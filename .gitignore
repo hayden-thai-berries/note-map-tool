@@ -1,0 +1,6 @@
+.DS_Store
+*.bak
+*.tmp
+
+# private work map (use maps/demo.md for the example data)
+maps/work.md

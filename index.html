@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sheets Ecosystem Map (local)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" data-keep>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" data-keep>
+<style data-keep>
+/* Layout idea: department columns of sheet cards, a band of connected apps below, wires drawn over the gaps. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#18212d; --muted:#5a6676; --line:#d3dae3;
+  --sheet:#e3f3ea; --sheet-edge:#9fd1b4; --app:#ebe6fb; --app-edge:#b9aaf0; --note:#fff3c4; --note-edge:#ecd67e;
+  --accent:#0b6bcb; --wire:#7a8798;
+  --hi:#fbe3e1; --hi-ink:#9b2c24; --med:#fdf0d0; --med-ink:#82590b; --lo:#e8ecf1; --lo-ink:#4b5666;
+  --font:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161d; --surface:#18202a; --ink:#e6ebf2; --muted:#98a5b6; --line:#2b3644;
+    --sheet:#173226; --sheet-edge:#2f6a4c; --app:#262046; --app-edge:#4f4396; --note:#3a3220; --note-edge:#75642b;
+    --accent:#5aa7ff; --wire:#6b7a8d;
+    --hi:#47211f; --hi-ink:#ffb4ad; --med:#41330f; --med-ink:#f3c96b; --lo:#252f3b; --lo-ink:#a9b5c5;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161d; --surface:#18202a; --ink:#e6ebf2; --muted:#98a5b6; --line:#2b3644;
+  --sheet:#173226; --sheet-edge:#2f6a4c; --app:#262046; --app-edge:#4f4396; --note:#3a3220; --note-edge:#75642b;
+  --accent:#5aa7ff; --wire:#6b7a8d;
+  --hi:#47211f; --hi-ink:#ffb4ad; --med:#41330f; --med-ink:#f3c96b; --lo:#252f3b; --lo-ink:#a9b5c5;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--font);-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+.page{max-width:1500px;margin:0 auto;padding:20px 16px 48px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+h1{margin:0;font-size:26px;line-height:1.15;font-weight:600;text-wrap:balance}
+.sub{margin:4px 0 0;color:var(--muted);font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;min-height:38px}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,textarea:focus-visible,.node a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn:disabled{opacity:.55;cursor:default}
+.main{display:flex;flex-direction:column;gap:20px}
+.editing .main{flex-direction:column-reverse}
+@media (min-width:1000px){
+  .editing .main{flex-direction:row-reverse;align-items:flex-start}
+  .editing .editor{width:400px;flex:none;position:sticky;top:16px}
+  .editing .mapPane{flex:1;min-width:0}
+}
+.mapPane{min-width:0}
+.map{position:relative}
+.map svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:0}
+.cols{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:44px 44px}
+.dept{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.dept h2,.appsBox h2{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.dept .meta{margin:-4px 0 0;color:var(--muted);font-size:13px}
+.noteCard{background:var(--note);border:1px solid var(--note-edge);border-radius:8px;padding:8px 10px;font-size:13px}
+.node{border-radius:8px;padding:9px 11px;border:1px solid var(--sheet-edge);background:var(--sheet);cursor:pointer;transition:opacity .15s;position:relative;z-index:1}
+.node.app{background:var(--app);border-color:var(--app-edge)}
+.node .nm{font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.node .nm a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.node .dt{font-size:13px;color:var(--muted);margin-top:1px}
+.pill{font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.pill.high{background:var(--hi);color:var(--hi-ink)}
+.pill.medium{background:var(--med);color:var(--med-ink)}
+.pill.low{background:var(--lo);color:var(--lo-ink)}
+.appsBox{position:relative;z-index:1;margin-top:56px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.appsBox .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:10px}
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec .node{margin-left:10px}
+.noteCard.hasNote{cursor:pointer}
+.noteCard.sel,.node.sel{outline:2px solid var(--accent);outline-offset:1px}
+.node .l{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);font:italic 600 11px/1 var(--font);flex:none;margin-left:6px}
+.page.detailOpen{padding-bottom:46vh}
+.detail{position:fixed;left:16px;right:16px;bottom:16px;max-width:640px;margin:0 auto;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 8px 28px rgba(0,0,0,.2);max-height:44vh;overflow:auto}
+.detail[hidden]{display:none}
+.detail h4{margin:0;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:34px}
+.detail .x{position:absolute;right:6px;top:6px;border:0;background:none;font-size:22px;line-height:1;padding:6px 10px;cursor:pointer;color:var(--muted)}
+.detail .meta2{color:var(--muted);font-size:13px;margin:4px 0 0}
+.detail .body{margin:10px 0 0;white-space:pre-wrap;font-size:14px}
+.detail .body.empty{color:var(--muted)}
+.detail .conns{margin:10px 0 0;padding:0;list-style:none;font-size:13px;display:grid;gap:4px}
+.detail .conns button{border:0;background:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline;text-underline-offset:2px}
+.detail a{color:var(--accent)}
+.map.focus .node:not(.on){opacity:.35}
+.wire{fill:none;stroke:var(--wire);stroke-width:1.6}
+.wire.manual{stroke-dasharray:6 5}
+.arrowhead{fill:var(--wire)}
+.map.focus .wire:not(.on){opacity:.12}
+.wire.on{stroke:var(--accent);stroke-width:2.6}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:22px 0 0;color:var(--muted);font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;border:1px solid}
+.ln{width:26px;height:0;border-top:2px solid var(--wire)}
+.ln.d{border-top-style:dashed}
+h3{font-size:15px;margin:28px 0 8px}
+.conn{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.conn li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:14px}
+.conn .how{display:block;color:var(--muted);font-size:13px}
+.warn{margin-top:16px;padding:10px 12px;border-radius:8px;background:var(--hi);color:var(--hi-ink);font-size:14px}
+.warn:empty{display:none}
+.editor{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.editor[hidden]{display:none}
+.editor h2{margin:0;font-size:15px}
+textarea{width:100%;min-height:420px;resize:vertical;font:13px/1.5 var(--mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;tab-size:2}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.status{font-size:13px;color:var(--muted)}
+details{font-size:13px;color:var(--muted)}
+summary{cursor:pointer;color:var(--ink)}
+pre{margin:8px 0 0;padding:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font:12px/1.5 var(--mono);color:var(--ink);overflow-x:auto;white-space:pre}
+@media (prefers-reduced-motion:reduce){.node{transition:none}}
+</style>
+</head>
+<body>
+<div class="page" id="page">
+  <header class="top">
+    <div>
+      <h1 id="title"></h1>
+      <p class="sub" id="stats"></p>
+    </div>
+    <button class="btn" id="editBtn" type="button">Edit</button>
+  </header>
+  <div class="main">
+    <section class="mapPane">
+      <div class="map" id="map"></div>
+      <div class="warn" id="warn"></div>
+      <h3>Connections</h3>
+      <ul class="conn" id="links"></ul>
+      <p class="legend">
+        <span><i class="sw" style="background:var(--sheet);border-color:var(--sheet-edge)"></i>Sheet</span>
+        <span><i class="sw" style="background:var(--app);border-color:var(--app-edge)"></i>Connected app</span>
+        <span><i class="sw" style="background:var(--note);border-color:var(--note-edge)"></i>Procedure</span>
+        <span><i class="ln"></i>Automatic link</span>
+        <span><i class="ln d"></i>Manual copy</span>
+        <span>Tap a card to trace its links</span>
+      </p>
+    </section>
+    <aside class="editor" id="editor" hidden>
+      <h2>Edit as Markdown</h2>
+      <textarea id="ed" spellcheck="false" aria-label="Map source in Markdown"></textarea>
+      <div class="bar">
+        <button class="btn primary" id="fileSaveBtn" type="button">Save</button>
+        <button class="btn" id="saveBtn" type="button">Download .md</button>
+        <button class="btn" id="copyBtn" type="button">Copy</button>
+        <button class="btn" id="openBtn" type="button">Open .md</button>
+        <input type="file" id="file" accept=".md,.txt,text/markdown,text/plain" hidden>
+      </div>
+      <div class="status" id="status" role="status"></div>
+      <details>
+        <summary>Syntax</summary>
+<pre>## Department name
+Lead: free text line (optional)
+&gt; Section title (yellow card, repeat as needed)
+  Optional note, indented two spaces
+- Sheet name | owner | high | https://link
+  Optional note, indented two spaces
+- Another sheet | owner | medium
+&gt; Next section
+- Sheet in the next section | owner | low
+
+## Apps
+- App name | what it does
+
+## Links
+- Sheet A -&gt; Sheet B | IMPORTRANGE
+- Sheet C -&gt; Sheet D | manual copy</pre>
+        <p>A "&gt;" line starts a section, and the "-" lines under it belong to it. An indented line under a section or item is its note: tap the card on the map to read it. Criticality is high, medium or low. A link whose note contains "manual" is drawn dashed. Names in Links must match a sheet or app name.</p>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<div class="detail" id="detail" hidden role="region" aria-label="Details"></div>
+
+<script type="text/plain" id="md" data-keep>
+# Sheets Ecosystem Map
+
+## Operations
+Lead: Kim Tran · IT contact: Sam
+> Weekly stock count — Fridays, Ops lead
+  Count on the warehouse floor, then update Inventory before 3pm.
+- Inventory | Kim | high
+  Master stock levels. Only Kim and Raj can edit.
+- Orders | Kim | high
+  Feeds the Sales pipeline through IMPORTRANGE.
+> Suppliers
+- Supplier List | Raj | medium
+
+## Sales
+Lead: Ana Cole
+> Quote approval — per quote, Sales manager
+- Pipeline | Ana | high
+- Quotes | Lee | high
+  Quotes over $10k need Finance sign-off before they go out.
+> Planning
+- Targets | Ana | medium
+
+## Finance
+Lead: Sam Ortiz
+> Month-end close — days 1–3, Finance lead
+  Starts on the first working day. Budget Tracker is locked once the close is signed off.
+- Budget Tracker | Sam | high
+- Invoice Log | Priya | high
+> Payroll run — fortnightly
+- Payroll Summary | Sam | high
+  Headcount is copied in by hand before each run. Check the totals against HR.
+
+## HR
+Lead: Jo Park
+> New starter setup — on hire, HR admin
+- Onboarding Checklist | Jo | low
+- Headcount | Jo | high
+  Source of truth for payroll. Update within one day of any change.
+> Leave
+- Leave Requests | Jo | medium
+
+## Apps
+- Vendor portal | Supplier price export
+- CRM | Daily connector sync
+  Owned by Sales ops. If the sync fails, Quotes stops updating.
+- Looker Studio | Finance dashboard
+- Slack | Apps Script reminders
+
+## Links
+- Orders -> Pipeline | IMPORTRANGE
+- Quotes -> Invoice Log | IMPORTRANGE
+- Headcount -> Payroll Summary | manual copy
+- Vendor portal -> Supplier List | CSV import
+- CRM -> Quotes | connector, daily
+- Invoice Log -> Looker Studio | connector
+- Onboarding Checklist -> Slack | Apps Script
+</script>
+
+<script data-keep id="app">
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var savedMd = $('md').textContent.replace(/^\n+|\n+$/g, '');
+  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null;
+
+  /* ---------- parse ---------- */
+  function parseNode(body, kind){
+    var parts = body.split('|').map(function(s){ return s.trim(); }).filter(function(s){ return s.length; });
+    var name = parts.shift() || '(unnamed)', url = null, crit = null, det = [];
+    parts.forEach(function(p){
+      if (/^https?:\/\//i.test(p)) url = p;
+      else if (/^(critical|high|medium|med|low)$/i.test(p)) { var c = p.toLowerCase(); crit = (c === 'critical') ? 'high' : (c === 'med' ? 'medium' : c); }
+      else det.push(p);
+    });
+    return { name: name, key: name.toLowerCase(), kind: kind, url: url, crit: crit, details: det.join(' · '), note: '' };
+  }
+  function parse(md){
+    var out = { title: 'Sheets map', depts: [], apps: [], links: [], warn: [] };
+    var cur = null, sec = null, mode = null, last = null;
+    function curSec(){
+      if (!sec) { sec = { title: null, note: '', nodes: [] }; cur.sections.push(sec); }
+      return sec;
+    }
+    md.split(/\r?\n/).forEach(function(raw){
+      var line = raw.trim(), m;
+      if (!line || /^<!--/.test(line)) return;
+      if (/^[ \t]+/.test(raw) && last && mode !== 'links') {
+        last.note = last.note ? last.note + '\n' + line : line;
+        return;
+      }
+      last = null;
+      if (/^##\s+/.test(line)) {
+        var name = line.replace(/^##\s+/, '').trim(), low = name.toLowerCase();
+        sec = null;
+        if (low === 'links') { mode = 'links'; cur = null; }
+        else if (low === 'apps' || low === 'connected apps') { mode = 'apps'; cur = null; }
+        else { mode = 'dept'; cur = { name: name, sections: [], text: [] }; out.depts.push(cur); }
+        return;
+      }
+      if (/^#\s+/.test(line)) { out.title = line.replace(/^#\s+/, ''); return; }
+      if (/^[-*]\s+/.test(line)) {
+        var body = line.replace(/^[-*]\s+/, '');
+        if (mode === 'links') {
+          m = body.match(/^(.+?)\s*(?:->|→)\s*(.+?)(?:\s*\|\s*(.*))?$/);
+          if (m) out.links.push({ from: m[1].trim(), to: m[2].trim(), label: (m[3] || '').trim() });
+          else out.warn.push('Cannot read link: ' + body);
+        } else if (mode === 'apps') { last = parseNode(body, 'app'); out.apps.push(last); }
+        else if (mode === 'dept') { last = parseNode(body, 'sheet'); last.dept = cur.name; curSec().nodes.push(last); }
+        else out.warn.push('Item outside a section: ' + body);
+        return;
+      }
+      if (line.charAt(0) === '>') {
+        if (cur) { sec = { title: line.replace(/^>\s*/, ''), note: '', nodes: [] }; cur.sections.push(sec); last = sec; }
+        return;
+      }
+      if (cur) cur.text.push(line);
+    });
+    return out;
+  }
+  function deptNodes(d){ var r = []; d.sections.forEach(function(s){ r = r.concat(s.nodes); }); return r; }
+
+  /* ---------- render ---------- */
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function infoDot(){ var i = el('span', 'info', 'i'); i.setAttribute('aria-label', 'has a note'); return i; }
+  function makeNode(n, deptName){
+    var d = el('div', 'node' + (n.kind === 'app' ? ' app' : ''));
+    d.tabIndex = 0;
+    d.setAttribute('role', 'button');
+    var nm = el('div', 'nm'), left = el('span', 'l');
+    if (n.url && /^https?:\/\//i.test(n.url)) {
+      var a = el('a', null, n.name); a.href = n.url; a.target = '_blank'; a.rel = 'noopener';
+      a.addEventListener('click', function(ev){ ev.stopPropagation(); });
+      left.appendChild(a);
+    } else left.appendChild(document.createTextNode(n.name));
+    if (n.note) left.appendChild(infoDot());
+    nm.appendChild(left);
+    if (n.crit) nm.appendChild(el('span', 'pill ' + n.crit, n.crit));
+    d.appendChild(nm);
+    if (n.details) d.appendChild(el('div', 'dt', n.details));
+    d.dataset.key = n.key;
+    d._dept = deptName || '__apps';
+    return d;
+  }
+  function render(md){
+    state = parse(md);
+    var map = $('map');
+    map.innerHTML = '';
+    map.classList.remove('focus');
+    nodeEls = {}; selected = null;
+    var warn = state.warn.slice();
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.innerHTML = '<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="arrowhead" d="M0 0L10 5L0 10z"/></marker></defs>';
+    map.appendChild(svg);
+    items = {};
+    function reg(n, d){
+      if (nodeEls[n.key]) warn.push('Duplicate name "' + n.name + '": links use the first one.');
+      else { nodeEls[n.key] = d; items[n.key] = n; n.el = d; }
+    }
+    var cols = el('div', 'cols');
+    state.depts.forEach(function(dp, di){
+      var box = el('section', 'dept');
+      box.appendChild(el('h2', null, dp.name));
+      dp.text.forEach(function(t){ box.appendChild(el('p', 'meta', t)); });
+      dp.sections.forEach(function(sc, si){
+        var wrap = el('div', 'sec');
+        if (sc.title) {
+          var key = 'sec:' + di + ':' + si;
+          var h = el('div', 'noteCard hasNote');
+          h.appendChild(document.createTextNode(sc.title));
+          if (sc.note) h.appendChild(infoDot());
+          h.tabIndex = 0; h.setAttribute('role', 'button');
+          items[key] = { kind: 'section', name: sc.title, note: sc.note, dept: dp.name, el: h };
+          wrap.appendChild(h);
+        }
+        sc.nodes.forEach(function(n){ var d = makeNode(n, dp.name); reg(n, d); wrap.appendChild(d); });
+        box.appendChild(wrap);
+      });
+      cols.appendChild(box);
+    });
+    map.appendChild(cols);
+    if (state.apps.length) {
+      var ab = el('section', 'appsBox');
+      ab.appendChild(el('h2', null, 'Connected apps'));
+      var row = el('div', 'row');
+      state.apps.forEach(function(n){ var d = makeNode(n, null); reg(n, d); row.appendChild(d); });
+      ab.appendChild(row); map.appendChild(ab);
+    }
+    Object.keys(items).forEach(function(k){
+      var d = items[k].el;
+      d.addEventListener('click', function(ev){ ev.stopPropagation(); select(selected === k ? null : k); });
+      d.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(selected === k ? null : k); } });
+    });
+    map.onclick = function(){ select(null); };
+
+    var ul = $('links'); ul.innerHTML = '';
+    state.links.forEach(function(l){
+      var a = nodeEls[l.from.toLowerCase()], b = nodeEls[l.to.toLowerCase()];
+      if (!a) warn.push('Link starts at "' + l.from + '", which is not a sheet or app.');
+      if (!b) warn.push('Link ends at "' + l.to + '", which is not a sheet or app.');
+      var li = el('li', null, l.from + ' → ' + l.to);
+      li.appendChild(el('span', 'how', (/manual/i.test(l.label) ? 'Manual · ' : 'Automatic · ') + (l.label || 'method not set')));
+      ul.appendChild(li);
+    });
+    var nSheets = state.depts.reduce(function(s, d){ return s + deptNodes(d).length; }, 0);
+    $('title').textContent = state.title;
+    $('stats').textContent = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links';
+    document.title = state.title;
+    var w = $('warn'); w.innerHTML = '';
+    warn.forEach(function(t){ w.appendChild(el('div', null, t)); });
+    requestAnimationFrame(drawWires);
+  }
+
+  /* ---------- wires ---------- */
+  function drawWires(){
+    var map = $('map'), svg = map.querySelector('svg');
+    if (!svg || !state) return;
+    var mr = map.getBoundingClientRect();
+    svg.setAttribute('width', mr.width); svg.setAttribute('height', mr.height);
+    Array.prototype.slice.call(svg.querySelectorAll('path.wire')).forEach(function(p){ p.remove(); });
+    function R(e){ var r = e.getBoundingClientRect(); return { l: r.left - mr.left, r: r.right - mr.left, t: r.top - mr.top, b: r.bottom - mr.top, cx: (r.left + r.right) / 2 - mr.left, cy: (r.top + r.bottom) / 2 - mr.top }; }
+    var loops = {};
+    state.links.forEach(function(l){
+      var A = nodeEls[l.from.toLowerCase()], B = nodeEls[l.to.toLowerCase()];
+      if (!A || !B || A === B) return;
+      var a = R(A), b = R(B), d;
+      if (A._dept === B._dept && A._dept !== '__apps') {
+        var k = loops[A._dept] = (loops[A._dept] || 0) + 1, bl = 12 + k * 8;
+        d = 'M' + a.r + ' ' + a.cy + ' C' + (a.r + bl) + ' ' + a.cy + ' ' + (b.r + bl) + ' ' + b.cy + ' ' + b.r + ' ' + b.cy;
+      } else if (a.r + 6 <= b.l) {
+        var dx = Math.max(30, (b.l - a.r) / 2);
+        d = 'M' + a.r + ' ' + a.cy + ' C' + (a.r + dx) + ' ' + a.cy + ' ' + (b.l - dx) + ' ' + b.cy + ' ' + b.l + ' ' + b.cy;
+      } else if (b.r + 6 <= a.l) {
+        var dx2 = Math.max(30, (a.l - b.r) / 2);
+        d = 'M' + a.l + ' ' + a.cy + ' C' + (a.l - dx2) + ' ' + a.cy + ' ' + (b.r + dx2) + ' ' + b.cy + ' ' + b.r + ' ' + b.cy;
+      } else if (a.b <= b.t) {
+        var dy = Math.max(30, (b.t - a.b) / 2);
+        d = 'M' + a.cx + ' ' + a.b + ' C' + a.cx + ' ' + (a.b + dy) + ' ' + b.cx + ' ' + (b.t - dy) + ' ' + b.cx + ' ' + b.t;
+      } else {
+        var dy2 = Math.max(30, (a.t - b.b) / 2);
+        d = 'M' + a.cx + ' ' + a.t + ' C' + a.cx + ' ' + (a.t - dy2) + ' ' + b.cx + ' ' + (b.b + dy2) + ' ' + b.cx + ' ' + b.b;
+      }
+      var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('class', 'wire' + (/manual/i.test(l.label) ? ' manual' : ''));
+      p.setAttribute('marker-end', 'url(#arr)');
+      p.dataset.from = l.from.toLowerCase(); p.dataset.to = l.to.toLowerCase();
+      svg.appendChild(p);
+    });
+    applySelection();
+  }
+  function select(k){ selected = k; applySelection(); }
+  function applySelection(){
+    var map = $('map'), on = {}, isNode = !!(selected && nodeEls[selected]);
+    Array.prototype.forEach.call(map.querySelectorAll('path.wire'), function(p){
+      var hit = isNode && (p.dataset.from === selected || p.dataset.to === selected);
+      p.classList.toggle('on', hit);
+      if (hit) { on[p.dataset.from] = true; on[p.dataset.to] = true; }
+    });
+    if (isNode) on[selected] = true;
+    Object.keys(nodeEls).forEach(function(k){ nodeEls[k].classList.toggle('on', !!on[k]); });
+    Object.keys(items).forEach(function(k){ items[k].el.classList.toggle('sel', k === selected); });
+    map.classList.toggle('focus', isNode);
+    showDetail();
+  }
+  function showDetail(){
+    var box = $('detail'), it = selected && items[selected];
+    if (!it) { box.hidden = true; box.innerHTML = ''; $('page').classList.remove('detailOpen'); return; }
+    box.innerHTML = '';
+    var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close');
+    x.addEventListener('click', function(){ select(null); });
+    box.appendChild(x);
+    var h = el('h4', null, it.name);
+    if (it.crit) h.appendChild(el('span', 'pill ' + it.crit, it.crit));
+    box.appendChild(h);
+    var bits = [];
+    if (it.kind === 'section') bits.push(it.dept + ' · section');
+    else { bits.push(it.kind === 'app' ? 'Connected app' : (it.dept || '')); if (it.details) bits.push(it.details); }
+    box.appendChild(el('p', 'meta2', bits.filter(Boolean).join(' · ')));
+    if (it.url && /^https?:\/\//i.test(it.url)) {
+      var lp = el('p', 'meta2'), a = el('a', null, 'Open sheet'); a.href = it.url; a.target = '_blank'; a.rel = 'noopener';
+      lp.appendChild(a); box.appendChild(lp);
+    }
+    var body = el('p', 'body' + (it.note ? '' : ' empty'), it.note || 'No note yet. Add an indented line under this item in the Markdown.');
+    box.appendChild(body);
+    if (nodeEls[selected]) {
+      var ul = el('ul', 'conns'), n = 0;
+      state.links.forEach(function(l){
+        var f = l.from.toLowerCase(), t = l.to.toLowerCase();
+        if (f !== selected && t !== selected) return;
+        var outgoing = f === selected, other = outgoing ? l.to : l.from, li = el('li');
+        li.appendChild(document.createTextNode(outgoing ? 'Sends to ' : 'Receives from '));
+        var b = el('button', null, other); b.type = 'button';
+        b.addEventListener('click', function(){
+          var ok = other.toLowerCase();
+          if (nodeEls[ok]) { select(ok); try { nodeEls[ok].scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
+        });
+        li.appendChild(b);
+        li.appendChild(document.createTextNode(' · ' + (l.label || 'method not set')));
+        ul.appendChild(li); n++;
+      });
+      if (n) box.appendChild(ul);
+    }
+    box.hidden = false; $('page').classList.add('detailOpen');
+  }
+  document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && selected) select(null); });
+  if (window.ResizeObserver) new ResizeObserver(function(){ drawWires(); }).observe($('map'));
+  window.addEventListener('resize', drawWires);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWires);
+
+  /* ---------- editor ---------- */
+  var ed = $('ed'), status = $('status'), timer = null;
+  function setStatus(t){ status.textContent = t || ''; }
+  function toggleEdit(){
+    var open = $('editor').hidden;
+    $('editor').hidden = !open;
+    $('page').classList.toggle('editing', open);
+    $('editBtn').textContent = open ? 'Close editor' : 'Edit';
+    if (open) { ed.value = ed.value || savedMd; }
+    setTimeout(drawWires, 50);
+  }
+  $('editBtn').addEventListener('click', toggleEdit);
+  ed.value = savedMd;
+  ed.addEventListener('input', function(){
+    setStatus(ed.value.trim() === savedMd ? '' : 'Unsaved changes. Press Save to keep them.');
+    clearTimeout(timer); timer = setTimeout(function(){ render(ed.value); }, 150);
+  });
+  ed.addEventListener('keydown', function(ev){
+    if (ev.key === 'Tab') { ev.preventDefault(); var s = ed.selectionStart; ed.value = ed.value.slice(0, s) + '  ' + ed.value.slice(ed.selectionEnd); ed.selectionStart = ed.selectionEnd = s + 2; }
+  });
+  $('copyBtn').addEventListener('click', function(){
+    function fallback(){ ed.select(); try { document.execCommand('copy'); setStatus('Copied.'); } catch (e) { setStatus('Select the text and copy it by hand.'); } }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ed.value).then(function(){ setStatus('Copied.'); }, fallback);
+    else fallback();
+  });
+  $('openBtn').addEventListener('click', function(){ $('file').click(); });
+  $('file').addEventListener('change', function(ev){
+    var f = ev.target.files && ev.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){ ed.value = String(r.result); render(ed.value); setStatus('Loaded ' + f.name + '. Press Save to keep it.'); };
+    r.readAsText(f);
+    ev.target.value = '';
+  });
+
+  /* ---------- local: the .md file in maps/ is the source of truth ---------- */
+  var param = new URLSearchParams(location.search).get('map') || 'work.md';
+  if (!/^[\w.-]+\.md$/.test(param)) param = 'work.md';
+  $('saveBtn').addEventListener('click', function(){
+    var blob = new Blob([ed.value.replace(/\s+$/, '') + '\n'], { type: 'text/markdown' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = param;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    setStatus('Downloaded ' + param + '. Replace maps/' + param + ' with it to keep your changes.');
+  });
+  var fsb = $('fileSaveBtn');
+  fsb.textContent = 'Save to ' + param;
+  function saveToFile(){
+    var text = ed.value.replace(/\s+$/, '') + '\n';
+    fsb.disabled = true; setStatus('Saving…');
+    fetch('maps/' + param, { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'text/markdown' }, body: text })
+      .then(function(r){ if (!r.ok) throw new Error(r.status); savedMd = text.replace(/^\n+|\n+$/g, ''); setStatus('Saved to maps/' + param + '. The previous version is kept as ' + param + '.bak.'); })
+      .catch(function(){ setStatus('Could not save here. Start the page with start.command (it runs server.py), or use Download .md.'); })
+      .then(function(){ fsb.disabled = false; });
+  }
+  fsb.addEventListener('click', saveToFile);
+  ed.addEventListener('keydown', function(ev){ if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 's') { ev.preventDefault(); saveToFile(); } });
+  fetch('maps/' + param, { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('missing'); return r.text(); })
+    .then(function(t){ savedMd = t.replace(/^\n+|\n+$/g, ''); ed.value = savedMd; render(savedMd); })
+    .catch(function(){ setStatus('Could not load maps/' + param + ' (open through the local server, see README). Showing the built-in demo.'); });
+
+  render(savedMd);
+})();
+</script>
+</body>
+</html>
