@@ -2,6 +2,8 @@
 
 A map of departments, Google Sheets, connected apps and the links between them. The map is drawn from a plain Markdown file.
 
+![Sheets Ecosystem Map demo](docs/screenshot.png)
+
 ## Run locally
 
 Double-click `start.command` (macOS), or in a terminal in this folder:
