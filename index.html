@@ -114,6 +114,40 @@ textarea{width:100%;min-height:420px;resize:vertical;font:13px/1.5 var(--mono);b
 details{font-size:13px;color:var(--muted)}
 summary{cursor:pointer;color:var(--ink)}
 pre{margin:8px 0 0;padding:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font:12px/1.5 var(--mono);color:var(--ink);overflow-x:auto;white-space:pre}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tab{border:0;border-bottom:2px solid transparent;background:none;padding:8px 12px;cursor:pointer;color:var(--muted);min-height:38px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tix{font-size:11px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--accent);color:var(--surface);margin-left:6px;letter-spacing:0;text-transform:none}
+.pill.project{background:var(--app);color:var(--ink)}
+.pill.ticket{background:var(--lo);color:var(--lo-ink)}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:36px}
+.board[hidden]{display:none}
+.bbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:16px}
+.bbar label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:start}
+.kcol{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.kcol.over{outline:2px dashed var(--accent);outline-offset:2px}
+.kcol h3{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
+.kcount{color:var(--muted);font-weight:400}
+.kempty{margin:0;color:var(--muted);font-size:13px}
+.tcard{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);cursor:pointer}
+.tcard:hover{border-color:var(--accent)}
+.tcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tcard.blocked{border-left:4px solid var(--hi-ink)}
+.tcard .top2{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.tcard .tt{font-weight:600;margin-top:2px}
+.tcard .tm{font-size:13px;color:var(--muted);margin-top:2px}
+.tcard .tm a{color:var(--accent)}
+.tcard .orphan{color:var(--hi-ink)}
+.tform{position:fixed;left:16px;right:16px;top:5vh;max-width:560px;margin:0 auto;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,.3);max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.tform[hidden]{display:none}
+.tform h4{margin:0;font-size:16px}
+.tform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.tform input,.tform select,.tform textarea{width:100%}
+.tform textarea{min-height:90px;font:14px/1.45 var(--font)}
+.trow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.trow{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.node{transition:none}}
 </style>
 </head>
@@ -123,10 +157,14 @@ pre{margin:8px 0 0;padding:10px;background:var(--bg);border:1px solid var(--line
     <div>
       <h1 id="title"></h1>
       <p class="sub" id="stats"></p>
+      <div class="tabs" role="tablist">
+        <button class="tab" id="tabMap" type="button" role="tab" aria-selected="true">Map</button>
+        <button class="tab" id="tabTix" type="button" role="tab" aria-selected="false">Tickets</button>
+      </div>
     </div>
     <button class="btn" id="editBtn" type="button">Edit</button>
   </header>
-  <div class="main">
+  <div class="main" id="mapView">
     <section class="mapPane">
       <div class="map" id="map"></div>
       <div class="warn" id="warn"></div>
@@ -174,7 +212,40 @@ Lead: free text line (optional)
       </details>
     </aside>
   </div>
+  <section class="board" id="board" hidden>
+    <div class="bbar">
+      <button class="btn primary" id="newTix" type="button">New ticket</button>
+      <label>Type
+        <select id="fType"><option value="">All</option><option value="ticket">Tickets</option><option value="project">Projects</option></select>
+      </label>
+      <label>Owner
+        <select id="fOwner"><option value="">Everyone</option></select>
+      </label>
+      <span class="status" id="tstatus" role="status"></span>
+    </div>
+    <div class="kanban" id="kanban"></div>
+  </section>
 </div>
+
+<form class="tform" id="tform" hidden aria-label="Ticket">
+  <h4 id="tformTitle">New ticket</h4>
+  <label>Title<input id="tTitle" required maxlength="200"></label>
+  <div class="trow">
+    <label>Type<select id="tType"><option value="ticket">Ticket</option><option value="project">Project</option></select></label>
+    <label>Status<select id="tStatus"><option value="todo">To do</option><option value="doing">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select></label>
+  </div>
+  <div class="trow">
+    <label>Owner<input id="tOwner" maxlength="100"></label>
+    <label>Linked to<select id="tTarget"></select></label>
+  </div>
+  <label>Link (URL)<input id="tUrl" type="url" placeholder="https://"></label>
+  <label>Notes<textarea id="tNotes" spellcheck="true"></textarea></label>
+  <div class="bar">
+    <button class="btn primary" type="submit">Save</button>
+    <button class="btn" id="tCancel" type="button">Cancel</button>
+    <button class="btn" id="tDelete" type="button">Delete</button>
+  </div>
+</form>
 
 <div class="detail" id="detail" hidden role="region" aria-label="Details"></div>
 
@@ -241,7 +312,7 @@ Lead: Jo Park
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var savedMd = $('md').textContent.replace(/^\n+|\n+$/g, '');
-  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null;
+  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null, tdata = { nextId: 1, tickets: [] };
 
   /* ---------- parse ---------- */
   function parseNode(body, kind){
@@ -318,6 +389,8 @@ Lead: Jo Park
       left.appendChild(a);
     } else left.appendChild(document.createTextNode(n.name));
     if (n.note) left.appendChild(infoDot());
+    var open = openFor(n.key).length;
+    if (open) left.appendChild(tixBadge(open));
     nm.appendChild(left);
     if (n.crit) nm.appendChild(el('span', 'pill ' + n.crit, n.crit));
     d.appendChild(nm);
@@ -344,7 +417,9 @@ Lead: Jo Park
     var cols = el('div', 'cols');
     state.depts.forEach(function(dp, di){
       var box = el('section', 'dept');
-      box.appendChild(el('h2', null, dp.name));
+      var h2 = el('h2', null, dp.name), dOpen = openFor('dept:' + dp.name).length;
+      if (dOpen) h2.appendChild(tixBadge(dOpen));
+      box.appendChild(h2);
       dp.text.forEach(function(t){ box.appendChild(el('p', 'meta', t)); });
       dp.sections.forEach(function(sc, si){
         var wrap = el('div', 'sec');
@@ -386,9 +461,13 @@ Lead: Jo Park
       li.appendChild(el('span', 'how', (/manual/i.test(l.label) ? 'Manual · ' : 'Automatic · ') + (l.label || 'method not set')));
       ul.appendChild(li);
     });
+    tdata.tickets.forEach(function(t){
+      if (t.target && targetName(t.target) === null) warn.push('Ticket ' + t.id + ' is linked to "' + t.target + '", which is not on the map.');
+    });
     var nSheets = state.depts.reduce(function(s, d){ return s + deptNodes(d).length; }, 0);
+    var nOpen = tdata.tickets.filter(function(t){ return t.status !== 'done'; }).length;
     $('title').textContent = state.title;
-    $('stats').textContent = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links';
+    $('stats').textContent = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links' + (tdata.tickets.length ? ' · ' + nOpen + ' open tickets' : '');
     document.title = state.title;
     var w = $('warn'); w.innerHTML = '';
     warn.forEach(function(t){ w.appendChild(el('div', null, t)); });
@@ -467,6 +546,18 @@ Lead: Jo Park
     }
     var body = el('p', 'body' + (it.note ? '' : ' empty'), it.note || 'No note yet. Add an indented line under this item in the Markdown.');
     box.appendChild(body);
+    var linked = tdata.tickets.filter(function(t){ return t.target === selected; });
+    if (linked.length) {
+      var tu = el('ul', 'conns');
+      linked.forEach(function(t){
+        var li = el('li'), b = el('button', null, t.id + ' ' + t.title); b.type = 'button';
+        b.addEventListener('click', function(){ showTab('tickets'); openForm(t.id); });
+        li.appendChild(document.createTextNode(statusLabel(t.status) + ' · '));
+        li.appendChild(b); tu.appendChild(li);
+      });
+      box.appendChild(el('p', 'meta2', 'Tickets and projects'));
+      box.appendChild(tu);
+    }
     if (nodeEls[selected]) {
       var ul = el('ul', 'conns'), n = 0;
       state.links.forEach(function(l){
@@ -491,6 +582,172 @@ Lead: Jo Park
   if (window.ResizeObserver) new ResizeObserver(function(){ drawWires(); }).observe($('map'));
   window.addEventListener('resize', drawWires);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWires);
+
+  /* ---------- tickets: maps/<map>.tickets.json, shown as a Kanban board ---------- */
+  var STATUSES = [['todo', 'To do'], ['doing', 'In progress'], ['blocked', 'Blocked'], ['done', 'Done']];
+  var editingId = null, tstatus = $('tstatus');
+  function setTStatus(t){ tstatus.textContent = t || ''; }
+  function ticketsFile(){ return param.replace(/\.md$/, '') + '.tickets.json'; }
+  function statusLabel(s){ for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i][0] === s) return STATUSES[i][1]; return s; }
+  function findTicket(id){ for (var i = 0; i < tdata.tickets.length; i++) if (tdata.tickets[i].id === id) return tdata.tickets[i]; return null; }
+  function openFor(target){ return tdata.tickets.filter(function(t){ return t.target === target && t.status !== 'done'; }); }
+  function tixBadge(c){
+    var b = el('span', 'tix', String(c));
+    b.title = c + ' open ticket' + (c > 1 ? 's' : ''); b.setAttribute('aria-label', b.title);
+    return b;
+  }
+  /* name of the map item a ticket points to: '' = not linked, null = no longer on the map */
+  function targetName(t){
+    if (!t) return '';
+    if (t.indexOf('dept:') === 0) {
+      var dn = t.slice(5);
+      return state.depts.some(function(d){ return d.name === dn; }) ? dn : null;
+    }
+    return items[t] && items[t].kind !== 'section' ? items[t].name : null;
+  }
+  function saveTickets(){
+    setTStatus('Saving…');
+    fetch('maps/' + ticketsFile(), { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(tdata, null, 2) + '\n' })
+      .then(function(r){ if (!r.ok) throw new Error(r.status); setTStatus('Saved to maps/' + ticketsFile() + '.'); })
+      .catch(function(){ setTStatus('Could not save here. Start the page with start.command (it runs server.py). Changes last only until you reload.'); });
+  }
+  function changed(){ renderBoard(); render(ed.value); saveTickets(); }
+  function today(){ return new Date().toISOString().slice(0, 10); }
+
+  function renderBoard(){
+    var owners = [];
+    tdata.tickets.forEach(function(t){ if (t.owner && owners.indexOf(t.owner) < 0) owners.push(t.owner); });
+    owners.sort();
+    var fo = $('fOwner'), cur = fo.value;
+    fo.innerHTML = '';
+    var all = el('option', null, 'Everyone'); all.value = ''; fo.appendChild(all);
+    owners.forEach(function(o){ var op = el('option', null, o); op.value = o; fo.appendChild(op); });
+    fo.value = owners.indexOf(cur) >= 0 ? cur : '';
+    var ft = $('fType').value, fow = fo.value;
+    var k = $('kanban'); k.innerHTML = '';
+    STATUSES.forEach(function(s){
+      var list = tdata.tickets.filter(function(t){ return t.status === s[0] && (!ft || t.type === ft) && (!fow || t.owner === fow); });
+      var col = el('section', 'kcol'), h = el('h3', null, s[1]);
+      h.appendChild(el('span', 'kcount', String(list.length)));
+      col.appendChild(h);
+      col.addEventListener('dragover', function(ev){ ev.preventDefault(); col.classList.add('over'); });
+      col.addEventListener('dragleave', function(){ col.classList.remove('over'); });
+      col.addEventListener('drop', function(ev){
+        ev.preventDefault(); col.classList.remove('over');
+        var t = findTicket(ev.dataTransfer.getData('text/plain'));
+        if (t && t.status !== s[0]) { t.status = s[0]; t.updated = today(); changed(); }
+      });
+      if (!list.length) col.appendChild(el('p', 'kempty', 'Nothing here'));
+      list.forEach(function(t){ col.appendChild(makeCard(t)); });
+      k.appendChild(col);
+    });
+  }
+  function makeCard(t){
+    var c = el('div', 'tcard' + (t.status === 'blocked' ? ' blocked' : ''));
+    c.tabIndex = 0; c.setAttribute('role', 'button'); c.draggable = true;
+    var top = el('div', 'top2', t.id);
+    top.appendChild(el('span', 'pill ' + t.type, t.type));
+    c.appendChild(top);
+    c.appendChild(el('div', 'tt', t.title));
+    var tn = targetName(t.target), meta = el('div', 'tm');
+    var bits = [];
+    if (t.owner) bits.push(t.owner);
+    if (tn) bits.push(tn);
+    meta.appendChild(document.createTextNode(bits.join(' · ')));
+    if (tn === null) { meta.appendChild(document.createTextNode(bits.length ? ' · ' : '')); meta.appendChild(el('span', 'orphan', 'unlinked')); }
+    if (t.url && /^https?:\/\//i.test(t.url)) {
+      var a = el('a', null, 'link'); a.href = t.url; a.target = '_blank'; a.rel = 'noopener';
+      a.addEventListener('click', function(ev){ ev.stopPropagation(); });
+      meta.appendChild(document.createTextNode(' · ')); meta.appendChild(a);
+    }
+    c.appendChild(meta);
+    c.addEventListener('click', function(){ openForm(t.id); });
+    c.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openForm(t.id); } });
+    c.addEventListener('dragstart', function(ev){ ev.dataTransfer.setData('text/plain', t.id); ev.dataTransfer.effectAllowed = 'move'; });
+    return c;
+  }
+
+  function fillTargets(current){
+    var sel = $('tTarget'); sel.innerHTML = '';
+    function opt(parent, v, label){ var o = el('option', null, label); o.value = v; parent.appendChild(o); }
+    function group(label){ var g = document.createElement('optgroup'); g.label = label; sel.appendChild(g); return g; }
+    opt(sel, '', 'Not linked');
+    state.depts.forEach(function(d){
+      var g = group(d.name);
+      opt(g, 'dept:' + d.name, 'Whole department');
+      deptNodes(d).forEach(function(n){ opt(g, n.key, n.name); });
+    });
+    if (state.apps.length) {
+      var ga = group('Connected apps');
+      state.apps.forEach(function(n){ opt(ga, n.key, n.name); });
+    }
+    if (current && targetName(current) === null) opt(sel, current, current + ' (not on the map)');
+    sel.value = current || '';
+  }
+  function openForm(id){
+    var t = id ? findTicket(id) : null;
+    editingId = t ? t.id : null;
+    $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ticket';
+    $('tTitle').value = t ? t.title : '';
+    $('tType').value = t ? t.type : 'ticket';
+    $('tStatus').value = t ? t.status : 'todo';
+    $('tOwner').value = t ? t.owner || '' : '';
+    $('tUrl').value = t ? t.url || '' : '';
+    $('tNotes').value = t ? t.notes || '' : '';
+    fillTargets(t ? t.target : '');
+    $('tDelete').hidden = !t;
+    $('tform').hidden = false;
+    $('tTitle').focus();
+  }
+  function closeForm(){ $('tform').hidden = true; editingId = null; }
+  $('newTix').addEventListener('click', function(){ openForm(null); });
+  $('tCancel').addEventListener('click', closeForm);
+  $('tDelete').addEventListener('click', function(){
+    var t = editingId && findTicket(editingId);
+    if (!t || !confirm('Delete ' + t.id + ' "' + t.title + '"?')) return;
+    tdata.tickets = tdata.tickets.filter(function(x){ return x !== t; });
+    closeForm(); changed();
+  });
+  $('tform').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var v = { title: $('tTitle').value.trim(), type: $('tType').value, status: $('tStatus').value, owner: $('tOwner').value.trim(),
+              url: $('tUrl').value.trim(), target: $('tTarget').value, notes: $('tNotes').value.trim(), updated: today() };
+    if (!v.title) return;
+    var t = editingId && findTicket(editingId);
+    if (t) Object.keys(v).forEach(function(key){ t[key] = v[key]; });
+    else { v.id = 'T-' + tdata.nextId++; tdata.tickets.push(v); }
+    closeForm(); changed();
+  });
+  $('fType').addEventListener('change', renderBoard);
+  $('fOwner').addEventListener('change', renderBoard);
+  document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && !$('tform').hidden) closeForm(); });
+
+  function showTab(name){
+    var t = name === 'tickets';
+    $('mapView').hidden = t; $('board').hidden = !t; $('editBtn').hidden = t;
+    $('tabMap').setAttribute('aria-selected', String(!t)); $('tabTix').setAttribute('aria-selected', String(t));
+    if (t) select(null); else { closeForm(); setTimeout(drawWires, 50); }
+    try { history.replaceState(null, '', t ? '#tickets' : location.pathname + location.search); } catch (e) {}
+  }
+  $('tabMap').addEventListener('click', function(){ showTab('map'); });
+  $('tabTix').addEventListener('click', function(){ showTab('tickets'); });
+  function loadTickets(){
+    fetch('maps/' + ticketsFile(), { cache: 'no-store' })
+      .then(function(r){ if (r.status === 404) return null; if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d){
+        if (d && Array.isArray(d.tickets)) {
+          var max = 0;
+          d.tickets.forEach(function(t){
+            if (!STATUSES.some(function(s){ return s[0] === t.status; })) t.status = 'todo';
+            if (t.type !== 'project') t.type = 'ticket';
+            max = Math.max(max, parseInt(String(t.id).replace(/\D/g, ''), 10) || 0);
+          });
+          tdata = { nextId: Math.max(Number(d.nextId) || 1, max + 1), tickets: d.tickets };
+        }
+        renderBoard(); render(ed.value);
+      })
+      .catch(function(){ setTStatus('Could not read maps/' + ticketsFile() + '. Open the page through the local server (see README).'); renderBoard(); });
+  }
 
   /* ---------- editor ---------- */
   var ed = $('ed'), status = $('status'), timer = null;
@@ -554,6 +811,9 @@ Lead: Jo Park
     .catch(function(){ setStatus('Could not load maps/' + param + ' (open through the local server, see README). Showing the built-in demo.'); });
 
   render(savedMd);
+  renderBoard();
+  loadTickets();
+  if (location.hash === '#tickets') showTab('tickets');
 })();
 </script>
 </body>

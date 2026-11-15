@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Local server for the Sheets Ecosystem Map.
 
-Serves this folder on http://localhost:8000 and lets the page save maps/<name>.md.
-Only PUT /maps/<name>.md is writable, only from this same page, and the previous
-version is kept as maps/<name>.md.bak.
+Serves this folder on http://localhost:8000 and lets the page save maps/<name>.md
+and maps/<name>.json (tickets). Only PUT /maps/<name>.md or .json is writable, only
+from this same page, and the previous version is kept as a .bak next to it.
 """
-import http.server, os, re, shutil
+import http.server, json, os, re, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
 ALLOWED_ORIGINS = ("http://localhost:%d" % PORT, "http://127.0.0.1:%d" % PORT)
-SAVE_PATH = re.compile(r"^/maps/([\w.-]+\.md)$")
+SAVE_PATH = re.compile(r"^/maps/([\w.-]+\.(?:md|json))$")
 MAX_BYTES = 1_000_000
 
 
@@ -35,9 +35,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.send_error(413, "Bad size")
         data = self.rfile.read(length)
         try:
-            data.decode("utf-8")
+            text = data.decode("utf-8")
         except UnicodeDecodeError:
             return self.send_error(400, "Not UTF-8")
+        if m.group(1).endswith(".json"):
+            try:
+                json.loads(text)
+            except ValueError:
+                return self.send_error(400, "Not JSON")
         path = os.path.join(ROOT, "maps", m.group(1))
         if os.path.exists(path):
             shutil.copyfile(path, path + ".bak")
