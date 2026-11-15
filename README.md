@@ -53,10 +53,13 @@ Opening `index.html` directly also works, but it can only show the built-in demo
 
 ## Tickets
 
-The Tickets tab is a Kanban board (To do, In progress, Blocked, Done) for tickets and projects. Each one can be linked to a sheet, a connected app or a whole department.
+The Tickets tab shows tickets and projects as a Kanban board (To do, In progress, Blocked, Done) or as a table. Switch with Board / Table; the choice is remembered. Each ticket can be linked to a sheet, a connected app or a whole department, and is drawn as a chip in the map's colours (green sheet, purple app, yellow department).
 
-- Press New ticket to add one. Click a card to edit or delete it. Drag a card to another column, or change its Status in the form, to move it.
-- Filter by type (ticket or project) or by owner.
+- A summary at the top shows how many tickets are in each status, and one red line per blocked ticket. Click that line to open the ticket.
+- Press New ticket to add one. Click a card or row to edit it in the drawer beside the list. Set the status with the buttons in the drawer; Blocked asks what it is waiting on, and that text shows on the card.
+- Board: drag a card to another column to move it.
+- Table: grouped by department, with the status changeable in place from the dropdown in each row.
+- Filter by type, owner, open only, or search the text.
 - On the Map tab, linked cards and departments show a small badge with the number of open tickets. Tap a card to see its tickets and jump to them.
 - A ticket linked to something that is no longer on the map shows "unlinked" and a warning under the map.
 - Tickets are saved to `maps/<map>.tickets.json` (for example `maps/work.tickets.json`), with the previous version kept as `.bak`. This needs `server.py`, which `start.command` runs.

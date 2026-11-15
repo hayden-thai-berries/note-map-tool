@@ -46,6 +46,7 @@ h1{margin:0;font-size:26px;line-height:1.15;font-weight:600;text-wrap:balance}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
 .btn:disabled{opacity:.55;cursor:default}
 .main{display:flex;flex-direction:column;gap:20px}
+.main[hidden]{display:none}
 .editing .main{flex-direction:column-reverse}
 @media (min-width:1000px){
   .editing .main{flex-direction:row-reverse;align-items:flex-start}
@@ -125,7 +126,8 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .board[hidden]{display:none}
 .bbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:16px}
 .bbar label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:start}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:start}
+.kanban[hidden]{display:none}
 .kcol{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:120px}
 .kcol.over{outline:2px dashed var(--accent);outline-offset:2px}
 .kcol h3{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
@@ -134,13 +136,15 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .tcard{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);cursor:pointer}
 .tcard:hover{border-color:var(--accent)}
 .tcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.tcard.blocked{border-left:4px solid var(--hi-ink)}
+.tcard.blocked{border-color:var(--hi-ink)}
+.tcard.done{opacity:.75}
+.tcard.sel{outline:2px solid var(--accent);outline-offset:1px}
 .tcard .top2{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
 .tcard .tt{font-weight:600;margin-top:2px}
 .tcard .tm{font-size:13px;color:var(--muted);margin-top:2px}
 .tcard .tm a{color:var(--accent)}
 .tcard .orphan{color:var(--hi-ink)}
-.tform{position:fixed;left:16px;right:16px;top:5vh;max-width:560px;margin:0 auto;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,.3);max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.tform{position:sticky;top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .tform[hidden]{display:none}
 .tform h4{margin:0;font-size:16px}
 .tform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
@@ -148,6 +152,74 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .tform textarea{min-height:90px;font:14px/1.45 var(--font)}
 .trow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.trow{grid-template-columns:1fr}}
+/* tickets: status colours, summary strip, drawer layout, table view */
+:root{--doing:#dcebfb; --doing-ink:#0b5aa8; --done-ink:#1f6b44}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--doing:#14304f; --doing-ink:#8cc3ff; --done-ink:#7fd1a3}}
+:root[data-theme="dark"]{--doing:#14304f; --doing-ink:#8cc3ff; --done-ink:#7fd1a3}
+.s-todo{background:var(--lo);color:var(--lo-ink)}
+.s-doing{background:var(--doing);color:var(--doing-ink)}
+.s-blocked{background:var(--hi);color:var(--hi-ink)}
+.s-done{background:var(--sheet);color:var(--done-ink)}
+.chip{display:inline-flex;align-items:center;font-size:12px;padding:1px 8px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.sheet{background:var(--sheet);border-color:var(--sheet-edge)}
+.chip.app{background:var(--app);border-color:var(--app-edge)}
+.chip.dept{background:var(--note);border-color:var(--note-edge)}
+.chip.orphan{background:var(--hi);border-color:var(--hi-ink);color:var(--hi-ink)}
+.av{width:22px;height:22px;border-radius:50%;background:var(--lo);color:var(--lo-ink);font-size:10px;font-weight:600;display:inline-grid;place-items:center;flex:none}
+.id{font:12px var(--mono);color:var(--muted)}
+.kind{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tcard{display:flex;flex-direction:column;gap:6px}
+.tcard .tt a{color:var(--accent);margin-left:6px;text-decoration:none}
+.tcard .row2{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.why{background:var(--hi);color:var(--hi-ink);border-radius:6px;padding:4px 8px;font-size:12px}
+.kcol h3 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.bbar input[type=search]{min-width:180px}
+.vsw{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.vsw button{border:0;background:var(--surface);padding:7px 14px;cursor:pointer;min-height:36px;color:var(--muted)}
+.vsw button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:500}
+.vsw button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tlayout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.tlayout.open{grid-template-columns:minmax(0,1fr) 300px}
+@media (max-width:900px){.tlayout.open{grid-template-columns:minmax(0,1fr)}.tlayout.open .tform{order:-1;position:static}}
+.tmain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tsum{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.tsum[hidden]{display:none}
+.tseg{display:flex;gap:2px;height:10px;border-radius:99px;overflow:hidden}
+.tseg i{display:block}
+.st-todo{background:var(--lo-ink)}.st-doing{background:var(--doing-ink)}.st-blocked{background:var(--hi-ink)}.st-done{background:var(--done-ink)}
+.tleg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted)}
+.tleg b{color:var(--ink);font-weight:600}
+.tleg .sp{flex:1}
+.tattn{display:block;width:100%;text-align:left;border:0;cursor:pointer;background:var(--hi);color:var(--hi-ink);border-radius:8px;padding:6px 10px;font-size:13px}
+.tattn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.tbl[hidden]{display:none}
+.tr{display:grid;grid-template-columns:52px minmax(0,1fr) 150px 70px 40px 124px 60px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;min-width:760px}
+.tr.head{border-top:0;background:var(--bg);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tr.grp{background:var(--bg);display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.tr.row{cursor:pointer}
+.tr.row:hover{background:var(--bg)}
+.tr.row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tr.row.sel{background:var(--bg);outline:2px solid var(--accent);outline-offset:-2px}
+.tr.row.done{opacity:.7}
+.tr .ttl{font-weight:500;min-width:0}
+.tr .ttl small{display:block;color:var(--hi-ink);font-size:12px;font-weight:400}
+.tr .upd{color:var(--muted);font-size:13px}
+.stsel{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:99px;padding:3px 8px;min-height:0;cursor:pointer;max-width:100%}
+.tpad{padding:14px}
+.tform h4{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tform .x{border:0;background:none;font-size:22px;line-height:1;padding:2px 8px;cursor:pointer;color:var(--muted)}
+.tform .lbl{font-size:13px;color:var(--muted);margin-bottom:-6px}
+.seg4{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tform .seg4 label{position:relative;flex-direction:row;justify-content:center;text-align:center;padding:7px 2px;font-size:11px;cursor:pointer;color:var(--muted);background:var(--surface)}
+.tform .seg4 label.on{font-weight:600}
+.tform .seg4 label.s-todo.on{background:var(--lo);color:var(--lo-ink)}
+.tform .seg4 label.s-doing.on{background:var(--doing);color:var(--doing-ink)}
+.tform .seg4 label.s-blocked.on{background:var(--hi);color:var(--hi-ink)}
+.tform .seg4 label.s-done.on{background:var(--sheet);color:var(--done-ink)}
+.seg4 input{position:absolute;opacity:0;width:100%;height:100%;inset:0;margin:0;cursor:pointer;min-height:0}
+.tform .seg4 label:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
+.tform #tBlockedRow[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.node{transition:none}}
 </style>
 </head>
@@ -221,23 +293,39 @@ Lead: free text line (optional)
       <label>Owner
         <select id="fOwner"><option value="">Everyone</option></select>
       </label>
+      <label>Show
+        <select id="fStatus"><option value="">All statuses</option><option value="open">Open only</option></select>
+      </label>
+      <input id="fSearch" type="search" placeholder="Search tickets" aria-label="Search tickets">
+      <span class="vsw" role="group" aria-label="View">
+        <button id="vBoard" type="button" aria-pressed="true">Board</button>
+        <button id="vTable" type="button" aria-pressed="false">Table</button>
+      </span>
       <span class="status" id="tstatus" role="status"></span>
     </div>
-    <div class="kanban" id="kanban"></div>
-  </section>
-</div>
+    <div class="tlayout" id="tlayout">
+    <div class="tmain">
+      <div class="tsum" id="tsum"></div>
+      <div class="kanban" id="kanban"></div>
+      <div class="tbl" id="ttable" hidden></div>
+    </div>
 
 <form class="tform" id="tform" hidden aria-label="Ticket">
-  <h4 id="tformTitle">New ticket</h4>
+  <h4><span id="tformTitle">New ticket</span><button class="x" id="tClose" type="button" aria-label="Close">×</button></h4>
   <label>Title<input id="tTitle" required maxlength="200"></label>
+  <div class="lbl" id="tStatusLbl">Status</div>
+  <div class="seg4" role="radiogroup" aria-labelledby="tStatusLbl">
+    <label class="s-todo"><input type="radio" name="tStatus" value="todo">To do</label>
+    <label class="s-doing"><input type="radio" name="tStatus" value="doing">In progress</label>
+    <label class="s-blocked"><input type="radio" name="tStatus" value="blocked">Blocked</label>
+    <label class="s-done"><input type="radio" name="tStatus" value="done">Done</label>
+  </div>
+  <label id="tBlockedRow">Blocked because<input id="tBlocked" maxlength="200" placeholder="What is it waiting on?"></label>
   <div class="trow">
     <label>Type<select id="tType"><option value="ticket">Ticket</option><option value="project">Project</option></select></label>
-    <label>Status<select id="tStatus"><option value="todo">To do</option><option value="doing">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select></label>
-  </div>
-  <div class="trow">
     <label>Owner<input id="tOwner" maxlength="100"></label>
-    <label>Linked to<select id="tTarget"></select></label>
   </div>
+  <label>Linked to<select id="tTarget"></select></label>
   <label>Link (URL)<input id="tUrl" type="url" placeholder="https://"></label>
   <label>Notes<textarea id="tNotes" spellcheck="true"></textarea></label>
   <div class="bar">
@@ -246,6 +334,9 @@ Lead: free text line (optional)
     <button class="btn" id="tDelete" type="button">Delete</button>
   </div>
 </form>
+    </div>
+  </section>
+</div>
 
 <div class="detail" id="detail" hidden role="region" aria-label="Details"></div>
 
@@ -312,7 +403,7 @@ Lead: Jo Park
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var savedMd = $('md').textContent.replace(/^\n+|\n+$/g, '');
-  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null, tdata = { nextId: 1, tickets: [] };
+  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null, tdata = { nextId: 1, tickets: [] }, mapStatsText = '';
 
   /* ---------- parse ---------- */
   function parseNode(body, kind){
@@ -467,7 +558,8 @@ Lead: Jo Park
     var nSheets = state.depts.reduce(function(s, d){ return s + deptNodes(d).length; }, 0);
     var nOpen = tdata.tickets.filter(function(t){ return t.status !== 'done'; }).length;
     $('title').textContent = state.title;
-    $('stats').textContent = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links' + (tdata.tickets.length ? ' · ' + nOpen + ' open tickets' : '');
+    mapStatsText = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links' + (tdata.tickets.length ? ' · ' + nOpen + ' open tickets' : '');
+    $('stats').textContent = $('board').hidden ? mapStatsText : ticketStats();
     document.title = state.title;
     var w = $('warn'); w.innerHTML = '';
     warn.forEach(function(t){ w.appendChild(el('div', null, t)); });
@@ -614,6 +706,121 @@ Lead: Jo Park
   function changed(){ renderBoard(); render(ed.value); saveTickets(); }
   function today(){ return new Date().toISOString().slice(0, 10); }
 
+  function ticketStats(){
+    var all = tdata.tickets, open = all.filter(function(t){ return t.status !== 'done'; }).length;
+    var blocked = all.filter(function(t){ return t.status === 'blocked'; }).length;
+    return all.length ? all.length + ' tickets · ' + open + ' open' + (blocked ? ' · ' + blocked + ' blocked' : '') : 'No tickets yet';
+  }
+  var tview = 'board';
+  try { if (localStorage.getItem('tview') === 'table') tview = 'table'; } catch (e) {}
+  function setView(v){
+    tview = v;
+    try { localStorage.setItem('tview', v); } catch (e) {}
+    renderBoard();
+  }
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function prettyDate(iso){ var d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function initials(n){
+    var w = String(n || '').trim().split(/\s+/);
+    return (w.length > 1 ? w[0].charAt(0) + w[1].charAt(0) : w[0].slice(0, 2)).toUpperCase();
+  }
+  function avatar(owner){ var a = el('span', 'av', initials(owner)); a.title = owner; return a; }
+  /* chip in the map's own colours: green sheet, purple app, yellow department */
+  function linkChip(t){
+    if (!t.target) return null;
+    var tn = targetName(t.target);
+    if (tn === null) return el('span', 'chip orphan', 'unlinked');
+    var cls = t.target.indexOf('dept:') === 0 ? 'dept' : (items[t.target].kind === 'app' ? 'app' : 'sheet');
+    return el('span', 'chip ' + cls, tn);
+  }
+  function visibleTickets(){
+    var q = $('fSearch').value.trim().toLowerCase(), ft = $('fType').value, fo = $('fOwner').value, fs = $('fStatus').value;
+    return tdata.tickets.filter(function(t){
+      if (ft && t.type !== ft) return false;
+      if (fo && t.owner !== fo) return false;
+      if (fs === 'open' && t.status === 'done') return false;
+      if (!q) return true;
+      return [t.id, t.title, t.owner, targetName(t.target), t.notes, t.blocked].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  /* status bar, counts, and one red line per blocked ticket */
+  function renderSummary(){
+    var box = $('tsum'), all = tdata.tickets;
+    box.innerHTML = '';
+    box.hidden = !all.length;
+    if (!all.length) return;
+    var seg = el('div', 'tseg'), leg = el('div', 'tleg');
+    STATUSES.forEach(function(s){
+      var c = all.filter(function(t){ return t.status === s[0]; }).length, sp = el('span');
+      if (c) { var i = el('i', 'st-' + s[0]); i.style.flex = String(c); i.title = c + ' ' + s[1].toLowerCase(); seg.appendChild(i); }
+      sp.appendChild(el('b', null, String(c))); sp.appendChild(document.createTextNode(' ' + s[1].toLowerCase()));
+      leg.appendChild(sp);
+    });
+    var open = all.filter(function(t){ return t.status !== 'done'; }).length;
+    leg.appendChild(el('span', 'sp'));
+    var os = el('span'); os.appendChild(el('b', null, String(open))); os.appendChild(document.createTextNode(' of ' + all.length + ' open'));
+    leg.appendChild(os);
+    box.appendChild(seg); box.appendChild(leg);
+    all.filter(function(t){ return t.status === 'blocked'; }).forEach(function(t){
+      var b = el('button', 'tattn'); b.type = 'button';
+      b.appendChild(el('b', null, 'Blocked'));
+      b.appendChild(document.createTextNode(' ' + t.id + ' ' + t.title + (t.blocked ? ' · ' + t.blocked : '')));
+      b.addEventListener('click', function(){ openForm(t.id); });
+      box.appendChild(b);
+    });
+  }
+  /* table view: grouped by department, with the status changeable in place */
+  function groupOf(t){
+    if (t.target && t.target.indexOf('dept:') === 0 && targetName(t.target)) return t.target.slice(5);
+    var it = t.target && items[t.target];
+    if (it && it.kind !== 'section') return it.kind === 'app' ? 'Connected apps' : it.dept;
+    return 'Not linked';
+  }
+  function renderTable(list){
+    var tb = $('ttable'); tb.innerHTML = '';
+    if (!list.length) { tb.appendChild(el('p', 'kempty tpad', 'No tickets match.')); return; }
+    var head = el('div', 'tr head');
+    ['ID', 'Title', 'Linked to', 'Type', 'Owner', 'Status', 'Updated'].forEach(function(h){ head.appendChild(el('span', null, h)); });
+    tb.appendChild(head);
+    var groups = {};
+    list.forEach(function(t){ var g = groupOf(t); (groups[g] = groups[g] || []).push(t); });
+    state.depts.map(function(d){ return d.name; }).concat(['Connected apps', 'Not linked']).forEach(function(g){
+      if (!groups[g]) return;
+      var rows = groups[g], nOpen = rows.filter(function(t){ return t.status !== 'done'; }).length, nDone = rows.length - nOpen;
+      var gr = el('div', 'tr grp');
+      gr.appendChild(el('span', 'chip dept', g));
+      gr.appendChild(el('span', null, nOpen + ' open' + (nDone ? ', ' + nDone + ' done' : '')));
+      tb.appendChild(gr);
+      rows.forEach(function(t){ tb.appendChild(makeRow(t)); });
+    });
+  }
+  function makeRow(t){
+    var r = el('div', 'tr row' + (t.status === 'done' ? ' done' : '') + (t.id === editingId ? ' sel' : ''));
+    r.tabIndex = 0; r.setAttribute('role', 'button');
+    r.appendChild(el('span', 'id', t.id));
+    var ttl = el('span', 'ttl', t.title);
+    if (t.status === 'blocked' && t.blocked) ttl.appendChild(el('small', null, t.blocked));
+    r.appendChild(ttl);
+    var cell = el('span'), chip = linkChip(t);
+    if (chip) cell.appendChild(chip);
+    r.appendChild(cell);
+    r.appendChild(el('span', 'kind', t.type));
+    var ow = el('span'); if (t.owner) ow.appendChild(avatar(t.owner));
+    r.appendChild(ow);
+    var sel = el('select', 'stsel s-' + t.status);
+    sel.setAttribute('aria-label', 'Status of ' + t.id);
+    STATUSES.forEach(function(s){ var o = el('option', null, s[1]); o.value = s[0]; sel.appendChild(o); });
+    sel.value = t.status;
+    sel.addEventListener('click', function(ev){ ev.stopPropagation(); });
+    sel.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
+    sel.addEventListener('change', function(){ t.status = sel.value; if (t.status !== 'blocked') t.blocked = ''; t.updated = today(); changed(); });
+    var sc = el('span'); sc.appendChild(sel); r.appendChild(sc);
+    r.appendChild(el('span', 'upd', prettyDate(t.updated)));
+    r.addEventListener('click', function(){ openForm(t.id); });
+    r.addEventListener('keydown', function(ev){ if (ev.target === r && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); openForm(t.id); } });
+    return r;
+  }
+
   function renderBoard(){
     var owners = [];
     tdata.tickets.forEach(function(t){ if (t.owner && owners.indexOf(t.owner) < 0) owners.push(t.owner); });
@@ -623,11 +830,18 @@ Lead: Jo Park
     var all = el('option', null, 'Everyone'); all.value = ''; fo.appendChild(all);
     owners.forEach(function(o){ var op = el('option', null, o); op.value = o; fo.appendChild(op); });
     fo.value = owners.indexOf(cur) >= 0 ? cur : '';
-    var ft = $('fType').value, fow = fo.value;
+    renderSummary();
+    $('kanban').hidden = tview !== 'board'; $('ttable').hidden = tview !== 'table';
+    $('vBoard').setAttribute('aria-pressed', String(tview === 'board'));
+    $('vTable').setAttribute('aria-pressed', String(tview === 'table'));
+    var shown = visibleTickets();
+    if (tview === 'table') { renderTable(shown); return; }
     var k = $('kanban'); k.innerHTML = '';
     STATUSES.forEach(function(s){
-      var list = tdata.tickets.filter(function(t){ return t.status === s[0] && (!ft || t.type === ft) && (!fow || t.owner === fow); });
-      var col = el('section', 'kcol'), h = el('h3', null, s[1]);
+      var list = shown.filter(function(t){ return t.status === s[0]; });
+      var col = el('section', 'kcol'), h = el('h3'), hl = el('span');
+      hl.appendChild(el('i', 'dot st-' + s[0])); hl.appendChild(document.createTextNode(s[1]));
+      h.appendChild(hl);
       h.appendChild(el('span', 'kcount', String(list.length)));
       col.appendChild(h);
       col.addEventListener('dragover', function(ev){ ev.preventDefault(); col.classList.add('over'); });
@@ -643,23 +857,22 @@ Lead: Jo Park
     });
   }
   function makeCard(t){
-    var c = el('div', 'tcard' + (t.status === 'blocked' ? ' blocked' : ''));
+    var c = el('div', 'tcard' + (t.status === 'blocked' ? ' blocked' : '') + (t.status === 'done' ? ' done' : '') + (t.id === editingId ? ' sel' : ''));
     c.tabIndex = 0; c.setAttribute('role', 'button'); c.draggable = true;
     var top = el('div', 'top2', t.id);
-    top.appendChild(el('span', 'pill ' + t.type, t.type));
+    top.appendChild(el('span', 'kind', t.type));
     c.appendChild(top);
-    c.appendChild(el('div', 'tt', t.title));
-    var tn = targetName(t.target), meta = el('div', 'tm');
-    var bits = [];
-    if (t.owner) bits.push(t.owner);
-    if (tn) bits.push(tn);
-    meta.appendChild(document.createTextNode(bits.join(' · ')));
-    if (tn === null) { meta.appendChild(document.createTextNode(bits.length ? ' · ' : '')); meta.appendChild(el('span', 'orphan', 'unlinked')); }
+    var title = el('div', 'tt', t.title);
     if (t.url && /^https?:\/\//i.test(t.url)) {
-      var a = el('a', null, 'link'); a.href = t.url; a.target = '_blank'; a.rel = 'noopener';
+      var a = el('a', null, '↗'); a.href = t.url; a.target = '_blank'; a.rel = 'noopener'; a.setAttribute('aria-label', 'Open link');
       a.addEventListener('click', function(ev){ ev.stopPropagation(); });
-      meta.appendChild(document.createTextNode(' · ')); meta.appendChild(a);
+      title.appendChild(a);
     }
+    c.appendChild(title);
+    if (t.status === 'blocked' && t.blocked) c.appendChild(el('div', 'why', t.blocked));
+    var meta = el('div', 'row2'), chip = linkChip(t);
+    meta.appendChild(chip || el('span'));
+    if (t.owner) meta.appendChild(avatar(t.owner));
     c.appendChild(meta);
     c.addEventListener('click', function(){ openForm(t.id); });
     c.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openForm(t.id); } });
@@ -690,16 +903,25 @@ Lead: Jo Park
     $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ticket';
     $('tTitle').value = t ? t.title : '';
     $('tType').value = t ? t.type : 'ticket';
-    $('tStatus').value = t ? t.status : 'todo';
+    setFormStatus(t ? t.status : 'todo');
+    $('tBlocked').value = t ? t.blocked || '' : '';
     $('tOwner').value = t ? t.owner || '' : '';
     $('tUrl').value = t ? t.url || '' : '';
     $('tNotes').value = t ? t.notes || '' : '';
     fillTargets(t ? t.target : '');
     $('tDelete').hidden = !t;
-    $('tform').hidden = false;
+    $('tform').hidden = false; $('tlayout').classList.add('open');
+    renderBoard();
     $('tTitle').focus();
   }
-  function closeForm(){ $('tform').hidden = true; editingId = null; }
+  function closeForm(){ $('tform').hidden = true; $('tlayout').classList.remove('open'); editingId = null; renderBoard(); }
+  function getFormStatus(){ var r = document.querySelector('#tform input[name="tStatus"]:checked'); return r ? r.value : 'todo'; }
+  function syncStatusUI(){
+    var cur = getFormStatus();
+    Array.prototype.forEach.call(document.querySelectorAll('#tform .seg4 label'), function(l){ l.classList.toggle('on', l.querySelector('input').value === cur); });
+    $('tBlockedRow').hidden = cur !== 'blocked';
+  }
+  function setFormStatus(s){ document.querySelector('#tform input[value="' + s + '"]').checked = true; syncStatusUI(); }
   $('newTix').addEventListener('click', function(){ openForm(null); });
   $('tCancel').addEventListener('click', closeForm);
   $('tDelete').addEventListener('click', function(){
@@ -710,8 +932,9 @@ Lead: Jo Park
   });
   $('tform').addEventListener('submit', function(ev){
     ev.preventDefault();
-    var v = { title: $('tTitle').value.trim(), type: $('tType').value, status: $('tStatus').value, owner: $('tOwner').value.trim(),
-              url: $('tUrl').value.trim(), target: $('tTarget').value, notes: $('tNotes').value.trim(), updated: today() };
+    var v = { title: $('tTitle').value.trim(), type: $('tType').value, status: getFormStatus(), owner: $('tOwner').value.trim(),
+              url: $('tUrl').value.trim(), target: $('tTarget').value, notes: $('tNotes').value.trim(),
+              blocked: getFormStatus() === 'blocked' ? $('tBlocked').value.trim() : '', updated: today() };
     if (!v.title) return;
     var t = editingId && findTicket(editingId);
     if (t) Object.keys(v).forEach(function(key){ t[key] = v[key]; });
@@ -720,6 +943,12 @@ Lead: Jo Park
   });
   $('fType').addEventListener('change', renderBoard);
   $('fOwner').addEventListener('change', renderBoard);
+  $('fStatus').addEventListener('change', renderBoard);
+  $('fSearch').addEventListener('input', renderBoard);
+  $('vBoard').addEventListener('click', function(){ setView('board'); });
+  $('vTable').addEventListener('click', function(){ setView('table'); });
+  $('tClose').addEventListener('click', closeForm);
+  Array.prototype.forEach.call(document.querySelectorAll('#tform input[name="tStatus"]'), function(r){ r.addEventListener('change', syncStatusUI); });
   document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && !$('tform').hidden) closeForm(); });
 
   function showTab(name){
@@ -727,6 +956,7 @@ Lead: Jo Park
     $('mapView').hidden = t; $('board').hidden = !t; $('editBtn').hidden = t;
     $('tabMap').setAttribute('aria-selected', String(!t)); $('tabTix').setAttribute('aria-selected', String(t));
     if (t) select(null); else { closeForm(); setTimeout(drawWires, 50); }
+    if (state) $('stats').textContent = t ? ticketStats() : mapStatsText;
     try { history.replaceState(null, '', t ? '#tickets' : location.pathname + location.search); } catch (e) {}
   }
   $('tabMap').addEventListener('click', function(){ showTab('map'); });
