@@ -1,0 +1,11 @@
+{
+  "nextId": 7,
+  "tickets": [
+    { "id": "T-1", "title": "Rebuild Orders import", "type": "project", "status": "doing", "owner": "Kim", "url": "", "target": "orders", "notes": "Replace the manual export with IMPORTRANGE.", "updated": "2026-11-10" },
+    { "id": "T-2", "title": "Fix CRM sync failures", "type": "ticket", "status": "blocked", "owner": "Ana", "url": "", "target": "crm", "notes": "Sync stops every night after the key expires.", "blocked": "Waiting on vendor API key", "updated": "2026-11-12" },
+    { "id": "T-3", "title": "Automate headcount copy", "type": "ticket", "status": "todo", "owner": "Jo", "url": "", "target": "payroll summary", "notes": "Remove the manual copy before each payroll run.", "updated": "2026-11-13" },
+    { "id": "T-4", "title": "Month-end close checklist", "type": "project", "status": "todo", "owner": "Sam", "url": "", "target": "dept:Finance", "notes": "", "updated": "2026-11-14" },
+    { "id": "T-5", "title": "Lock Budget Tracker after sign-off", "type": "ticket", "status": "done", "owner": "Sam", "url": "", "target": "budget tracker", "notes": "", "updated": "2026-11-01" },
+    { "id": "T-6", "title": "Slack reminders for new starters", "type": "ticket", "status": "doing", "owner": "Jo", "url": "", "target": "slack", "notes": "", "updated": "2026-11-15" }
+  ]
+}

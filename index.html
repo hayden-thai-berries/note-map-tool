@@ -46,6 +46,7 @@ h1{margin:0;font-size:26px;line-height:1.15;font-weight:600;text-wrap:balance}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
 .btn:disabled{opacity:.55;cursor:default}
 .main{display:flex;flex-direction:column;gap:20px}
+.main[hidden]{display:none}
 .editing .main{flex-direction:column-reverse}
 @media (min-width:1000px){
   .editing .main{flex-direction:row-reverse;align-items:flex-start}
@@ -114,6 +115,115 @@ textarea{width:100%;min-height:420px;resize:vertical;font:13px/1.5 var(--mono);b
 details{font-size:13px;color:var(--muted)}
 summary{cursor:pointer;color:var(--ink)}
 pre{margin:8px 0 0;padding:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font:12px/1.5 var(--mono);color:var(--ink);overflow-x:auto;white-space:pre}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tab{border:0;border-bottom:2px solid transparent;background:none;padding:8px 12px;cursor:pointer;color:var(--muted);min-height:38px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tix{font-size:11px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--accent);color:var(--surface);margin-left:6px;letter-spacing:0;text-transform:none}
+.pill.project{background:var(--app);color:var(--ink)}
+.pill.ticket{background:var(--lo);color:var(--lo-ink)}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:36px}
+.board[hidden]{display:none}
+.bbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:16px}
+.bbar label{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:start}
+.kanban[hidden]{display:none}
+.kcol{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.kcol.over{outline:2px dashed var(--accent);outline-offset:2px}
+.kcol h3{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
+.kcount{color:var(--muted);font-weight:400}
+.kempty{margin:0;color:var(--muted);font-size:13px}
+.tcard{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);cursor:pointer}
+.tcard:hover{border-color:var(--accent)}
+.tcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tcard.blocked{border-color:var(--hi-ink)}
+.tcard.done{opacity:.75}
+.tcard.sel{outline:2px solid var(--accent);outline-offset:1px}
+.tcard .top2{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.tcard .tt{font-weight:600;margin-top:2px}
+.tcard .tm{font-size:13px;color:var(--muted);margin-top:2px}
+.tcard .tm a{color:var(--accent)}
+.tcard .orphan{color:var(--hi-ink)}
+.tform{position:sticky;top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.tform[hidden]{display:none}
+.tform h4{margin:0;font-size:16px}
+.tform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.tform input,.tform select,.tform textarea{width:100%}
+.tform textarea{min-height:90px;font:14px/1.45 var(--font)}
+.trow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.trow{grid-template-columns:1fr}}
+/* tickets: status colours, summary strip, drawer layout, table view */
+:root{--doing:#dcebfb; --doing-ink:#0b5aa8; --done-ink:#1f6b44}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--doing:#14304f; --doing-ink:#8cc3ff; --done-ink:#7fd1a3}}
+:root[data-theme="dark"]{--doing:#14304f; --doing-ink:#8cc3ff; --done-ink:#7fd1a3}
+.s-todo{background:var(--lo);color:var(--lo-ink)}
+.s-doing{background:var(--doing);color:var(--doing-ink)}
+.s-blocked{background:var(--hi);color:var(--hi-ink)}
+.s-done{background:var(--sheet);color:var(--done-ink)}
+.chip{display:inline-flex;align-items:center;font-size:12px;padding:1px 8px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.sheet{background:var(--sheet);border-color:var(--sheet-edge)}
+.chip.app{background:var(--app);border-color:var(--app-edge)}
+.chip.dept{background:var(--note);border-color:var(--note-edge)}
+.chip.orphan{background:var(--hi);border-color:var(--hi-ink);color:var(--hi-ink)}
+.av{width:22px;height:22px;border-radius:50%;background:var(--lo);color:var(--lo-ink);font-size:10px;font-weight:600;display:inline-grid;place-items:center;flex:none}
+.id{font:12px var(--mono);color:var(--muted)}
+.kind{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tcard{display:flex;flex-direction:column;gap:6px}
+.tcard .tt a{color:var(--accent);margin-left:6px;text-decoration:none}
+.tcard .row2{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.why{background:var(--hi);color:var(--hi-ink);border-radius:6px;padding:4px 8px;font-size:12px}
+.kcol h3 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.bbar input[type=search]{min-width:180px}
+.vsw{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.vsw button{border:0;background:var(--surface);padding:7px 14px;cursor:pointer;min-height:36px;color:var(--muted)}
+.vsw button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:500}
+.vsw button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tlayout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.tlayout.open{grid-template-columns:minmax(0,1fr) 300px}
+@media (max-width:900px){.tlayout.open{grid-template-columns:minmax(0,1fr)}.tlayout.open .tform{order:-1;position:static}}
+.tmain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tsum{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.tsum[hidden]{display:none}
+.tseg{display:flex;gap:2px;height:10px;border-radius:99px;overflow:hidden}
+.tseg i{display:block}
+.st-todo{background:var(--lo-ink)}.st-doing{background:var(--doing-ink)}.st-blocked{background:var(--hi-ink)}.st-done{background:var(--done-ink)}
+.tleg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted)}
+.tleg b{color:var(--ink);font-weight:600}
+.tleg .sp{flex:1}
+.tattn{display:block;width:100%;text-align:left;border:0;cursor:pointer;background:var(--hi);color:var(--hi-ink);border-radius:8px;padding:6px 10px;font-size:13px}
+.tattn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.tbl[hidden]{display:none}
+.tr{display:grid;grid-template-columns:52px minmax(0,1fr) 150px 70px 40px 124px 60px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;min-width:760px}
+.tr.head{border-top:0;background:var(--bg);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tr.grp{background:var(--bg);display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.tr.row{cursor:pointer}
+.tr.row:hover{background:var(--bg)}
+.tr.row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tr.row.sel{background:var(--bg);outline:2px solid var(--accent);outline-offset:-2px}
+.tr.row.done{opacity:.7}
+.tr .ttl{font-weight:500;min-width:0}
+.tr .ttl small{display:block;color:var(--hi-ink);font-size:12px;font-weight:400}
+.tr .upd{color:var(--muted);font-size:13px}
+.stsel{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:99px;padding:3px 8px;min-height:0;cursor:pointer;max-width:100%}
+.tpad{padding:14px}
+.tform h4{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.detail .quick{display:flex;gap:6px;margin-top:12px}
+.detail .quick input{flex:1;min-width:0}
+.detail .meta2.ok{color:var(--done-ink)}
+.detail .meta2.bad{color:var(--hi-ink)}
+.tform .x{border:0;background:none;font-size:22px;line-height:1;padding:2px 8px;cursor:pointer;color:var(--muted)}
+.tform .lbl{font-size:13px;color:var(--muted);margin-bottom:-6px}
+.seg4{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tform .seg4 label{position:relative;flex-direction:row;justify-content:center;text-align:center;padding:7px 2px;font-size:11px;cursor:pointer;color:var(--muted);background:var(--surface)}
+.tform .seg4 label.on{font-weight:600}
+.tform .seg4 label.s-todo.on{background:var(--lo);color:var(--lo-ink)}
+.tform .seg4 label.s-doing.on{background:var(--doing);color:var(--doing-ink)}
+.tform .seg4 label.s-blocked.on{background:var(--hi);color:var(--hi-ink)}
+.tform .seg4 label.s-done.on{background:var(--sheet);color:var(--done-ink)}
+.seg4 input{position:absolute;opacity:0;width:100%;height:100%;inset:0;margin:0;cursor:pointer;min-height:0}
+.tform .seg4 label:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
+.tform #tBlockedRow[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.node{transition:none}}
 </style>
 </head>
@@ -123,10 +233,14 @@ pre{margin:8px 0 0;padding:10px;background:var(--bg);border:1px solid var(--line
     <div>
       <h1 id="title"></h1>
       <p class="sub" id="stats"></p>
+      <div class="tabs" role="tablist">
+        <button class="tab" id="tabMap" type="button" role="tab" aria-selected="true">Map</button>
+        <button class="tab" id="tabTix" type="button" role="tab" aria-selected="false">Tickets</button>
+      </div>
     </div>
     <button class="btn" id="editBtn" type="button">Edit</button>
   </header>
-  <div class="main">
+  <div class="main" id="mapView">
     <section class="mapPane">
       <div class="map" id="map"></div>
       <div class="warn" id="warn"></div>
@@ -174,6 +288,58 @@ Lead: free text line (optional)
       </details>
     </aside>
   </div>
+  <section class="board" id="board" hidden>
+    <div class="bbar">
+      <button class="btn primary" id="newTix" type="button">New ticket</button>
+      <label>Type
+        <select id="fType"><option value="">All</option><option value="ticket">Tickets</option><option value="project">Projects</option></select>
+      </label>
+      <label>Owner
+        <select id="fOwner"><option value="">Everyone</option></select>
+      </label>
+      <label>Show
+        <select id="fStatus"><option value="">All statuses</option><option value="open">Open only</option></select>
+      </label>
+      <input id="fSearch" type="search" placeholder="Search tickets" aria-label="Search tickets">
+      <span class="vsw" role="group" aria-label="View">
+        <button id="vBoard" type="button" aria-pressed="true">Board</button>
+        <button id="vTable" type="button" aria-pressed="false">Table</button>
+      </span>
+      <span class="status" id="tstatus" role="status"></span>
+    </div>
+    <div class="tlayout" id="tlayout">
+    <div class="tmain">
+      <div class="tsum" id="tsum"></div>
+      <div class="kanban" id="kanban"></div>
+      <div class="tbl" id="ttable" hidden></div>
+    </div>
+
+<form class="tform" id="tform" hidden aria-label="Ticket">
+  <h4><span id="tformTitle">New ticket</span><button class="x" id="tClose" type="button" aria-label="Close">×</button></h4>
+  <label>Title<input id="tTitle" required maxlength="200"></label>
+  <div class="lbl" id="tStatusLbl">Status</div>
+  <div class="seg4" role="radiogroup" aria-labelledby="tStatusLbl">
+    <label class="s-todo"><input type="radio" name="tStatus" value="todo">To do</label>
+    <label class="s-doing"><input type="radio" name="tStatus" value="doing">In progress</label>
+    <label class="s-blocked"><input type="radio" name="tStatus" value="blocked">Blocked</label>
+    <label class="s-done"><input type="radio" name="tStatus" value="done">Done</label>
+  </div>
+  <label id="tBlockedRow">Blocked because<input id="tBlocked" maxlength="200" placeholder="What is it waiting on?"></label>
+  <div class="trow">
+    <label>Type<select id="tType"><option value="ticket">Ticket</option><option value="project">Project</option></select></label>
+    <label>Owner<input id="tOwner" maxlength="100"></label>
+  </div>
+  <label>Linked to<select id="tTarget"></select></label>
+  <label>Link (URL)<input id="tUrl" type="url" placeholder="https://"></label>
+  <label>Notes<textarea id="tNotes" spellcheck="true"></textarea></label>
+  <div class="bar">
+    <button class="btn primary" type="submit">Save</button>
+    <button class="btn" id="tCancel" type="button">Cancel</button>
+    <button class="btn" id="tDelete" type="button">Delete</button>
+  </div>
+</form>
+    </div>
+  </section>
 </div>
 
 <div class="detail" id="detail" hidden role="region" aria-label="Details"></div>
@@ -241,7 +407,7 @@ Lead: Jo Park
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var savedMd = $('md').textContent.replace(/^\n+|\n+$/g, '');
-  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null;
+  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null, tdata = { nextId: 1, tickets: [] }, mapStatsText = '', detailNote = '', detailWarn = '';
 
   /* ---------- parse ---------- */
   function parseNode(body, kind){
@@ -318,6 +484,8 @@ Lead: Jo Park
       left.appendChild(a);
     } else left.appendChild(document.createTextNode(n.name));
     if (n.note) left.appendChild(infoDot());
+    var open = openFor(n.key).length;
+    if (open) left.appendChild(tixBadge(open));
     nm.appendChild(left);
     if (n.crit) nm.appendChild(el('span', 'pill ' + n.crit, n.crit));
     d.appendChild(nm);
@@ -344,7 +512,9 @@ Lead: Jo Park
     var cols = el('div', 'cols');
     state.depts.forEach(function(dp, di){
       var box = el('section', 'dept');
-      box.appendChild(el('h2', null, dp.name));
+      var h2 = el('h2', null, dp.name), dOpen = openFor('dept:' + dp.name).length;
+      if (dOpen) h2.appendChild(tixBadge(dOpen));
+      box.appendChild(h2);
       dp.text.forEach(function(t){ box.appendChild(el('p', 'meta', t)); });
       dp.sections.forEach(function(sc, si){
         var wrap = el('div', 'sec');
@@ -386,9 +556,14 @@ Lead: Jo Park
       li.appendChild(el('span', 'how', (/manual/i.test(l.label) ? 'Manual · ' : 'Automatic · ') + (l.label || 'method not set')));
       ul.appendChild(li);
     });
+    tdata.tickets.forEach(function(t){
+      if (t.target && targetName(t.target) === null) warn.push('Ticket ' + t.id + ' is linked to "' + t.target + '", which is not on the map.');
+    });
     var nSheets = state.depts.reduce(function(s, d){ return s + deptNodes(d).length; }, 0);
+    var nOpen = tdata.tickets.filter(function(t){ return t.status !== 'done'; }).length;
     $('title').textContent = state.title;
-    $('stats').textContent = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links';
+    mapStatsText = state.depts.length + ' departments · ' + nSheets + ' sheets · ' + state.apps.length + ' apps · ' + state.links.length + ' links' + (tdata.tickets.length ? ' · ' + nOpen + ' open tickets' : '');
+    $('stats').textContent = $('board').hidden ? mapStatsText : ticketStats();
     document.title = state.title;
     var w = $('warn'); w.innerHTML = '';
     warn.forEach(function(t){ w.appendChild(el('div', null, t)); });
@@ -433,7 +608,7 @@ Lead: Jo Park
     });
     applySelection();
   }
-  function select(k){ selected = k; applySelection(); }
+  function select(k){ if (k !== selected) { detailNote = ''; detailWarn = ''; } selected = k; applySelection(); }
   function applySelection(){
     var map = $('map'), on = {}, isNode = !!(selected && nodeEls[selected]);
     Array.prototype.forEach.call(map.querySelectorAll('path.wire'), function(p){
@@ -450,6 +625,10 @@ Lead: Jo Park
   function showDetail(){
     var box = $('detail'), it = selected && items[selected];
     if (!it) { box.hidden = true; box.innerHTML = ''; $('page').classList.remove('detailOpen'); return; }
+    /* keep a half-typed quick-add title when the detail is redrawn for the same item */
+    var prevQ = box.dataset.key === selected ? box.querySelector('.quick input') : null;
+    var prevVal = prevQ ? prevQ.value : '', hadFocus = !!prevQ && document.activeElement === prevQ;
+    box.dataset.key = selected;
     box.innerHTML = '';
     var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close');
     x.addEventListener('click', function(){ select(null); });
@@ -461,12 +640,31 @@ Lead: Jo Park
     if (it.kind === 'section') bits.push(it.dept + ' · section');
     else { bits.push(it.kind === 'app' ? 'Connected app' : (it.dept || '')); if (it.details) bits.push(it.details); }
     box.appendChild(el('p', 'meta2', bits.filter(Boolean).join(' · ')));
+    if (detailNote) box.appendChild(el('p', 'meta2 ok', detailNote));
+    if (detailWarn) box.appendChild(el('p', 'meta2 bad', detailWarn));
     if (it.url && /^https?:\/\//i.test(it.url)) {
       var lp = el('p', 'meta2'), a = el('a', null, 'Open sheet'); a.href = it.url; a.target = '_blank'; a.rel = 'noopener';
       lp.appendChild(a); box.appendChild(lp);
     }
     var body = el('p', 'body' + (it.note ? '' : ' empty'), it.note || 'No note yet. Add an indented line under this item in the Markdown.');
     box.appendChild(body);
+    var linked = tdata.tickets.filter(function(t){ return t.target === selected; });
+    if (linked.length) {
+      var tu = el('ul', 'conns');
+      linked.forEach(function(t){
+        var li = el('li'), b = el('button', null, t.id + ' ' + t.title); b.type = 'button';
+        b.addEventListener('click', function(){ showTab('tickets'); openForm(t.id); });
+        li.appendChild(document.createTextNode(statusLabel(t.status) + ' · '));
+        li.appendChild(b); tu.appendChild(li);
+      });
+      box.appendChild(el('p', 'meta2', 'Tickets and projects'));
+      box.appendChild(tu);
+    }
+    if (nodeEls[selected]) {
+      var qa = quickAdd(selected, it, prevVal);
+      box.appendChild(qa);
+      if (hadFocus) qa.querySelector('input').focus();
+    }
     if (nodeEls[selected]) {
       var ul = el('ul', 'conns'), n = 0;
       state.links.forEach(function(l){
@@ -491,6 +689,335 @@ Lead: Jo Park
   if (window.ResizeObserver) new ResizeObserver(function(){ drawWires(); }).observe($('map'));
   window.addEventListener('resize', drawWires);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWires);
+
+  /* ---------- tickets: maps/<map>.tickets.json, shown as a Kanban board ---------- */
+  var STATUSES = [['todo', 'To do'], ['doing', 'In progress'], ['blocked', 'Blocked'], ['done', 'Done']];
+  var editingId = null, tstatus = $('tstatus');
+  function setTStatus(t){ tstatus.textContent = t || ''; }
+  function ticketsFile(){ return param.replace(/\.md$/, '') + '.tickets.json'; }
+  function statusLabel(s){ for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i][0] === s) return STATUSES[i][1]; return s; }
+  function findTicket(id){ for (var i = 0; i < tdata.tickets.length; i++) if (tdata.tickets[i].id === id) return tdata.tickets[i]; return null; }
+  function openFor(target){ return tdata.tickets.filter(function(t){ return t.target === target && t.status !== 'done'; }); }
+  function tixBadge(c){
+    var b = el('span', 'tix', String(c));
+    b.title = c + ' open ticket' + (c > 1 ? 's' : ''); b.setAttribute('aria-label', b.title);
+    return b;
+  }
+  /* name of the map item a ticket points to: '' = not linked, null = no longer on the map */
+  function targetName(t){
+    if (!t) return '';
+    if (t.indexOf('dept:') === 0) {
+      var dn = t.slice(5);
+      return state.depts.some(function(d){ return d.name === dn; }) ? dn : null;
+    }
+    return items[t] && items[t].kind !== 'section' ? items[t].name : null;
+  }
+  function saveTickets(){
+    setTStatus('Saving…'); detailWarn = '';
+    fetch('maps/' + ticketsFile(), { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(tdata, null, 2) + '\n' })
+      .then(function(r){ if (!r.ok) throw new Error(r.status); setTStatus('Saved to maps/' + ticketsFile() + '.'); })
+      .catch(function(){
+        var msg = 'Could not save here. Start the page with start.command (it runs server.py). Changes last only until you reload.';
+        setTStatus(msg);
+        if (!$('detail').hidden) { detailWarn = msg; showDetail(); }
+      });
+  }
+  function changed(){ renderBoard(); render(ed.value); saveTickets(); }
+  function today(){ return new Date().toISOString().slice(0, 10); }
+
+  /* "Add a ticket to <item>" row in the map's detail panel: creates a ticket already linked to the selected sheet or app */
+  function quickAdd(key, it, value){
+    var f = el('form', 'quick'), inp = el('input'), add = el('button', 'btn primary', 'Add'), more = el('button', 'btn', 'More…');
+    inp.type = 'text'; inp.maxLength = 200; inp.value = value || '';
+    inp.placeholder = 'Add a ticket to ' + it.name + '…';
+    inp.setAttribute('aria-label', 'New ticket title for ' + it.name);
+    add.type = 'submit'; more.type = 'button'; more.title = 'Add with owner, link and notes';
+    f.appendChild(inp); f.appendChild(add); f.appendChild(more);
+    f.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var title = inp.value.trim();
+      if (!title) { inp.focus(); return; }
+      var t = { id: 'T-' + tdata.nextId++, title: title, type: 'ticket', status: 'todo', owner: '', url: '', target: key, notes: '', blocked: '', updated: today() };
+      tdata.tickets.push(t);
+      inp.value = '';
+      changed(); select(key);
+      detailNote = 'Added ' + t.id + '.'; showDetail();
+    });
+    more.addEventListener('click', function(){ showTab('tickets'); openForm(null, key); });
+    return f;
+  }
+  function ticketStats(){
+    var all = tdata.tickets, open = all.filter(function(t){ return t.status !== 'done'; }).length;
+    var blocked = all.filter(function(t){ return t.status === 'blocked'; }).length;
+    return all.length ? all.length + ' tickets · ' + open + ' open' + (blocked ? ' · ' + blocked + ' blocked' : '') : 'No tickets yet';
+  }
+  var tview = 'board';
+  try { if (localStorage.getItem('tview') === 'table') tview = 'table'; } catch (e) {}
+  function setView(v){
+    tview = v;
+    try { localStorage.setItem('tview', v); } catch (e) {}
+    renderBoard();
+  }
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function prettyDate(iso){ var d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function initials(n){
+    var w = String(n || '').trim().split(/\s+/);
+    return (w.length > 1 ? w[0].charAt(0) + w[1].charAt(0) : w[0].slice(0, 2)).toUpperCase();
+  }
+  function avatar(owner){ var a = el('span', 'av', initials(owner)); a.title = owner; return a; }
+  /* chip in the map's own colours: green sheet, purple app, yellow department */
+  function linkChip(t){
+    if (!t.target) return null;
+    var tn = targetName(t.target);
+    if (tn === null) return el('span', 'chip orphan', 'unlinked');
+    var cls = t.target.indexOf('dept:') === 0 ? 'dept' : (items[t.target].kind === 'app' ? 'app' : 'sheet');
+    return el('span', 'chip ' + cls, tn);
+  }
+  function visibleTickets(){
+    var q = $('fSearch').value.trim().toLowerCase(), ft = $('fType').value, fo = $('fOwner').value, fs = $('fStatus').value;
+    return tdata.tickets.filter(function(t){
+      if (ft && t.type !== ft) return false;
+      if (fo && t.owner !== fo) return false;
+      if (fs === 'open' && t.status === 'done') return false;
+      if (!q) return true;
+      return [t.id, t.title, t.owner, targetName(t.target), t.notes, t.blocked].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  /* status bar, counts, and one red line per blocked ticket */
+  function renderSummary(){
+    var box = $('tsum'), all = tdata.tickets;
+    box.innerHTML = '';
+    box.hidden = !all.length;
+    if (!all.length) return;
+    var seg = el('div', 'tseg'), leg = el('div', 'tleg');
+    STATUSES.forEach(function(s){
+      var c = all.filter(function(t){ return t.status === s[0]; }).length, sp = el('span');
+      if (c) { var i = el('i', 'st-' + s[0]); i.style.flex = String(c); i.title = c + ' ' + s[1].toLowerCase(); seg.appendChild(i); }
+      sp.appendChild(el('b', null, String(c))); sp.appendChild(document.createTextNode(' ' + s[1].toLowerCase()));
+      leg.appendChild(sp);
+    });
+    var open = all.filter(function(t){ return t.status !== 'done'; }).length;
+    leg.appendChild(el('span', 'sp'));
+    var os = el('span'); os.appendChild(el('b', null, String(open))); os.appendChild(document.createTextNode(' of ' + all.length + ' open'));
+    leg.appendChild(os);
+    box.appendChild(seg); box.appendChild(leg);
+    all.filter(function(t){ return t.status === 'blocked'; }).forEach(function(t){
+      var b = el('button', 'tattn'); b.type = 'button';
+      b.appendChild(el('b', null, 'Blocked'));
+      b.appendChild(document.createTextNode(' ' + t.id + ' ' + t.title + (t.blocked ? ' · ' + t.blocked : '')));
+      b.addEventListener('click', function(){ openForm(t.id); });
+      box.appendChild(b);
+    });
+  }
+  /* table view: grouped by department, with the status changeable in place */
+  function groupOf(t){
+    if (t.target && t.target.indexOf('dept:') === 0 && targetName(t.target)) return t.target.slice(5);
+    var it = t.target && items[t.target];
+    if (it && it.kind !== 'section') return it.kind === 'app' ? 'Connected apps' : it.dept;
+    return 'Not linked';
+  }
+  function renderTable(list){
+    var tb = $('ttable'); tb.innerHTML = '';
+    if (!list.length) { tb.appendChild(el('p', 'kempty tpad', 'No tickets match.')); return; }
+    var head = el('div', 'tr head');
+    ['ID', 'Title', 'Linked to', 'Type', 'Owner', 'Status', 'Updated'].forEach(function(h){ head.appendChild(el('span', null, h)); });
+    tb.appendChild(head);
+    var groups = {};
+    list.forEach(function(t){ var g = groupOf(t); (groups[g] = groups[g] || []).push(t); });
+    state.depts.map(function(d){ return d.name; }).concat(['Connected apps', 'Not linked']).forEach(function(g){
+      if (!groups[g]) return;
+      var rows = groups[g], nOpen = rows.filter(function(t){ return t.status !== 'done'; }).length, nDone = rows.length - nOpen;
+      var gr = el('div', 'tr grp');
+      gr.appendChild(el('span', 'chip dept', g));
+      gr.appendChild(el('span', null, nOpen + ' open' + (nDone ? ', ' + nDone + ' done' : '')));
+      tb.appendChild(gr);
+      rows.forEach(function(t){ tb.appendChild(makeRow(t)); });
+    });
+  }
+  function makeRow(t){
+    var r = el('div', 'tr row' + (t.status === 'done' ? ' done' : '') + (t.id === editingId ? ' sel' : ''));
+    r.tabIndex = 0; r.setAttribute('role', 'button');
+    r.appendChild(el('span', 'id', t.id));
+    var ttl = el('span', 'ttl', t.title);
+    if (t.status === 'blocked' && t.blocked) ttl.appendChild(el('small', null, t.blocked));
+    r.appendChild(ttl);
+    var cell = el('span'), chip = linkChip(t);
+    if (chip) cell.appendChild(chip);
+    r.appendChild(cell);
+    r.appendChild(el('span', 'kind', t.type));
+    var ow = el('span'); if (t.owner) ow.appendChild(avatar(t.owner));
+    r.appendChild(ow);
+    var sel = el('select', 'stsel s-' + t.status);
+    sel.setAttribute('aria-label', 'Status of ' + t.id);
+    STATUSES.forEach(function(s){ var o = el('option', null, s[1]); o.value = s[0]; sel.appendChild(o); });
+    sel.value = t.status;
+    sel.addEventListener('click', function(ev){ ev.stopPropagation(); });
+    sel.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
+    sel.addEventListener('change', function(){ t.status = sel.value; if (t.status !== 'blocked') t.blocked = ''; t.updated = today(); changed(); });
+    var sc = el('span'); sc.appendChild(sel); r.appendChild(sc);
+    r.appendChild(el('span', 'upd', prettyDate(t.updated)));
+    r.addEventListener('click', function(){ openForm(t.id); });
+    r.addEventListener('keydown', function(ev){ if (ev.target === r && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); openForm(t.id); } });
+    return r;
+  }
+
+  function renderBoard(){
+    var owners = [];
+    tdata.tickets.forEach(function(t){ if (t.owner && owners.indexOf(t.owner) < 0) owners.push(t.owner); });
+    owners.sort();
+    var fo = $('fOwner'), cur = fo.value;
+    fo.innerHTML = '';
+    var all = el('option', null, 'Everyone'); all.value = ''; fo.appendChild(all);
+    owners.forEach(function(o){ var op = el('option', null, o); op.value = o; fo.appendChild(op); });
+    fo.value = owners.indexOf(cur) >= 0 ? cur : '';
+    renderSummary();
+    $('kanban').hidden = tview !== 'board'; $('ttable').hidden = tview !== 'table';
+    $('vBoard').setAttribute('aria-pressed', String(tview === 'board'));
+    $('vTable').setAttribute('aria-pressed', String(tview === 'table'));
+    var shown = visibleTickets();
+    if (tview === 'table') { renderTable(shown); return; }
+    var k = $('kanban'); k.innerHTML = '';
+    STATUSES.forEach(function(s){
+      var list = shown.filter(function(t){ return t.status === s[0]; });
+      var col = el('section', 'kcol'), h = el('h3'), hl = el('span');
+      hl.appendChild(el('i', 'dot st-' + s[0])); hl.appendChild(document.createTextNode(s[1]));
+      h.appendChild(hl);
+      h.appendChild(el('span', 'kcount', String(list.length)));
+      col.appendChild(h);
+      col.addEventListener('dragover', function(ev){ ev.preventDefault(); col.classList.add('over'); });
+      col.addEventListener('dragleave', function(){ col.classList.remove('over'); });
+      col.addEventListener('drop', function(ev){
+        ev.preventDefault(); col.classList.remove('over');
+        var t = findTicket(ev.dataTransfer.getData('text/plain'));
+        if (t && t.status !== s[0]) { t.status = s[0]; t.updated = today(); changed(); }
+      });
+      if (!list.length) col.appendChild(el('p', 'kempty', 'Nothing here'));
+      list.forEach(function(t){ col.appendChild(makeCard(t)); });
+      k.appendChild(col);
+    });
+  }
+  function makeCard(t){
+    var c = el('div', 'tcard' + (t.status === 'blocked' ? ' blocked' : '') + (t.status === 'done' ? ' done' : '') + (t.id === editingId ? ' sel' : ''));
+    c.tabIndex = 0; c.setAttribute('role', 'button'); c.draggable = true;
+    var top = el('div', 'top2', t.id);
+    top.appendChild(el('span', 'kind', t.type));
+    c.appendChild(top);
+    var title = el('div', 'tt', t.title);
+    if (t.url && /^https?:\/\//i.test(t.url)) {
+      var a = el('a', null, '↗'); a.href = t.url; a.target = '_blank'; a.rel = 'noopener'; a.setAttribute('aria-label', 'Open link');
+      a.addEventListener('click', function(ev){ ev.stopPropagation(); });
+      title.appendChild(a);
+    }
+    c.appendChild(title);
+    if (t.status === 'blocked' && t.blocked) c.appendChild(el('div', 'why', t.blocked));
+    var meta = el('div', 'row2'), chip = linkChip(t);
+    meta.appendChild(chip || el('span'));
+    if (t.owner) meta.appendChild(avatar(t.owner));
+    c.appendChild(meta);
+    c.addEventListener('click', function(){ openForm(t.id); });
+    c.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openForm(t.id); } });
+    c.addEventListener('dragstart', function(ev){ ev.dataTransfer.setData('text/plain', t.id); ev.dataTransfer.effectAllowed = 'move'; });
+    return c;
+  }
+
+  function fillTargets(current){
+    var sel = $('tTarget'); sel.innerHTML = '';
+    function opt(parent, v, label){ var o = el('option', null, label); o.value = v; parent.appendChild(o); }
+    function group(label){ var g = document.createElement('optgroup'); g.label = label; sel.appendChild(g); return g; }
+    opt(sel, '', 'Not linked');
+    state.depts.forEach(function(d){
+      var g = group(d.name);
+      opt(g, 'dept:' + d.name, 'Whole department');
+      deptNodes(d).forEach(function(n){ opt(g, n.key, n.name); });
+    });
+    if (state.apps.length) {
+      var ga = group('Connected apps');
+      state.apps.forEach(function(n){ opt(ga, n.key, n.name); });
+    }
+    if (current && targetName(current) === null) opt(sel, current, current + ' (not on the map)');
+    sel.value = current || '';
+  }
+  function openForm(id, target){
+    var t = id ? findTicket(id) : null;
+    editingId = t ? t.id : null;
+    $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ticket';
+    $('tTitle').value = t ? t.title : '';
+    $('tType').value = t ? t.type : 'ticket';
+    setFormStatus(t ? t.status : 'todo');
+    $('tBlocked').value = t ? t.blocked || '' : '';
+    $('tOwner').value = t ? t.owner || '' : '';
+    $('tUrl').value = t ? t.url || '' : '';
+    $('tNotes').value = t ? t.notes || '' : '';
+    fillTargets(t ? t.target : target || '');
+    $('tDelete').hidden = !t;
+    $('tform').hidden = false; $('tlayout').classList.add('open');
+    renderBoard();
+    $('tTitle').focus();
+  }
+  function closeForm(){ $('tform').hidden = true; $('tlayout').classList.remove('open'); editingId = null; renderBoard(); }
+  function getFormStatus(){ var r = document.querySelector('#tform input[name="tStatus"]:checked'); return r ? r.value : 'todo'; }
+  function syncStatusUI(){
+    var cur = getFormStatus();
+    Array.prototype.forEach.call(document.querySelectorAll('#tform .seg4 label'), function(l){ l.classList.toggle('on', l.querySelector('input').value === cur); });
+    $('tBlockedRow').hidden = cur !== 'blocked';
+  }
+  function setFormStatus(s){ document.querySelector('#tform input[value="' + s + '"]').checked = true; syncStatusUI(); }
+  $('newTix').addEventListener('click', function(){ openForm(null); });
+  $('tCancel').addEventListener('click', closeForm);
+  $('tDelete').addEventListener('click', function(){
+    var t = editingId && findTicket(editingId);
+    if (!t || !confirm('Delete ' + t.id + ' "' + t.title + '"?')) return;
+    tdata.tickets = tdata.tickets.filter(function(x){ return x !== t; });
+    closeForm(); changed();
+  });
+  $('tform').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var v = { title: $('tTitle').value.trim(), type: $('tType').value, status: getFormStatus(), owner: $('tOwner').value.trim(),
+              url: $('tUrl').value.trim(), target: $('tTarget').value, notes: $('tNotes').value.trim(),
+              blocked: getFormStatus() === 'blocked' ? $('tBlocked').value.trim() : '', updated: today() };
+    if (!v.title) return;
+    var t = editingId && findTicket(editingId);
+    if (t) Object.keys(v).forEach(function(key){ t[key] = v[key]; });
+    else { v.id = 'T-' + tdata.nextId++; tdata.tickets.push(v); }
+    closeForm(); changed();
+  });
+  $('fType').addEventListener('change', renderBoard);
+  $('fOwner').addEventListener('change', renderBoard);
+  $('fStatus').addEventListener('change', renderBoard);
+  $('fSearch').addEventListener('input', renderBoard);
+  $('vBoard').addEventListener('click', function(){ setView('board'); });
+  $('vTable').addEventListener('click', function(){ setView('table'); });
+  $('tClose').addEventListener('click', closeForm);
+  Array.prototype.forEach.call(document.querySelectorAll('#tform input[name="tStatus"]'), function(r){ r.addEventListener('change', syncStatusUI); });
+  document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && !$('tform').hidden) closeForm(); });
+
+  function showTab(name){
+    var t = name === 'tickets';
+    $('mapView').hidden = t; $('board').hidden = !t; $('editBtn').hidden = t;
+    $('tabMap').setAttribute('aria-selected', String(!t)); $('tabTix').setAttribute('aria-selected', String(t));
+    if (t) select(null); else { closeForm(); setTimeout(drawWires, 50); }
+    if (state) $('stats').textContent = t ? ticketStats() : mapStatsText;
+    try { history.replaceState(null, '', t ? '#tickets' : location.pathname + location.search); } catch (e) {}
+  }
+  $('tabMap').addEventListener('click', function(){ showTab('map'); });
+  $('tabTix').addEventListener('click', function(){ showTab('tickets'); });
+  function loadTickets(){
+    fetch('maps/' + ticketsFile(), { cache: 'no-store' })
+      .then(function(r){ if (r.status === 404) return null; if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d){
+        if (d && Array.isArray(d.tickets)) {
+          var max = 0;
+          d.tickets.forEach(function(t){
+            if (!STATUSES.some(function(s){ return s[0] === t.status; })) t.status = 'todo';
+            if (t.type !== 'project') t.type = 'ticket';
+            max = Math.max(max, parseInt(String(t.id).replace(/\D/g, ''), 10) || 0);
+          });
+          tdata = { nextId: Math.max(Number(d.nextId) || 1, max + 1), tickets: d.tickets };
+        }
+        renderBoard(); render(ed.value);
+      })
+      .catch(function(){ setTStatus('Could not read maps/' + ticketsFile() + '. Open the page through the local server (see README).'); renderBoard(); });
+  }
 
   /* ---------- editor ---------- */
   var ed = $('ed'), status = $('status'), timer = null;
@@ -554,6 +1081,9 @@ Lead: Jo Park
     .catch(function(){ setStatus('Could not load maps/' + param + ' (open through the local server, see README). Showing the built-in demo.'); });
 
   render(savedMd);
+  renderBoard();
+  loadTickets();
+  if (location.hash === '#tickets') showTab('tickets');
 })();
 </script>
 </body>
