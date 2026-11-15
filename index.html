@@ -208,6 +208,10 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .stsel{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:99px;padding:3px 8px;min-height:0;cursor:pointer;max-width:100%}
 .tpad{padding:14px}
 .tform h4{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.detail .quick{display:flex;gap:6px;margin-top:12px}
+.detail .quick input{flex:1;min-width:0}
+.detail .meta2.ok{color:var(--done-ink)}
+.detail .meta2.bad{color:var(--hi-ink)}
 .tform .x{border:0;background:none;font-size:22px;line-height:1;padding:2px 8px;cursor:pointer;color:var(--muted)}
 .tform .lbl{font-size:13px;color:var(--muted);margin-bottom:-6px}
 .seg4{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -403,7 +407,7 @@ Lead: Jo Park
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var savedMd = $('md').textContent.replace(/^\n+|\n+$/g, '');
-  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null, tdata = { nextId: 1, tickets: [] }, mapStatsText = '';
+  var state = null, nodeEls = {}, items = {}, selected = null, artifactApi = null, tdata = { nextId: 1, tickets: [] }, mapStatsText = '', detailNote = '', detailWarn = '';
 
   /* ---------- parse ---------- */
   function parseNode(body, kind){
@@ -604,7 +608,7 @@ Lead: Jo Park
     });
     applySelection();
   }
-  function select(k){ selected = k; applySelection(); }
+  function select(k){ if (k !== selected) { detailNote = ''; detailWarn = ''; } selected = k; applySelection(); }
   function applySelection(){
     var map = $('map'), on = {}, isNode = !!(selected && nodeEls[selected]);
     Array.prototype.forEach.call(map.querySelectorAll('path.wire'), function(p){
@@ -621,6 +625,10 @@ Lead: Jo Park
   function showDetail(){
     var box = $('detail'), it = selected && items[selected];
     if (!it) { box.hidden = true; box.innerHTML = ''; $('page').classList.remove('detailOpen'); return; }
+    /* keep a half-typed quick-add title when the detail is redrawn for the same item */
+    var prevQ = box.dataset.key === selected ? box.querySelector('.quick input') : null;
+    var prevVal = prevQ ? prevQ.value : '', hadFocus = !!prevQ && document.activeElement === prevQ;
+    box.dataset.key = selected;
     box.innerHTML = '';
     var x = el('button', 'x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close');
     x.addEventListener('click', function(){ select(null); });
@@ -632,6 +640,8 @@ Lead: Jo Park
     if (it.kind === 'section') bits.push(it.dept + ' · section');
     else { bits.push(it.kind === 'app' ? 'Connected app' : (it.dept || '')); if (it.details) bits.push(it.details); }
     box.appendChild(el('p', 'meta2', bits.filter(Boolean).join(' · ')));
+    if (detailNote) box.appendChild(el('p', 'meta2 ok', detailNote));
+    if (detailWarn) box.appendChild(el('p', 'meta2 bad', detailWarn));
     if (it.url && /^https?:\/\//i.test(it.url)) {
       var lp = el('p', 'meta2'), a = el('a', null, 'Open sheet'); a.href = it.url; a.target = '_blank'; a.rel = 'noopener';
       lp.appendChild(a); box.appendChild(lp);
@@ -649,6 +659,11 @@ Lead: Jo Park
       });
       box.appendChild(el('p', 'meta2', 'Tickets and projects'));
       box.appendChild(tu);
+    }
+    if (nodeEls[selected]) {
+      var qa = quickAdd(selected, it, prevVal);
+      box.appendChild(qa);
+      if (hadFocus) qa.querySelector('input').focus();
     }
     if (nodeEls[selected]) {
       var ul = el('ul', 'conns'), n = 0;
@@ -698,14 +713,39 @@ Lead: Jo Park
     return items[t] && items[t].kind !== 'section' ? items[t].name : null;
   }
   function saveTickets(){
-    setTStatus('Saving…');
+    setTStatus('Saving…'); detailWarn = '';
     fetch('maps/' + ticketsFile(), { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(tdata, null, 2) + '\n' })
       .then(function(r){ if (!r.ok) throw new Error(r.status); setTStatus('Saved to maps/' + ticketsFile() + '.'); })
-      .catch(function(){ setTStatus('Could not save here. Start the page with start.command (it runs server.py). Changes last only until you reload.'); });
+      .catch(function(){
+        var msg = 'Could not save here. Start the page with start.command (it runs server.py). Changes last only until you reload.';
+        setTStatus(msg);
+        if (!$('detail').hidden) { detailWarn = msg; showDetail(); }
+      });
   }
   function changed(){ renderBoard(); render(ed.value); saveTickets(); }
   function today(){ return new Date().toISOString().slice(0, 10); }
 
+  /* "Add a ticket to <item>" row in the map's detail panel: creates a ticket already linked to the selected sheet or app */
+  function quickAdd(key, it, value){
+    var f = el('form', 'quick'), inp = el('input'), add = el('button', 'btn primary', 'Add'), more = el('button', 'btn', 'More…');
+    inp.type = 'text'; inp.maxLength = 200; inp.value = value || '';
+    inp.placeholder = 'Add a ticket to ' + it.name + '…';
+    inp.setAttribute('aria-label', 'New ticket title for ' + it.name);
+    add.type = 'submit'; more.type = 'button'; more.title = 'Add with owner, link and notes';
+    f.appendChild(inp); f.appendChild(add); f.appendChild(more);
+    f.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var title = inp.value.trim();
+      if (!title) { inp.focus(); return; }
+      var t = { id: 'T-' + tdata.nextId++, title: title, type: 'ticket', status: 'todo', owner: '', url: '', target: key, notes: '', blocked: '', updated: today() };
+      tdata.tickets.push(t);
+      inp.value = '';
+      changed(); select(key);
+      detailNote = 'Added ' + t.id + '.'; showDetail();
+    });
+    more.addEventListener('click', function(){ showTab('tickets'); openForm(null, key); });
+    return f;
+  }
   function ticketStats(){
     var all = tdata.tickets, open = all.filter(function(t){ return t.status !== 'done'; }).length;
     var blocked = all.filter(function(t){ return t.status === 'blocked'; }).length;
@@ -897,7 +937,7 @@ Lead: Jo Park
     if (current && targetName(current) === null) opt(sel, current, current + ' (not on the map)');
     sel.value = current || '';
   }
-  function openForm(id){
+  function openForm(id, target){
     var t = id ? findTicket(id) : null;
     editingId = t ? t.id : null;
     $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ticket';
@@ -908,7 +948,7 @@ Lead: Jo Park
     $('tOwner').value = t ? t.owner || '' : '';
     $('tUrl').value = t ? t.url || '' : '';
     $('tNotes').value = t ? t.notes || '' : '';
-    fillTargets(t ? t.target : '');
+    fillTargets(t ? t.target : target || '');
     $('tDelete').hidden = !t;
     $('tform').hidden = false; $('tlayout').classList.add('open');
     renderBoard();

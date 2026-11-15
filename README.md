@@ -61,6 +61,7 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 - Table: grouped by department, with the status changeable in place from the dropdown in each row.
 - Filter by type, owner, open only, or search the text.
 - On the Map tab, linked cards and departments show a small badge with the number of open tickets. Tap a card to see its tickets and jump to them.
+- To create a ticket from the map, tap a sheet or app, type a title in "Add a ticket to ..." and press Add. It is saved as a To do ticket linked to that card. Press More... to add the owner, link and notes in the Tickets tab first.
 - A ticket linked to something that is no longer on the map shows "unlinked" and a warning under the map.
 - Tickets are saved to `maps/<map>.tickets.json` (for example `maps/work.tickets.json`), with the previous version kept as `.bak`. This needs `server.py`, which `start.command` runs.
 - `maps/work.tickets.json` is private and not tracked by git. `maps/demo.tickets.json` is the example, shown with `?map=demo.md`.
