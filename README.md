@@ -59,6 +59,7 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 - Press New ticket to add one. Click a card or row to edit it in the drawer beside the list. Set the status with the buttons in the drawer; Blocked asks what it is waiting on, and that text shows on the card.
 - Board: drag a card to another column to move it.
 - Table: grouped by department, with the status changeable in place from the dropdown in each row.
+- Time: open a ticket and use "Time spent" to log hours (for example 1.5) with an optional note. Each entry is dated and can be removed. The total shows on the card and in the table's Time column.
 - Filter by type, owner, open only, or search the text.
 - On the Map tab, linked cards and departments show a small badge with the number of open tickets. Tap a card to see its tickets and jump to them.
 - To create a ticket from the map, tap a sheet or app, type a title in "Add a ticket to ..." and press Add. It is saved as a To do ticket linked to that card. Press More... to add the owner, link and notes in the Tickets tab first.

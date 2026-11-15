@@ -194,7 +194,7 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .tattn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tbl{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
 .tbl[hidden]{display:none}
-.tr{display:grid;grid-template-columns:52px minmax(0,1fr) 150px 70px 40px 124px 60px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;min-width:760px}
+.tr{display:grid;grid-template-columns:52px minmax(0,1fr) 150px 70px 40px 124px 56px 60px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;min-width:820px}
 .tr.head{border-top:0;background:var(--bg);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .tr.grp{background:var(--bg);display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
 .tr.row{cursor:pointer}
@@ -224,6 +224,18 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .seg4 input{position:absolute;opacity:0;width:100%;height:100%;inset:0;margin:0;cursor:pointer;min-height:0}
 .tform .seg4 label:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
 .tform #tBlockedRow[hidden]{display:none}
+.tform .timebox[hidden]{display:none}
+.timebox{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.timebox .tot{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.timebox .tot b{color:var(--fg);font-size:15px}
+.timebox ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:150px;overflow-y:auto}
+.timebox li{display:flex;gap:8px;align-items:baseline;font-size:13px;min-width:0}
+.timebox li .h{font-weight:600;min-width:44px}
+.timebox li .d{color:var(--muted);white-space:nowrap}
+.timebox li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timebox li button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+.timebox .add{display:grid;grid-template-columns:74px minmax(0,1fr) auto;gap:6px}
+.tcard .hrs,.tr .hrs{color:var(--muted);font-size:12px;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.node{transition:none}}
 </style>
 </head>
@@ -332,6 +344,15 @@ Lead: free text line (optional)
   <label>Linked to<select id="tTarget"></select></label>
   <label>Link (URL)<input id="tUrl" type="url" placeholder="https://"></label>
   <label>Notes<textarea id="tNotes" spellcheck="true"></textarea></label>
+  <div class="timebox" id="timeBox" hidden>
+    <div class="tot"><span>Time spent</span><b id="tTotal">0 h</b></div>
+    <ul id="tLog"></ul>
+    <div class="add">
+      <input id="tHours" type="number" min="0.25" max="24" step="0.25" placeholder="Hours" aria-label="Hours worked">
+      <input id="tLogNote" maxlength="120" placeholder="What did you do? (optional)" aria-label="Note">
+      <button class="btn" id="tLogBtn" type="button">Log</button>
+    </div>
+  </div>
   <div class="bar">
     <button class="btn primary" type="submit">Save</button>
     <button class="btn" id="tCancel" type="button">Cancel</button>
@@ -759,6 +780,8 @@ Lead: Jo Park
     renderBoard();
   }
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function hoursOf(t){ return (t.log || []).reduce(function(a, e){ return a + (+e.hours || 0); }, 0); }
+  function fmtH(h){ return (Math.round(h * 100) / 100) + ' h'; }
   function prettyDate(iso){ var d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()]; }
   function initials(n){
     var w = String(n || '').trim().split(/\s+/);
@@ -820,7 +843,7 @@ Lead: Jo Park
     var tb = $('ttable'); tb.innerHTML = '';
     if (!list.length) { tb.appendChild(el('p', 'kempty tpad', 'No tickets match.')); return; }
     var head = el('div', 'tr head');
-    ['ID', 'Title', 'Linked to', 'Type', 'Owner', 'Status', 'Updated'].forEach(function(h){ head.appendChild(el('span', null, h)); });
+    ['ID', 'Title', 'Linked to', 'Type', 'Owner', 'Status', 'Time', 'Updated'].forEach(function(h){ head.appendChild(el('span', null, h)); });
     tb.appendChild(head);
     var groups = {};
     list.forEach(function(t){ var g = groupOf(t); (groups[g] = groups[g] || []).push(t); });
@@ -855,6 +878,7 @@ Lead: Jo Park
     sel.addEventListener('keydown', function(ev){ ev.stopPropagation(); });
     sel.addEventListener('change', function(){ t.status = sel.value; if (t.status !== 'blocked') t.blocked = ''; t.updated = today(); changed(); });
     var sc = el('span'); sc.appendChild(sel); r.appendChild(sc);
+    r.appendChild(el('span', 'hrs', hoursOf(t) ? fmtH(hoursOf(t)) : ''));
     r.appendChild(el('span', 'upd', prettyDate(t.updated)));
     r.addEventListener('click', function(){ openForm(t.id); });
     r.addEventListener('keydown', function(ev){ if (ev.target === r && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); openForm(t.id); } });
@@ -912,6 +936,7 @@ Lead: Jo Park
     if (t.status === 'blocked' && t.blocked) c.appendChild(el('div', 'why', t.blocked));
     var meta = el('div', 'row2'), chip = linkChip(t);
     meta.appendChild(chip || el('span'));
+    if (hoursOf(t)) meta.appendChild(el('span', 'hrs', '⏱ ' + fmtH(hoursOf(t))));
     if (t.owner) meta.appendChild(avatar(t.owner));
     c.appendChild(meta);
     c.addEventListener('click', function(){ openForm(t.id); });
@@ -950,10 +975,37 @@ Lead: Jo Park
     $('tNotes').value = t ? t.notes || '' : '';
     fillTargets(t ? t.target : target || '');
     $('tDelete').hidden = !t;
+    $('timeBox').hidden = !t; $('tHours').value = ''; $('tLogNote').value = '';
+    if (t) renderLog(t);
     $('tform').hidden = false; $('tlayout').classList.add('open');
     renderBoard();
     $('tTitle').focus();
   }
+  function renderLog(t){
+    var ul = $('tLog'); ul.innerHTML = '';
+    $('tTotal').textContent = fmtH(hoursOf(t));
+    (t.log || []).slice().reverse().forEach(function(e){
+      var li = el('li');
+      li.appendChild(el('span', 'h', fmtH(+e.hours || 0)));
+      li.appendChild(el('span', 'd', prettyDate(e.date)));
+      var n = el('span', 'n', e.note || ''); if (e.note) n.title = e.note;
+      li.appendChild(n);
+      var x = el('button', null, '×'); x.type = 'button'; x.setAttribute('aria-label', 'Remove entry');
+      x.addEventListener('click', function(){ t.log.splice(t.log.indexOf(e), 1); t.updated = today(); changed(); renderLog(t); });
+      li.appendChild(x);
+      ul.appendChild(li);
+    });
+  }
+  function logTime(){
+    var t = editingId && findTicket(editingId), h = parseFloat($('tHours').value);
+    if (!t) return;
+    if (!(h > 0 && h <= 24)) { $('tHours').focus(); return; }
+    (t.log = t.log || []).push({ date: today(), hours: Math.round(h * 100) / 100, note: $('tLogNote').value.trim() });
+    t.updated = today(); $('tHours').value = ''; $('tLogNote').value = '';
+    changed(); renderLog(t); $('tHours').focus();
+  }
+  $('tLogBtn').addEventListener('click', logTime);
+  ['tHours', 'tLogNote'].forEach(function(id){ $(id).addEventListener('keydown', function(ev){ if (ev.key === 'Enter') { ev.preventDefault(); logTime(); } }); });
   function closeForm(){ $('tform').hidden = true; $('tlayout').classList.remove('open'); editingId = null; renderBoard(); }
   function getFormStatus(){ var r = document.querySelector('#tform input[name="tStatus"]:checked'); return r ? r.value : 'todo'; }
   function syncStatusUI(){
