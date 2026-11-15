@@ -58,3 +58,4 @@ Opening `index.html` directly also works, but it can only show the built-in demo
 - `maps/work.md`: your map. Start here.
 - `server.py`: the local server. It serves the folder and accepts saves to `maps/*.md` only, from this page only, on localhost only.
 - `start.command`: runs `server.py` and opens the browser on macOS.
+test commitlint
