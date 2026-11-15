@@ -1,0 +1,14 @@
+{
+  "name": "sheets-map",
+  "private": true,
+  "description": "Dev tooling only (commitlint); the app itself has no Node dependencies",
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "husky": "^9.1.7"
+  },
+  "scripts": {
+    "prepare": "husky"
+  },
+  "type": "module"
+}
