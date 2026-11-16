@@ -1,0 +1,13 @@
+/* Edit-as-Markdown side panel and the page layout while it is open. */
+.main{display:flex;flex-direction:column;gap:20px}
+.main[hidden]{display:none}
+.editing .main{flex-direction:column-reverse}
+@media (min-width:1000px){
+  .editing .main{flex-direction:row-reverse;align-items:flex-start}
+  .editing .editor{width:400px;flex:none;position:sticky;top:16px}
+  .editing .mapPane{flex:1;min-width:0}
+}
+.editor{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.editor[hidden]{display:none}
+.editor h2{margin:0;font-size:15px}
+textarea{width:100%;min-height:420px;resize:vertical;font:13px/1.5 var(--mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;tab-size:2}

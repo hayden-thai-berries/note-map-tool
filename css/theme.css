@@ -1,0 +1,27 @@
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#18212d; --muted:#5a6676; --line:#d3dae3;
+  --sheet:#e3f3ea; --sheet-edge:#9fd1b4; --app:#ebe6fb; --app-edge:#b9aaf0; --note:#fff3c4; --note-edge:#ecd67e;
+  --accent:#0b6bcb; --wire:#7a8798;
+  --hi:#fbe3e1; --hi-ink:#9b2c24; --med:#fdf0d0; --med-ink:#82590b; --lo:#e8ecf1; --lo-ink:#4b5666;
+  --font:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161d; --surface:#18202a; --ink:#e6ebf2; --muted:#98a5b6; --line:#2b3644;
+    --sheet:#173226; --sheet-edge:#2f6a4c; --app:#262046; --app-edge:#4f4396; --note:#3a3220; --note-edge:#75642b;
+    --accent:#5aa7ff; --wire:#6b7a8d;
+    --hi:#47211f; --hi-ink:#ffb4ad; --med:#41330f; --med-ink:#f3c96b; --lo:#252f3b; --lo-ink:#a9b5c5;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161d; --surface:#18202a; --ink:#e6ebf2; --muted:#98a5b6; --line:#2b3644;
+  --sheet:#173226; --sheet-edge:#2f6a4c; --app:#262046; --app-edge:#4f4396; --note:#3a3220; --note-edge:#75642b;
+  --accent:#5aa7ff; --wire:#6b7a8d;
+  --hi:#47211f; --hi-ink:#ffb4ad; --med:#41330f; --med-ink:#f3c96b; --lo:#252f3b; --lo-ink:#a9b5c5;
+  color-scheme:dark;
+}
+:root{--doing:#dcebfb; --doing-ink:#0b5aa8; --done-ink:#1f6b44}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--doing:#14304f; --doing-ink:#8cc3ff; --done-ink:#7fd1a3}}
+:root[data-theme="dark"]{--doing:#14304f; --doing-ink:#8cc3ff; --done-ink:#7fd1a3}
