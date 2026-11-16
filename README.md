@@ -56,6 +56,7 @@ Opening `index.html` directly also works, but it can only show the built-in demo
 The Tickets tab shows tickets and projects as a Kanban board (To do, In progress, Blocked, Done) or as a table. Switch with Board / Table; the choice is remembered. Each ticket can be linked to a sheet, a connected app or a whole department, and is drawn as a chip in the map's colours (green sheet, purple app, yellow department).
 
 - A summary at the top shows how many tickets are in each status, and one red line per blocked ticket. Click that line to open the ticket.
+- IDs are date based: `T20261116.001` for a ticket and `P20261116.001` for a project (prefix, the date it was created, then a counter that restarts at 001 each day, separately for T and P). Tickets created before this change keep their old `T-1` style IDs. An ID does not change if you later switch a ticket's type.
 - Press New ticket to add one. Click a card or row to edit it in the drawer beside the list. Set the status with the buttons in the drawer; Blocked asks what it is waiting on, and that text shows on the card.
 - Board: drag a card to another column to move it.
 - Table: grouped by department, with the status changeable in place from the dropdown in each row.

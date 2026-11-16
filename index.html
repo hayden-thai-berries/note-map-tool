@@ -194,7 +194,7 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .tattn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tbl{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
 .tbl[hidden]{display:none}
-.tr{display:grid;grid-template-columns:52px minmax(0,1fr) 150px 70px 40px 124px 56px 60px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;min-width:820px}
+.tr{display:grid;grid-template-columns:100px minmax(0,1fr) 150px 70px 40px 124px 56px 60px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;min-width:870px}
 .tr.head{border-top:0;background:var(--bg);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .tr.grp{background:var(--bg);display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
 .tr.row{cursor:pointer}
@@ -745,6 +745,15 @@ Lead: Jo Park
   }
   function changed(){ renderBoard(); render(ed.value); saveTickets(); }
   function today(){ return new Date().toISOString().slice(0, 10); }
+  /* IDs look like T20261116.001 (ticket) or P20261116.001 (project): prefix, local date, then a per-day counter */
+  function newId(type){
+    var d = new Date(), pad = function(n){ return (n < 10 ? '0' : '') + n; };
+    var base = (type === 'project' ? 'P' : 'T') + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.', n = 0;
+    tdata.tickets.forEach(function(t){
+      if (String(t.id).indexOf(base) === 0) n = Math.max(n, parseInt(String(t.id).slice(base.length), 10) || 0);
+    });
+    return base + ('00' + (n + 1)).slice(-3);
+  }
 
   /* "Add a ticket to <item>" row in the map's detail panel: creates a ticket already linked to the selected sheet or app */
   function quickAdd(key, it, value){
@@ -758,7 +767,7 @@ Lead: Jo Park
       ev.preventDefault();
       var title = inp.value.trim();
       if (!title) { inp.focus(); return; }
-      var t = { id: 'T-' + tdata.nextId++, title: title, type: 'ticket', status: 'todo', owner: '', url: '', target: key, notes: '', blocked: '', updated: today() };
+      var t = { id: newId('ticket'), title: title, type: 'ticket', status: 'todo', owner: '', url: '', target: key, notes: '', blocked: '', updated: today() };
       tdata.tickets.push(t);
       inp.value = '';
       changed(); select(key);
@@ -1030,7 +1039,7 @@ Lead: Jo Park
     if (!v.title) return;
     var t = editingId && findTicket(editingId);
     if (t) Object.keys(v).forEach(function(key){ t[key] = v[key]; });
-    else { v.id = 'T-' + tdata.nextId++; tdata.tickets.push(v); }
+    else { v.id = newId(v.type); tdata.tickets.push(v); }
     closeForm(); changed();
   });
   $('fType').addEventListener('change', renderBoard);
@@ -1062,7 +1071,8 @@ Lead: Jo Park
           d.tickets.forEach(function(t){
             if (!STATUSES.some(function(s){ return s[0] === t.status; })) t.status = 'todo';
             if (t.type !== 'project') t.type = 'ticket';
-            max = Math.max(max, parseInt(String(t.id).replace(/\D/g, ''), 10) || 0);
+            var legacy = /^T-(\d+)$/.exec(String(t.id));
+            if (legacy) max = Math.max(max, parseInt(legacy[1], 10));
           });
           tdata = { nextId: Math.max(Number(d.nextId) || 1, max + 1), tickets: d.tickets };
         }
