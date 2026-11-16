@@ -150,6 +150,9 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .tform label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
 .tform input,.tform select,.tform textarea{width:100%}
 .tform textarea{min-height:90px;font:14px/1.45 var(--font)}
+.tform #tDesc{min-height:76px}
+.tcard .desc{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;overflow-wrap:anywhere}
+.tr .ttl small.d{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:520px){.trow{grid-template-columns:1fr}}
 /* tickets: status colours, summary strip, drawer layout, table view */
@@ -329,6 +332,7 @@ Lead: free text line (optional)
 <form class="tform" id="tform" hidden aria-label="Ticket">
   <h4><span id="tformTitle">New ticket</span><button class="x" id="tClose" type="button" aria-label="Close">×</button></h4>
   <label>Title<input id="tTitle" required maxlength="200"></label>
+  <label>Description<textarea id="tDesc" maxlength="2000" spellcheck="true" placeholder="What is the request? What is being asked, and by whom?"></textarea></label>
   <div class="lbl" id="tStatusLbl">Status</div>
   <div class="seg4" role="radiogroup" aria-labelledby="tStatusLbl">
     <label class="s-todo"><input type="radio" name="tStatus" value="todo">To do</label>
@@ -812,7 +816,7 @@ Lead: Jo Park
       if (fo && t.owner !== fo) return false;
       if (fs === 'open' && t.status === 'done') return false;
       if (!q) return true;
-      return [t.id, t.title, t.owner, targetName(t.target), t.notes, t.blocked].join(' ').toLowerCase().indexOf(q) >= 0;
+      return [t.id, t.title, t.description, t.owner, targetName(t.target), t.notes, t.blocked].join(' ').toLowerCase().indexOf(q) >= 0;
     });
   }
   /* status bar, counts, and one red line per blocked ticket */
@@ -871,6 +875,7 @@ Lead: Jo Park
     r.tabIndex = 0; r.setAttribute('role', 'button');
     r.appendChild(el('span', 'id', t.id));
     var ttl = el('span', 'ttl', t.title);
+    if (t.description) { var dl = el('small', 'd', t.description.split('\n')[0]); dl.title = t.description; ttl.appendChild(dl); }
     if (t.status === 'blocked' && t.blocked) ttl.appendChild(el('small', null, t.blocked));
     r.appendChild(ttl);
     var cell = el('span'), chip = linkChip(t);
@@ -942,6 +947,7 @@ Lead: Jo Park
       title.appendChild(a);
     }
     c.appendChild(title);
+    if (t.description) c.appendChild(el('div', 'desc', t.description));
     if (t.status === 'blocked' && t.blocked) c.appendChild(el('div', 'why', t.blocked));
     var meta = el('div', 'row2'), chip = linkChip(t);
     meta.appendChild(chip || el('span'));
@@ -976,6 +982,7 @@ Lead: Jo Park
     editingId = t ? t.id : null;
     $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ticket';
     $('tTitle').value = t ? t.title : '';
+    $('tDesc').value = t ? t.description || '' : '';
     $('tType').value = t ? t.type : 'ticket';
     setFormStatus(t ? t.status : 'todo');
     $('tBlocked').value = t ? t.blocked || '' : '';
@@ -1033,7 +1040,7 @@ Lead: Jo Park
   });
   $('tform').addEventListener('submit', function(ev){
     ev.preventDefault();
-    var v = { title: $('tTitle').value.trim(), type: $('tType').value, status: getFormStatus(), owner: $('tOwner').value.trim(),
+    var v = { title: $('tTitle').value.trim(), description: $('tDesc').value.trim(), type: $('tType').value, status: getFormStatus(), owner: $('tOwner').value.trim(),
               url: $('tUrl').value.trim(), target: $('tTarget').value, notes: $('tNotes').value.trim(),
               blocked: getFormStatus() === 'blocked' ? $('tBlocked').value.trim() : '', updated: today() };
     if (!v.title) return;

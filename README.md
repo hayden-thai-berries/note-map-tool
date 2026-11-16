@@ -57,6 +57,7 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 
 - A summary at the top shows how many tickets are in each status, and one red line per blocked ticket. Click that line to open the ticket.
 - IDs are date based: `T20261116.001` for a ticket and `P20261116.001` for a project (prefix, the date it was created, then a counter that restarts at 001 each day, separately for T and P). Tickets created before this change keep their old `T-1` style IDs. An ID does not change if you later switch a ticket's type.
+- Description: describe what the request is (what is being asked, and by whom) in the Description box under the title. It shows as a short preview on the board card and under the title in the table (hover for the full text), and the search box looks in it too. Notes is still there for anything else.
 - Press New ticket to add one. Click a card or row to edit it in the drawer beside the list. Set the status with the buttons in the drawer; Blocked asks what it is waiting on, and that text shows on the card.
 - Board: drag a card to another column to move it.
 - Table: grouped by department, with the status changeable in place from the dropdown in each row.
