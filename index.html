@@ -151,6 +151,26 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 .tform input,.tform select,.tform textarea{width:100%}
 .tform textarea{min-height:90px;font:14px/1.45 var(--font)}
 .tform #tDesc{min-height:76px}
+.tform .pbox[hidden],.tform .reqbox[hidden],.tform .itemsbox[hidden]{display:none}
+.tform .pbox label{display:flex}
+.tform .reqbox{display:flex;flex-direction:column;gap:10px;border:1px dashed var(--line);border-radius:8px;padding:10px}
+.tform .itemsbox{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.itemsbox .tot{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.itemsbox .tot b{color:var(--fg);font-size:13px}
+.itemsbox ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:180px;overflow-y:auto}
+.itemsbox li button{display:flex;gap:8px;align-items:baseline;width:100%;min-width:0;text-align:left;border:0;background:none;padding:3px 0;cursor:pointer;font-size:13px;color:var(--fg)}
+.itemsbox li .k{color:var(--muted);font-size:11px;min-width:50px}
+.itemsbox li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.itemsbox li .s{color:var(--muted);font-size:12px;white-space:nowrap}
+.itemsbox .add2{display:flex;gap:6px;flex-wrap:wrap}
+.tcard .pj{font-size:12px;color:var(--muted)}
+.tcard .pj .bar2{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:3px}
+.tcard .pj .bar2 i{display:block;height:100%;background:var(--accent)}
+.tcard .inproj{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dec{font-size:11px;border-radius:999px;padding:1px 8px;font-weight:600;white-space:nowrap}
+.dec.proposed{background:var(--doing);color:var(--doing-ink)}
+.dec.approved{background:var(--sheet);color:var(--done-ink)}
+.dec.rejected{background:var(--hi);color:var(--hi-ink)}
 .tcard .desc{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;overflow-wrap:anywhere}
 .tr .ttl small.d{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -307,7 +327,7 @@ Lead: free text line (optional)
     <div class="bbar">
       <button class="btn primary" id="newTix" type="button">New ticket</button>
       <label>Type
-        <select id="fType"><option value="">All</option><option value="ticket">Tickets</option><option value="project">Projects</option></select>
+        <select id="fType"><option value="">All</option><option value="ticket">Tickets</option><option value="project">Projects</option><option value="change">Change requests</option><option value="feature">Features</option></select>
       </label>
       <label>Owner
         <select id="fOwner"><option value="">Everyone</option></select>
@@ -342,12 +362,30 @@ Lead: free text line (optional)
   </div>
   <label id="tBlockedRow">Blocked because<input id="tBlocked" maxlength="200" placeholder="What is it waiting on?"></label>
   <div class="trow">
-    <label>Type<select id="tType"><option value="ticket">Ticket</option><option value="project">Project</option></select></label>
+    <label>Type<select id="tType"><option value="ticket">Ticket</option><option value="project">Project</option><option value="change">Change request</option><option value="feature">Feature</option></select></label>
     <label>Owner<input id="tOwner" maxlength="100"></label>
+  </div>
+  <div class="pbox" id="tProjectRow"><label>Part of project<select id="tProject"></select></label></div>
+  <div class="reqbox" id="tReqBox" hidden>
+    <div class="trow">
+      <label>Requested by<input id="tReqBy" maxlength="100"></label>
+      <label>Requested on<input id="tReqOn" type="date"></label>
+    </div>
+    <label>Impact<input id="tImpact" maxlength="200" placeholder="e.g. adds about 6 h, delays go-live"></label>
+    <label>Decision<select id="tDecision"><option value="proposed">Proposed</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
   </div>
   <label>Linked to<select id="tTarget"></select></label>
   <label>Link (URL)<input id="tUrl" type="url" placeholder="https://"></label>
   <label>Notes<textarea id="tNotes" spellcheck="true"></textarea></label>
+  <div class="itemsbox" id="tItemsBox" hidden>
+    <div class="tot"><span>Items in this project</span><b id="tItemsSum"></b></div>
+    <ul id="tItems"></ul>
+    <div class="add2">
+      <button class="btn" id="tAddChange" type="button">+ Change request</button>
+      <button class="btn" id="tAddFeature" type="button">+ Feature</button>
+      <button class="btn" id="tAddTicket" type="button">+ Ticket</button>
+    </div>
+  </div>
   <div class="timebox" id="timeBox" hidden>
     <div class="tot"><span>Time spent</span><b id="tTotal">0 h</b></div>
     <ul id="tLog"></ul>
@@ -717,6 +755,14 @@ Lead: Jo Park
 
   /* ---------- tickets: maps/<map>.tickets.json, shown as a Kanban board ---------- */
   var STATUSES = [['todo', 'To do'], ['doing', 'In progress'], ['blocked', 'Blocked'], ['done', 'Done']];
+  /* kinds of item and the letter their ID starts with; a change request or feature can belong to a project */
+  var KINDS = [['ticket', 'T'], ['project', 'P'], ['change', 'C'], ['feature', 'F']];
+  var DECISIONS = [['proposed', 'Proposed'], ['approved', 'Approved'], ['rejected', 'Rejected']];
+  function isKind(k){ return KINDS.some(function(x){ return x[0] === k; }); }
+  function prefixOf(k){ for (var i = 0; i < KINDS.length; i++) if (KINDS[i][0] === k) return KINDS[i][1]; return 'T'; }
+  function decisionLabel(d){ for (var i = 0; i < DECISIONS.length; i++) if (DECISIONS[i][0] === d) return DECISIONS[i][1]; return d; }
+  function itemsOf(p){ return tdata.tickets.filter(function(x){ return x.project === p.id; }); }
+  function projectOf(t){ var p = t.project && findTicket(t.project); return p && p.type === 'project' ? p : null; }
   var editingId = null, tstatus = $('tstatus');
   function setTStatus(t){ tstatus.textContent = t || ''; }
   function ticketsFile(){ return param.replace(/\.md$/, '') + '.tickets.json'; }
@@ -752,7 +798,7 @@ Lead: Jo Park
   /* IDs look like T20261116.001 (ticket) or P20261116.001 (project): prefix, local date, then a per-day counter */
   function newId(type){
     var d = new Date(), pad = function(n){ return (n < 10 ? '0' : '') + n; };
-    var base = (type === 'project' ? 'P' : 'T') + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.', n = 0;
+    var base = prefixOf(type) + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.', n = 0;
     tdata.tickets.forEach(function(t){
       if (String(t.id).indexOf(base) === 0) n = Math.max(n, parseInt(String(t.id).slice(base.length), 10) || 0);
     });
@@ -795,6 +841,19 @@ Lead: Jo Park
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function hoursOf(t){ return (t.log || []).reduce(function(a, e){ return a + (+e.hours || 0); }, 0); }
   function fmtH(h){ return (Math.round(h * 100) / 100) + ' h'; }
+  /* a project's totals: its own items (not counting rejected change requests), done count, and hours logged on it and on them */
+  function projectStats(p){
+    var its = itemsOf(p).filter(function(x){ return x.decision !== 'rejected'; });
+    var done = its.filter(function(x){ return x.status === 'done'; }).length;
+    var hrs = its.reduce(function(a, x){ return a + hoursOf(x); }, hoursOf(p));
+    return { total: its.length, done: done, hours: hrs };
+  }
+  function statsLine(s){
+    var parts = [];
+    if (s.total) parts.push(s.done + ' of ' + s.total + ' items done');
+    if (s.hours) parts.push('⏱ ' + fmtH(s.hours));
+    return parts.join(' · ');
+  }
   function prettyDate(iso){ var d = new Date(iso + 'T00:00:00'); return isNaN(d) ? '' : d.getDate() + ' ' + MONTHS[d.getMonth()]; }
   function initials(n){
     var w = String(n || '').trim().split(/\s+/);
@@ -816,7 +875,8 @@ Lead: Jo Park
       if (fo && t.owner !== fo) return false;
       if (fs === 'open' && t.status === 'done') return false;
       if (!q) return true;
-      return [t.id, t.title, t.description, t.owner, targetName(t.target), t.notes, t.blocked].join(' ').toLowerCase().indexOf(q) >= 0;
+      var pj = projectOf(t);
+      return [t.id, t.title, t.description, t.owner, targetName(t.target), t.notes, t.blocked, t.requestedBy, t.impact, pj && pj.title, pj && pj.id].join(' ').toLowerCase().indexOf(q) >= 0;
     });
   }
   /* status bar, counts, and one red line per blocked ticket */
@@ -876,6 +936,13 @@ Lead: Jo Park
     r.appendChild(el('span', 'id', t.id));
     var ttl = el('span', 'ttl', t.title);
     if (t.description) { var dl = el('small', 'd', t.description.split('\n')[0]); dl.title = t.description; ttl.appendChild(dl); }
+    if (t.type === 'project') {
+      var rs = projectStats(t);
+      if (rs.total || rs.hours) ttl.appendChild(el('small', 'd', statsLine(rs)));
+    } else if (projectOf(t)) {
+      ttl.appendChild(el('small', 'd', '↳ ' + projectOf(t).id + ' ' + projectOf(t).title));
+    }
+    if (t.type === 'change' && t.decision) ttl.appendChild(el('small', 'd', 'Change request · ' + decisionLabel(t.decision) + (t.impact ? ' · ' + t.impact : '')));
     if (t.status === 'blocked' && t.blocked) ttl.appendChild(el('small', null, t.blocked));
     r.appendChild(ttl);
     var cell = el('span'), chip = linkChip(t);
@@ -938,7 +1005,11 @@ Lead: Jo Park
     var c = el('div', 'tcard' + (t.status === 'blocked' ? ' blocked' : '') + (t.status === 'done' ? ' done' : '') + (t.id === editingId ? ' sel' : ''));
     c.tabIndex = 0; c.setAttribute('role', 'button'); c.draggable = true;
     var top = el('div', 'top2', t.id);
-    top.appendChild(el('span', 'kind', t.type));
+    var kindBox = el('span');
+    if (t.type === 'change' && t.decision) kindBox.appendChild(el('span', 'dec ' + t.decision, decisionLabel(t.decision)));
+    kindBox.appendChild(document.createTextNode(' '));
+    kindBox.appendChild(el('span', 'kind', t.type));
+    top.appendChild(kindBox);
     c.appendChild(top);
     var title = el('div', 'tt', t.title);
     if (t.url && /^https?:\/\//i.test(t.url)) {
@@ -948,6 +1019,16 @@ Lead: Jo Park
     }
     c.appendChild(title);
     if (t.description) c.appendChild(el('div', 'desc', t.description));
+    if (t.type === 'project') {
+      var ps = projectStats(t);
+      if (ps.total || ps.hours) {
+        var pj = el('div', 'pj', statsLine(ps));
+        if (ps.total) { var bar = el('div', 'bar2'), fill = el('i'); fill.style.width = Math.round(ps.done / ps.total * 100) + '%'; bar.appendChild(fill); pj.appendChild(bar); }
+        c.appendChild(pj);
+      }
+    } else if (projectOf(t)) {
+      c.appendChild(el('div', 'inproj', '↳ ' + projectOf(t).id + ' ' + projectOf(t).title));
+    }
     if (t.status === 'blocked' && t.blocked) c.appendChild(el('div', 'why', t.blocked));
     var meta = el('div', 'row2'), chip = linkChip(t);
     meta.appendChild(chip || el('span'));
@@ -977,13 +1058,51 @@ Lead: Jo Park
     if (current && targetName(current) === null) opt(sel, current, current + ' (not on the map)');
     sel.value = current || '';
   }
-  function openForm(id, target){
+  function fillProjects(current, selfId){
+    var sel = $('tProject'); sel.innerHTML = '';
+    function opt(v, label){ var o = el('option', null, label); o.value = v; sel.appendChild(o); }
+    opt('', 'None');
+    tdata.tickets.forEach(function(p){ if (p.type === 'project' && p.id !== selfId) opt(p.id, p.id + ' · ' + p.title); });
+    if (current && !projectOf({ project: current })) opt(current, current + ' (not a project)');
+    sel.value = current || '';
+  }
+  /* show the fields that belong to the chosen type */
+  function syncKindUI(){
+    var type = $('tType').value, t = editingId && findTicket(editingId);
+    $('tProjectRow').hidden = type === 'project';
+    $('tReqBox').hidden = type !== 'change';
+    var showItems = !!t && t.type === 'project' && type === 'project';
+    $('tItemsBox').hidden = !showItems;
+    if (showItems) renderItems(t);
+  }
+  function renderItems(p){
+    var ul = $('tItems'), its = itemsOf(p), st = projectStats(p);
+    ul.innerHTML = '';
+    $('tItemsSum').textContent = statsLine(st) || 'none yet';
+    its.forEach(function(x){
+      var li = el('li'), b = el('button'); b.type = 'button';
+      b.appendChild(el('span', 'k', x.type));
+      b.appendChild(el('span', 'n', x.id + ' ' + x.title));
+      var s = statusLabel(x.status) + (x.type === 'change' && x.decision ? ' · ' + decisionLabel(x.decision) : '');
+      b.appendChild(el('span', 's', s));
+      b.addEventListener('click', function(){ openForm(x.id); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  function openForm(id, target, preset){
     var t = id ? findTicket(id) : null;
+    preset = preset || {};
     editingId = t ? t.id : null;
-    $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ticket';
+    $('tformTitle').textContent = t ? t.id + ' · Edit' : 'New ' + (preset.type === 'change' ? 'change request' : preset.type || 'ticket');
     $('tTitle').value = t ? t.title : '';
     $('tDesc').value = t ? t.description || '' : '';
-    $('tType').value = t ? t.type : 'ticket';
+    $('tType').value = t ? t.type : preset.type || 'ticket';
+    fillProjects(t ? t.project : preset.project || '', t ? t.id : null);
+    $('tReqBy').value = t ? t.requestedBy || '' : '';
+    $('tReqOn').value = t ? t.requested || '' : today();
+    $('tImpact').value = t ? t.impact || '' : '';
+    $('tDecision').value = t && t.decision ? t.decision : 'proposed';
+    syncKindUI();
     setFormStatus(t ? t.status : 'todo');
     $('tBlocked').value = t ? t.blocked || '' : '';
     $('tOwner').value = t ? t.owner || '' : '';
@@ -1034,7 +1153,9 @@ Lead: Jo Park
   $('tCancel').addEventListener('click', closeForm);
   $('tDelete').addEventListener('click', function(){
     var t = editingId && findTicket(editingId);
-    if (!t || !confirm('Delete ' + t.id + ' "' + t.title + '"?')) return;
+    var kids = t && t.type === 'project' ? itemsOf(t) : [];
+    if (!t || !confirm('Delete ' + t.id + ' "' + t.title + '"?' + (kids.length ? '\n\nIts ' + kids.length + ' item' + (kids.length > 1 ? 's' : '') + ' will be kept but no longer belong to a project.' : ''))) return;
+    kids.forEach(function(x){ delete x.project; });
     tdata.tickets = tdata.tickets.filter(function(x){ return x !== t; });
     closeForm(); changed();
   });
@@ -1044,7 +1165,21 @@ Lead: Jo Park
               url: $('tUrl').value.trim(), target: $('tTarget').value, notes: $('tNotes').value.trim(),
               blocked: getFormStatus() === 'blocked' ? $('tBlocked').value.trim() : '', updated: today() };
     if (!v.title) return;
+    /* project link and change-request fields only apply to some types; undefined drops them from the saved file */
+    v.project = v.type === 'project' ? undefined : $('tProject').value || undefined;
+    var isChange = v.type === 'change';
+    v.requestedBy = isChange ? $('tReqBy').value.trim() || undefined : undefined;
+    v.requested = isChange ? $('tReqOn').value || undefined : undefined;
+    v.impact = isChange ? $('tImpact').value.trim() || undefined : undefined;
+    v.decision = isChange ? $('tDecision').value : undefined;
     var t = editingId && findTicket(editingId);
+    if (t && t.type === 'project' && v.type !== 'project') {
+      var kids = itemsOf(t);
+      if (kids.length) {
+        if (!confirm(t.id + ' has ' + kids.length + ' item' + (kids.length > 1 ? 's' : '') + '. If it is no longer a project they will be kept but no longer belong to it. Continue?')) return;
+        kids.forEach(function(x){ delete x.project; });
+      }
+    }
     if (t) Object.keys(v).forEach(function(key){ t[key] = v[key]; });
     else { v.id = newId(v.type); tdata.tickets.push(v); }
     closeForm(); changed();
@@ -1056,6 +1191,10 @@ Lead: Jo Park
   $('vBoard').addEventListener('click', function(){ setView('board'); });
   $('vTable').addEventListener('click', function(){ setView('table'); });
   $('tClose').addEventListener('click', closeForm);
+  $('tType').addEventListener('change', syncKindUI);
+  [['tAddChange', 'change'], ['tAddFeature', 'feature'], ['tAddTicket', 'ticket']].forEach(function(b){
+    $(b[0]).addEventListener('click', function(){ if (editingId) openForm(null, '', { type: b[1], project: editingId }); });
+  });
   Array.prototype.forEach.call(document.querySelectorAll('#tform input[name="tStatus"]'), function(r){ r.addEventListener('change', syncStatusUI); });
   document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape' && !$('tform').hidden) closeForm(); });
 
@@ -1077,7 +1216,7 @@ Lead: Jo Park
           var max = 0;
           d.tickets.forEach(function(t){
             if (!STATUSES.some(function(s){ return s[0] === t.status; })) t.status = 'todo';
-            if (t.type !== 'project') t.type = 'ticket';
+            if (!isKind(t.type)) t.type = 'ticket';
             var legacy = /^T-(\d+)$/.exec(String(t.id));
             if (legacy) max = Math.max(max, parseInt(legacy[1], 10));
           });

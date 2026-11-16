@@ -58,6 +58,11 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 - A summary at the top shows how many tickets are in each status, and one red line per blocked ticket. Click that line to open the ticket.
 - IDs are date based: `T20261116.001` for a ticket and `P20261116.001` for a project (prefix, the date it was created, then a counter that restarts at 001 each day, separately for T and P). Tickets created before this change keep their old `T-1` style IDs. An ID does not change if you later switch a ticket's type.
 - Description: describe what the request is (what is being asked, and by whom) in the Description box under the title. It shows as a short preview on the board card and under the title in the table (hover for the full text), and the search box looks in it too. Notes is still there for anything else.
+- Projects, change requests and features: Type can be Ticket, Project, Change request or Feature. IDs start with `T`, `P`, `C` or `F` (for example `C20261116.001`). Any item that is not a project has a "Part of project" dropdown to attach it to a project.
+  - Open a project to see its items, and use "+ Change request", "+ Feature" or "+ Ticket" there to add one already attached. The project card and table row show "3 of 7 items done" and the hours logged on the project and its items. Rejected change requests are not counted.
+  - A Change request also records who requested it and when, its impact (for example "adds about 6 h"), and a decision: Proposed, Approved or Rejected. The decision shows as a badge on the card. It is separate from the status, so a request can wait for approval while still To do.
+  - Filter by type to see only change requests, and search also matches the requester, the impact and the project name.
+  - Deleting a project (or changing it to another type) keeps its items, which then no longer belong to a project.
 - Press New ticket to add one. Click a card or row to edit it in the drawer beside the list. Set the status with the buttons in the drawer; Blocked asks what it is waiting on, and that text shows on the card.
 - Board: drag a card to another column to move it.
 - Table: grouped by department, with the status changeable in place from the dropdown in each row.
