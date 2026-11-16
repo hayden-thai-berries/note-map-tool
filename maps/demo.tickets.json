@@ -2,7 +2,7 @@
   "nextId": 7,
   "tickets": [
     {
-      "id": "T-1",
+      "id": "P20261115.001",
       "title": "Rebuild Orders import",
       "type": "project",
       "status": "doing",
@@ -31,7 +31,7 @@
       "blocked": ""
     },
     {
-      "id": "T-2",
+      "id": "T20261112.001",
       "title": "Fix CRM sync failures",
       "type": "ticket",
       "status": "blocked",
@@ -50,7 +50,7 @@
       "updated": "2026-11-12"
     },
     {
-      "id": "T-3",
+      "id": "T20261113.001",
       "title": "Automate headcount copy",
       "type": "ticket",
       "status": "todo",
@@ -61,7 +61,7 @@
       "updated": "2026-11-13"
     },
     {
-      "id": "T-4",
+      "id": "P20261114.001",
       "title": "Month-end close checklist",
       "type": "project",
       "status": "todo",
@@ -72,7 +72,7 @@
       "updated": "2026-11-14"
     },
     {
-      "id": "T-5",
+      "id": "T20261101.001",
       "title": "Lock Budget Tracker after sign-off",
       "type": "ticket",
       "status": "done",
@@ -83,7 +83,7 @@
       "updated": "2026-11-01"
     },
     {
-      "id": "T-6",
+      "id": "T20261115.001",
       "title": "Slack reminders for new starters",
       "type": "ticket",
       "status": "doing",
