@@ -24,9 +24,10 @@
     return el('span', 'chip ' + cls, tn);
   }
   function visibleTickets(){
-    var q = $('fSearch').value.trim().toLowerCase(), ft = $('fType').value, fo = $('fOwner').value, fs = $('fStatus').value;
-    return S.tdata.tickets.filter(function(t){
+    var q = $('fSearch').value.trim().toLowerCase(), ft = $('fType').value, fo = $('fOwner').value, fs = $('fStatus').value, fp = $('fPriority').value;
+    return App.byPriority(S.tdata.tickets).filter(function(t){
       if (ft && t.type !== ft) return false;
+      if (fp && App.priorityOf(t) !== fp) return false;
       if (fo && t.owner !== fo) return false;
       if (fs === 'open' && t.status === 'done') return false;
       if (!q) return true;
@@ -91,7 +92,9 @@
     var r = el('div', 'tr row' + (t.status === 'done' ? ' done' : '') + (t.id === S.editingId ? ' sel' : ''));
     r.tabIndex = 0; r.setAttribute('role', 'button');
     r.appendChild(el('span', 'id', t.id));
-    var ttl = el('span', 'ttl', t.title);
+    var ttl = el('span', 'ttl'), pb = App.priorityBadge(t);
+    if (pb) { ttl.appendChild(pb); ttl.appendChild(document.createTextNode(' ')); }
+    ttl.appendChild(document.createTextNode(t.title));
     if (t.description) { var dl = el('small', 'd', t.description.split('\n')[0]); dl.title = t.description; ttl.appendChild(dl); }
     if (t.type === 'project') {
       var rs = App.projectStats(t);
@@ -162,7 +165,8 @@
     var c = el('div', 'tcard' + (t.status === 'blocked' ? ' blocked' : '') + (t.status === 'done' ? ' done' : '') + (t.id === S.editingId ? ' sel' : ''));
     c.tabIndex = 0; c.setAttribute('role', 'button'); c.draggable = true;
     var top = el('div', 'top2', t.id);
-    var kindBox = el('span');
+    var kindBox = el('span'), pb = App.priorityBadge(t);
+    if (pb) { kindBox.appendChild(pb); kindBox.appendChild(document.createTextNode(' ')); }
     if (t.type === 'change' && t.decision) kindBox.appendChild(el('span', 'dec ' + t.decision, App.decisionLabel(t.decision)));
     kindBox.appendChild(document.createTextNode(' '));
     kindBox.appendChild(el('span', 'kind', t.type));
@@ -200,6 +204,7 @@
 
   $('fType').addEventListener('change', renderBoard);
   $('fOwner').addEventListener('change', renderBoard);
+  $('fPriority').addEventListener('change', renderBoard);
   $('fStatus').addEventListener('change', renderBoard);
   $('fSearch').addEventListener('input', renderBoard);
   $('vBoard').addEventListener('click', function(){ setView('board'); });

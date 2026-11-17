@@ -63,6 +63,7 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
   - A Change request also records who requested it and when, its impact (for example "adds about 6 h"), and a decision: Proposed, Approved or Rejected. The decision shows as a badge on the card. It is separate from the status, so a request can wait for approval while still To do.
   - Filter by type to see only change requests, and search also matches the requester, the impact and the project name.
   - Deleting a project (or changing it to another type) keeps its items, which then no longer belong to a project.
+- Priority: every ticket and project has a priority, Urgent, High, Normal or Low. New items are Normal. Urgent, High and Low show as a small badge on the card and in the table, and Normal shows nothing. Lists are ordered with the most important first, and the Priority filter at the top narrows them to one level. Normal is not written to the file, so older tickets without a priority count as Normal.
 - Press New ticket to add one. Click a card or row to edit it in the drawer beside the list. Set the status with the buttons in the drawer; Blocked asks what it is waiting on, and that text shows on the card.
 - Board: drag a card to another column to move it.
 - Table: grouped by department, with the status changeable in place from the dropdown in each row.

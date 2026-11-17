@@ -82,6 +82,9 @@ Lead: free text line (optional)
       <label>Owner
         <select id="fOwner"><option value="">Everyone</option></select>
       </label>
+      <label>Priority
+        <select id="fPriority"><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select>
+      </label>
       <label>Show
         <select id="fStatus"><option value="">All statuses</option><option value="open">Open only</option></select>
       </label>
@@ -113,8 +116,9 @@ Lead: free text line (optional)
   <label id="tBlockedRow">Blocked because<input id="tBlocked" maxlength="200" placeholder="What is it waiting on?"></label>
   <div class="trow">
     <label>Type<select id="tType"><option value="ticket">Ticket</option><option value="project">Project</option><option value="change">Change request</option><option value="feature">Feature</option></select></label>
-    <label>Owner<input id="tOwner" maxlength="100"></label>
+    <label>Priority<select id="tPriority"><option value="urgent">Urgent</option><option value="high">High</option><option value="normal" selected>Normal</option><option value="low">Low</option></select></label>
   </div>
+  <label>Owner<input id="tOwner" maxlength="100"></label>
   <div class="pbox" id="tProjectRow"><label>Part of project<select id="tProject"></select></label></div>
   <div class="reqbox" id="tReqBox" hidden>
     <div class="trow">
