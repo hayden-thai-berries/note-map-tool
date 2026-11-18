@@ -96,7 +96,7 @@ test commitlint
 
 ## Flows
 
-The Flows tab draws business flows as swimlanes: one lane per team, one box per step, and arrows for the hand-offs between teams. The text lives in `maps/<map>.flows.md` (for `work.md` that is `maps/work.flows.md`, not tracked by git; `maps/demo.flows.md` is the example). Click a step to edit it in a form (team, text, day, sheet, ticket, what it waits for), or use Add step, New flow and the move/delete buttons; Save writes the file. Edit as text is there too, but the form rewrites the text, so comments you add by hand are not kept.
+The Flows tab draws business flows as swimlanes: one lane per team, one box per step, and arrows for the hand-offs between teams. The text lives in `maps/<map>.flows.md` (for `work.md` that is `maps/work.flows.md`, not tracked by git; `maps/demo.flows.md` is the example). Click a step to edit it in a form (team, text, day, sheet, ticket, what it waits for), or use Add step, New flow and the move/delete buttons; Save writes the file. Drag a step to another lane or to another place in the order. With the editor open, each lane has buttons to rename it (or double-click its name), move it up or down, and remove it when empty; Add lane creates one. A lane named like a department on the map shows a Department tag. Edit as text is there too, but the form rewrites the text, so comments you add by hand are not kept.
 
     # Weekly payroll
     Every: Friday, then Monday           (optional text)

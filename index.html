@@ -173,6 +173,7 @@ Lead: free text line (optional)
         <h2>Edit flow</h2>
         <label>Flow name<input id="fName" maxlength="100"></label>
         <label>Runs<input id="fEvery" maxlength="100" placeholder="e.g. every Friday"></label>
+        <div class="bar"><input id="fLaneName" maxlength="60" placeholder="New lane (team or department)" aria-label="New lane name"><button class="btn" id="fAddLane" type="button">+ Add lane</button></div>
         <p class="status" id="fHint">Click a step in the diagram to edit it.</p>
         <form class="fstep" id="fStepForm" hidden aria-label="Step">
           <h3 id="sHead">Step</h3>
@@ -208,7 +209,7 @@ Teams: Harvest, IT     (lane order, optional)
 2. IT | Top up | Fri | &lt;- Harvest: Piece work ready
 3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | &lt;- IT: Top up done
   Indented line = note for the step above</pre>
-          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. Editing with the form rewrites this text, so comments you add here are not kept.</p>
+          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. Editing with the form rewrites this text, so comments you add here are not kept. Drag a step to another lane or place to move it.</p>
         </details>
       </aside>
     </div>

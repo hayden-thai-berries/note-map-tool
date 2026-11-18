@@ -3,7 +3,7 @@
   var S = App.S, $ = App.$, el = App.el;
 
   var LANE_W = 110, LANE_H = 150, CARD_W = 190, CARD_H = 100, GAP = 140, PAD = 20, SVGNS = 'http://www.w3.org/2000/svg';
-  var timer = null, flows = [], selStep = -1;
+  var timer = null, flows = [], selStep = -1, suppressClick = false;
 
   function flowsFile(){ return S.param.replace(/\.md$/, '') + '.flows.md'; }
   function setStatus(t){ $('fstatus').textContent = t || ''; }
@@ -39,6 +39,48 @@
     return box;
   }
 
+  /* the department on the map with the same name as a team, if there is one */
+  function deptOf(team){
+    var key = team.toLowerCase(), hit = null;
+    if (S.model) S.model.depts.forEach(function(d){ if (d.name.toLowerCase() === key) hit = d; });
+    return hit;
+  }
+  function laneBtn(text, title, fn, disabled){
+    var b = el('button', 'fbtn', text); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.disabled = !!disabled;
+    b.addEventListener('click', function(ev){ ev.stopPropagation(); fn(); });
+    return b;
+  }
+  function laneLabel(flow, team, i){
+    var lab = el('div', 'flabel'), name = el('div', 'fname', team), d = deptOf(team);
+    name.title = 'Double-click to rename';
+    name.addEventListener('dblclick', function(){ startRename(lab, name, i); });
+    lab.appendChild(name);
+    if (d) {
+      var b = el('span', 'fdept', 'Department');
+      b.title = 'A department on the map' + (d.text.length ? ': ' + d.text.join(' · ') : '');
+      lab.appendChild(b);
+    }
+    var empty = !flow.steps.some(function(st){ return st.team.toLowerCase() === team.toLowerCase(); });
+    var ctl = el('div', 'fctl');
+    ctl.appendChild(laneBtn('✎', 'Rename lane', function(){ startRename(lab, name, i); }));
+    ctl.appendChild(laneBtn('▲', 'Move lane up', function(){ moveLane(i, -1); }, i === 0));
+    ctl.appendChild(laneBtn('▼', 'Move lane down', function(){ moveLane(i, 1); }, i === flow.teams.length - 1));
+    if (empty) ctl.appendChild(laneBtn('✕', 'Remove empty lane', function(){ flows[S.flowIdx].teams.splice(i, 1); commit(false); }));
+    lab.appendChild(ctl);
+    return lab;
+  }
+  function startRename(lab, name, i){
+    var inp = el('input', 'frename'), finished = false;
+    inp.value = flows[S.flowIdx].teams[i]; inp.maxLength = 60; inp.setAttribute('aria-label', 'Lane name');
+    function finish(save){
+      if (finished) return; finished = true;
+      if (save) renameLane(i, inp.value); else renderFlows(true);
+    }
+    inp.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') finish(true); if (ev.key === 'Escape') finish(false); });
+    inp.addEventListener('blur', function(){ finish(true); });
+    lab.replaceChild(inp, name); inp.focus(); inp.select();
+  }
+
   function drawFlow(flow){
     var host = $('fcanvas'), warn = flow.warn.slice(), n = flow.steps.length;
     host.textContent = '';
@@ -48,10 +90,11 @@
     function laneOf(st){ return flow.teams.map(function(t){ return t.toLowerCase(); }).indexOf(st.team.toLowerCase()); }
     function top(st){ return laneOf(st) * LANE_H + (LANE_H - 10 - CARD_H) / 2; }
 
+    var laneEls = [];
     flow.teams.forEach(function(t, i){
       var lane = el('div', 'flane c' + (i % 4)); lane.style.top = i * LANE_H + 'px'; lane.style.height = LANE_H - 10 + 'px';
-      lane.appendChild(el('div', 'flabel', t));
-      host.appendChild(lane);
+      lane.appendChild(laneLabel(flow, t, i));
+      host.appendChild(lane); laneEls.push(lane);
     });
 
     var svg = document.createElementNS(SVGNS, 'svg');
@@ -76,9 +119,44 @@
       }
     });
 
+    /* where a dragged card would land: the lane under the pointer, and its place in the step order (the others keep their order) */
+    function dropTarget(ev, from){
+      var r = host.getBoundingClientRect(), px = ev.clientX - r.left, py = ev.clientY - r.top;
+      var lane = Math.max(0, Math.min(flow.teams.length - 1, Math.floor(py / LANE_H)));
+      var others = flow.steps.map(function(st, j){ return j; }).filter(function(j){ return j !== from; });
+      var pos = others.filter(function(j){ return x(j) + CARD_W / 2 < px; }).length;
+      var lineX = !others.length ? null : pos < others.length ? x(others[pos]) - GAP / 2 : x(others[others.length - 1]) + CARD_W + GAP / 2;
+      return { lane: lane, pos: pos, lineX: lineX };
+    }
+    function startDrag(ev, card, from){
+      var sx = ev.clientX, sy = ev.clientY, moved = false, mark = el('div', 'fdrop');
+      function move(e){
+        var dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!moved) {
+          if (Math.abs(dx) + Math.abs(dy) < 6) return;
+          moved = true; card.classList.add('drag'); host.classList.add('dragging'); host.appendChild(mark);
+        }
+        card.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        var t = dropTarget(e, from);
+        laneEls.forEach(function(l, k){ l.classList.toggle('over', k === t.lane); });
+        mark.style.display = t.lineX == null ? 'none' : 'block'; mark.style.left = t.lineX + 'px'; mark.style.height = height + 'px';
+      }
+      function up(e){
+        document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+        if (!moved) return;
+        suppressClick = true; setTimeout(function(){ suppressClick = false; }, 0);
+        if (e.type === 'pointercancel') { renderFlows(true); return; }
+        var t = dropTarget(e, from);
+        if (flow.teams[t.lane].toLowerCase() === flow.steps[from].team.toLowerCase() && t.pos === from) { renderFlows(true); return; }
+        dropStep(from, t.lane, t.pos);
+      }
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }
+
     flow.steps.forEach(function(st, i){
       var card = el('div', 'fcard c' + (laneOf(st) % 4) + (i === selStep ? ' sel' : '')); card.tabIndex = 0; card.setAttribute('role', 'button');
-      card.addEventListener('click', function(ev){ if (!ev.target.closest('a')) pickStep(i); });
+      card.addEventListener('click', function(ev){ if (!suppressClick && !ev.target.closest('a')) pickStep(i); });
+      card.addEventListener('pointerdown', function(ev){ if (ev.button === 0 && !ev.target.closest('a')) startDrag(ev, card, i); });
       card.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickStep(i); } }); card.style.left = x(i) + 'px'; card.style.top = top(st) + 'px';
       card.style.width = CARD_W + 'px'; card.style.height = CARD_H + 'px';
       card.appendChild(el('div', 'fmeta', (i + 1) + (st.day ? ' · ' + st.day : '')));
@@ -146,6 +224,33 @@
   }
   function pickStep(i){ selStep = i; showEditor(true); renderFlows(); }
 
+  /* a team's name is used by its steps and by the steps that wait on it; renaming to an existing lane merges the two */
+  function renameLane(i, value){
+    var f = flow(), old = f.teams[i], now = cleanTeam(value);
+    if (!now || now === old) { renderFlows(true); return; }
+    f.steps.forEach(function(st){
+      if (st.team.toLowerCase() === old.toLowerCase()) st.team = now;
+      st.triggers.forEach(function(t){ if (t.team.toLowerCase() === old.toLowerCase()) t.team = now; });
+    });
+    f.teams[i] = now;
+    f.teams = f.teams.filter(function(t, k){ return f.teams.findIndex(function(u){ return u.toLowerCase() === t.toLowerCase(); }) === k; });
+    commit(false);
+  }
+  function moveLane(i, d){
+    var f = flow(), j = i + d; if (j < 0 || j >= f.teams.length) return;
+    var t = f.teams[i]; f.teams[i] = f.teams[j]; f.teams[j] = t; commit(false);
+  }
+  function dropStep(from, lane, pos){
+    var f = flow(), st = f.steps.splice(from, 1)[0];
+    st.team = f.teams[lane]; f.steps.splice(pos, 0, st); selStep = pos; commit(false);
+  }
+  function addLane(){
+    var f = flow(), name = cleanTeam($('fLaneName').value);
+    if (!f || !name) return;
+    if (!f.teams.some(function(t){ return t.toLowerCase() === name.toLowerCase(); })) f.teams.push(name);
+    $('fLaneName').value = ''; commit(false);
+  }
+
   function fillOptions(sel, items, value){
     sel.textContent = '';
     items.forEach(function(it){ var o = el('option', null, it[1]); o.value = it[0]; sel.appendChild(o); });
@@ -176,7 +281,9 @@
     if (!st) return;
     $('sHead').textContent = 'Step ' + (selStep + 1);
     $('sTeam').value = st.team; $('sTitle').value = st.title; $('sSheet').value = st.sheet || ''; $('sNote').value = st.note;
-    $('sTeams').textContent = ''; f.teams.forEach(function(t){ var o = el('option'); o.value = t; $('sTeams').appendChild(o); });
+    var teamNames = f.teams.slice();
+    if (S.model) S.model.depts.forEach(function(d){ if (teamNames.indexOf(d.name) < 0) teamNames.push(d.name); });
+    $('sTeams').textContent = ''; teamNames.forEach(function(t){ var o = el('option'); o.value = t; $('sTeams').appendChild(o); });
     $('sSheets').textContent = '';
     if (S.model) {
       var names = []; S.model.depts.forEach(function(d){ App.deptNodes(d).forEach(function(n){ names.push(n.name); }); });
@@ -198,7 +305,10 @@
     var old = st.team.toLowerCase(), now = cleanTeam(v) || '(no team)';
     st.team = now;
     var f = flow(), stillUsed = f.steps.some(function(o){ return o.team.toLowerCase() === old; });
-    if (!stillUsed) f.steps.forEach(function(o){ o.triggers.forEach(function(t){ if (t.team.toLowerCase() === old) t.team = now; }); });
+    if (!stillUsed) {
+      f.steps.forEach(function(o){ o.triggers.forEach(function(t){ if (t.team.toLowerCase() === old) t.team = now; }); });
+      f.teams = f.teams.filter(function(t){ return t.toLowerCase() !== old; });
+    }
   });
   bindStep('sTitle', 'input', function(st, v){ st.title = clean(v) || '(untitled)'; });
   bindStep('sDay', 'change', function(st, v){ st.day = v || null; });
@@ -245,5 +355,7 @@
     if (ev.key === 'Tab') { ev.preventDefault(); var s = this.selectionStart; this.value = this.value.slice(0, s) + '  ' + this.value.slice(this.selectionEnd); this.selectionStart = this.selectionEnd = s + 2; }
     if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 's') { ev.preventDefault(); saveFlows(); }
   });
+  $('fAddLane').addEventListener('click', addLane);
+  $('fLaneName').addEventListener('keydown', function(ev){ if (ev.key === 'Enter') { ev.preventDefault(); addLane(); } });
   $('fSave').addEventListener('click', saveFlows);
 })(App);

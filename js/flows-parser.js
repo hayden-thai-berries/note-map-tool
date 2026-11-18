@@ -77,14 +77,13 @@
     return flows;
   }
 
-  /* the reverse of parseFlows, so the form editor can write the text file. Lanes nobody uses are dropped from the Teams line. */
+  /* the reverse of parseFlows, so the form editor can write the text file. Empty lanes are kept in the Teams line. */
   function stringifyFlows(flows){
     return flows.map(function(f){
-      var used = {}, seen = {}, teams = [], out = ['# ' + f.title];
-      f.steps.forEach(function(st){ used[st.team.toLowerCase()] = true; });
+      var seen = {}, teams = [], out = ['# ' + f.title];
       f.teams.concat(f.steps.map(function(st){ return st.team; })).forEach(function(t){
         var k = t.toLowerCase();
-        if (used[k] && !seen[k]) { seen[k] = true; teams.push(t); }
+        if (!seen[k]) { seen[k] = true; teams.push(t); }
       });
       if (f.every) out.push('Every: ' + f.every);
       if (teams.length) out.push('Teams: ' + teams.join(', '));
