@@ -14,6 +14,7 @@ Then open:
 
 - http://localhost:8000/ for your map (`maps/work.md`)
 - http://localhost:8000/?map=demo.md for the example data (`maps/demo.md`)
+- Add `#flows` or `#tickets` to the address (for example http://localhost:8000/?map=demo.md#flows) to open that tab directly.
 
 `maps/work.md` is private and not tracked by git. Create your own copy (for example from `maps/demo.md`) and edit it. Without it the page shows the built-in demo.
 
@@ -77,19 +78,22 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 ## Files
 
 - `index.html`: the page markup and the built-in demo map. No build step, no dependencies. Fonts load from Google Fonts when online and fall back to system fonts.
-- `css/`: styles. `theme.css` (colours, light and dark), `base.css` (reset, buttons, form controls), `map.css` (map, cards, wires, detail panel), `editor.css` (Markdown editor panel), `tickets.css` (Tickets tab).
+- `css/`: styles. `theme.css` (colours, light and dark), `base.css` (reset, buttons, form controls), `map.css` (map, cards, wires, detail panel), `editor.css` (Markdown editor panel), `tickets.css` (Tickets tab), `flows.css` (Flows tab).
 - `js/`: the app, as plain scripts (not ES modules) so `index.html` still opens from a file path. Each file adds what it shares to the `App` object from `core.js`, and `index.html` loads them in this order:
   - `core.js`: the `App` namespace and the shared state (`App.S`).
   - `parser.js`: Markdown to map model.
+  - `flows-parser.js`: Markdown to flows, and back again for the form editor.
   - `tickets-data.js`: ticket constants, IDs, totals, loading and saving the tickets file.
   - `tickets-board.js`: summary strip, Kanban board, table, filters.
   - `map.js`: map drawing, wires, selection, detail panel.
   - `tickets-form.js`: ticket drawer form, time log, "Add a ticket" row.
+  - `flows-view.js`: Flows tab: swimlane drawing, drag and drop, form editor, loading and saving the flows file.
   - `editor.js`: Markdown editor panel and saving `maps/<map>.md`.
   - `main.js`: tab switching and startup (keep last).
 - `maps/demo.md`: example data.
 - `maps/work.md`: your map. Start here.
 - `maps/demo.tickets.json`: example tickets. `maps/work.tickets.json` holds your own.
+- `maps/demo.flows.md`: example flows. `maps/work.flows.md` holds your own (not tracked by git).
 - `server.py`: the local server. It serves the folder and accepts saves to `maps/*.md` and `maps/*.json` only, from this page only, on localhost only.
 - `start.command`: runs `server.py` and opens the browser on macOS.
 test commitlint
