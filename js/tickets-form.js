@@ -82,6 +82,7 @@
     $('tTitle').value = t ? t.title : '';
     $('tDesc').value = t ? t.description || '' : '';
     $('tType').value = t ? t.type : preset.type || 'ticket';
+    $('tPriority').value = t ? App.priorityOf(t) : 'normal';
     fillProjects(t ? t.project : preset.project || '', t ? t.id : null);
     $('tReqBy').value = t ? t.requestedBy || '' : '';
     $('tReqOn').value = t ? t.requested || '' : App.today();
@@ -165,6 +166,7 @@
               blocked: getFormStatus() === 'blocked' ? $('tBlocked').value.trim() : '', updated: App.today() };
     if (!v.title) return;
     /* project link and change-request fields only apply to some types; undefined drops them from the saved file */
+    v.priority = $('tPriority').value === 'normal' ? undefined : $('tPriority').value;
     v.project = v.type === 'project' ? undefined : $('tProject').value || undefined;
     var isChange = v.type === 'change';
     v.requestedBy = isChange ? $('tReqBy').value.trim() || undefined : undefined;

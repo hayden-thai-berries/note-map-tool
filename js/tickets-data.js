@@ -8,6 +8,22 @@
   var DECISIONS = [['proposed', 'Proposed'], ['approved', 'Approved'], ['rejected', 'Rejected']];
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+  /* most important first; a ticket with no priority set counts as normal, and normal is not saved to the file */
+  var PRIORITIES = [['urgent', 'Urgent'], ['high', 'High'], ['normal', 'Normal'], ['low', 'Low']];
+  function priorityOf(t){ return PRIORITIES.some(function(p){ return p[0] === t.priority; }) ? t.priority : 'normal'; }
+  function priorityRank(t){ for (var i = 0; i < PRIORITIES.length; i++) if (PRIORITIES[i][0] === priorityOf(t)) return i; return 2; }
+  function priorityLabel(t){ return PRIORITIES[priorityRank(t)][1]; }
+  /* small coloured badge; nothing for normal so the common case stays quiet */
+  function priorityBadge(t){
+    var p = priorityOf(t);
+    if (p === 'normal') return null;
+    var b = document.createElement('span'); b.className = 'pri ' + p; b.textContent = priorityLabel(t); b.title = 'Priority: ' + priorityLabel(t);
+    return b;
+  }
+  function byPriority(list){
+    return list.map(function(t, i){ return [t, i]; }).sort(function(a, b){ return priorityRank(a[0]) - priorityRank(b[0]) || a[1] - b[1]; }).map(function(x){ return x[0]; });
+  }
+
   function isKind(k){ return KINDS.some(function(x){ return x[0] === k; }); }
   function prefixOf(k){ for (var i = 0; i < KINDS.length; i++) if (KINDS[i][0] === k) return KINDS[i][1]; return 'T'; }
   function decisionLabel(d){ for (var i = 0; i < DECISIONS.length; i++) if (DECISIONS[i][0] === d) return DECISIONS[i][1]; return d; }
@@ -97,7 +113,8 @@
       .catch(function(){ setTStatus('Could not read maps/' + ticketsFile() + '. Open the page through the local server (see README).'); App.renderBoard(); });
   }
 
-  App.STATUSES = STATUSES;
+  App.STATUSES = STATUSES; App.PRIORITIES = PRIORITIES;
+  App.priorityOf = priorityOf; App.priorityLabel = priorityLabel; App.priorityBadge = priorityBadge; App.byPriority = byPriority;
   App.statusLabel = statusLabel; App.decisionLabel = decisionLabel;
   App.findTicket = findTicket; App.itemsOf = itemsOf; App.projectOf = projectOf; App.openFor = openFor;
   App.targetName = targetName; App.today = today; App.newId = newId;
