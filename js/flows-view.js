@@ -4,6 +4,12 @@
 
   var LANE_W = 110, LANE_H = 150, CARD_W = 190, CARD_H = 100, GAP = 140, PAD = 20, SVGNS = 'http://www.w3.org/2000/svg';
   var timer = null, flows = [], selStep = -1, suppressClick = false;
+  /* the arrow open in the editor: { kind: 'in', to: step index, tIdx: index in that step's triggers, -1 = automatic arrow }
+   * or { kind: 'back', step: step index, bIdx: index in its backs }. Indices, because every edit re-reads the text. */
+  var selArrow = null;
+  function sameArrow(a, b){
+    return !!a && a.kind === b.kind && (a.kind === 'in' ? a.to === b.to && a.tIdx === b.tIdx : a.step === b.step && a.bIdx === b.bIdx);
+  }
 
   function flowsFile(){ return S.param.replace(/\.md$/, '') + '.flows.md'; }
   function setStatus(t){ $('fstatus').textContent = t || ''; }
@@ -110,32 +116,65 @@
       var ax = x(e.from) + CARD_W, ay = top(a) + CARD_H / 2, bx = x(e.to), by = top(b) + CARD_H / 2, mx = bx - GAP / 2;
       var path = document.createElementNS(SVGNS, 'path');
       path.setAttribute('d', ay === by ? 'M' + ax + ' ' + ay + ' H' + bx : 'M' + ax + ' ' + ay + ' H' + mx + ' V' + by + ' H' + bx);
-      path.setAttribute('class', e.msg ? 'fe msg' : 'fe');
+      var pick = { kind: 'in', to: e.to, tIdx: e.tIdx }, on = sameArrow(selArrow, pick);
+      path.setAttribute('class', (e.msg ? 'fe msg' : 'fe') + (on ? ' sel' : ''));
       path.setAttribute('marker-end', 'url(#' + (e.msg ? 'fa' : 'fw') + ')');
       svg.appendChild(path);
+      svg.appendChild(hitPath(path.getAttribute('d'), pick));
       if (e.msg) {
-        var pill = el('div', 'fmsg', '✉ ' + e.msg); pill.title = a.team + ' tells ' + b.team + ': ' + e.msg;
+        var pill = el('div', 'fmsg click' + (on ? ' sel' : ''), '✉ ' + e.msg); pill.title = a.team + ' tells ' + b.team + ': ' + e.msg + ' (click to edit this arrow)';
         pill.style.left = (ay === by ? (ax + bx) / 2 : mx) + 'px'; pill.style.top = (ay === by ? ay - 16 : (ay + by) / 2) + 'px';
+        pill.addEventListener('click', function(){ pickArrow(pick); });
         host.appendChild(pill);
       }
     });
 
     /* a step that sends work back to an earlier one: a dashed loop under the lanes, from the bottom of one box to the bottom of the other */
     flow.steps.forEach(function(st, i){
-      st.backs.forEach(function(b){
+      st.backs.forEach(function(b, bi){
         var k = flow.steps.indexOf(b.ref); if (k < 0) return;
         var sx = x(i) + CARD_W / 2, tx = x(k) + CARD_W / 2, sy = top(st) + CARD_H, ty = top(b.ref) + CARD_H;
         var yl = Math.max(laneOf(st), laneOf(b.ref)) * LANE_H + LANE_H - 17;
-        var path = document.createElementNS(SVGNS, 'path');
+        var path = document.createElementNS(SVGNS, 'path'), pick = { kind: 'back', step: i, bIdx: bi }, on = sameArrow(selArrow, pick);
         path.setAttribute('d', 'M' + sx + ' ' + sy + ' V' + yl + ' H' + tx + ' V' + ty);
-        path.setAttribute('class', 'fe back'); path.setAttribute('marker-end', 'url(#fb)');
+        path.setAttribute('class', 'fe back' + (on ? ' sel' : '')); path.setAttribute('marker-end', 'url(#fb)');
         svg.appendChild(path);
-        var pill = el('div', 'fmsg back', '↩ ' + (b.msg || 'Sent back to step ' + (k + 1)));
-        pill.title = st.team + ' sends back to step ' + (k + 1) + (b.msg ? ': ' + b.msg : '');
+        svg.appendChild(hitPath(path.getAttribute('d'), pick));
+        var pill = el('div', 'fmsg back click' + (on ? ' sel' : ''), '↩ ' + (b.msg || 'Sent back to step ' + (k + 1)));
+        pill.title = st.team + ' sends back to step ' + (k + 1) + (b.msg ? ': ' + b.msg : '') + ' (click to edit this arrow)';
         pill.style.left = (sx + tx) / 2 + 'px'; pill.style.top = yl + 'px';
+        pill.addEventListener('click', function(){ pickArrow(pick); });
         host.appendChild(pill);
       });
     });
+
+    /* a wide invisible copy of an arrow, so a thin line is easy to click */
+    function hitPath(d, pick){
+      var h = document.createElementNS(SVGNS, 'path');
+      h.setAttribute('d', d); h.setAttribute('class', 'fhit');
+      h.addEventListener('click', function(){ pickArrow(pick); });
+      return h;
+    }
+    /* drag from the dot on a card's right edge to another card: onto a later step it adds an arrow, onto an earlier one a "sent back" arrow */
+    function startConnect(ev, from){
+      ev.stopPropagation(); ev.preventDefault();
+      var line = document.createElementNS(SVGNS, 'path'), a = flow.steps[from], sx = x(from) + CARD_W, sy = top(a) + CARD_H / 2, over = null;
+      line.setAttribute('class', 'fe pend'); svg.appendChild(line);
+      function cardAt(e){ var c = document.elementFromPoint(e.clientX, e.clientY); c = c && c.closest && c.closest('.fcard'); return c && +c.getAttribute('data-i') !== from ? c : null; }
+      function move(e){
+        var r = host.getBoundingClientRect();
+        line.setAttribute('d', 'M' + sx + ' ' + sy + ' L' + (e.clientX - r.left) + ' ' + (e.clientY - r.top));
+        var c = cardAt(e); if (over && over !== c) over.classList.remove('target'); if (c) c.classList.add('target'); over = c;
+      }
+      function up(e){
+        document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+        line.remove(); if (over) over.classList.remove('target');
+        suppressClick = true; setTimeout(function(){ suppressClick = false; }, 0);
+        var c = e.type === 'pointercancel' ? null : cardAt(e);
+        if (c) connect(from, +c.getAttribute('data-i'));
+      }
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }
 
     /* where a dragged card would land: the lane under the pointer, and its place in the step order (the others keep their order) */
     function dropTarget(ev, from){
@@ -176,7 +215,11 @@
       card.addEventListener('click', function(ev){ if (!suppressClick && !ev.target.closest('a')) pickStep(i); });
       card.addEventListener('pointerdown', function(ev){ if (ev.button === 0 && !ev.target.closest('a')) startDrag(ev, card, i); });
       card.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickStep(i); } }); card.style.left = x(i) + 'px'; card.style.top = top(st) + 'px';
-      card.style.width = CARD_W + 'px'; card.style.height = CARD_H + 'px';
+      card.style.width = CARD_W + 'px'; card.style.height = CARD_H + 'px'; card.setAttribute('data-i', i);
+      var dot = el('span', 'fconn'); dot.title = 'Drag to another step to draw an arrow';
+      dot.addEventListener('pointerdown', function(ev){ if (ev.button === 0) startConnect(ev, i); });
+      dot.addEventListener('click', function(ev){ ev.stopPropagation(); });
+      card.appendChild(dot);
       card.appendChild(el('div', 'fmeta', (i + 1) + (st.day ? ' · ' + st.day : '')));
       var title = el('div', 'ftitle', st.title); if (st.note) title.title = st.note;
       card.appendChild(title);
@@ -240,7 +283,97 @@
     setStatus(S.flowsMd === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
     renderFlows(keepForm);
   }
-  function pickStep(i){ selStep = i; showEditor(true); renderFlows(); }
+  function pickStep(i){ selStep = i; selArrow = null; showEditor(true); renderFlows(); }
+  function pickArrow(a){ selArrow = a; selStep = -1; showEditor(true); renderFlows(); }
+
+  /* the trigger behind the open arrow; the automatic arrow from the step before is turned into a real one first so it can be changed */
+  function arrowTrigger(){
+    var f = flow(), st = f && f.steps[selArrow.to];
+    if (!st) return null;
+    if (selArrow.tIdx < 0) {
+      if (selArrow.to < 1) return null;
+      st.triggers.push({ ref: f.steps[selArrow.to - 1], team: null, msg: '' }); selArrow.tIdx = st.triggers.length - 1;
+    }
+    return st.triggers[selArrow.tIdx] || null;
+  }
+  /* draws an arrow between two steps: to a later step it is a normal arrow, to an earlier one a "sent back" arrow */
+  function connect(from, to){
+    var f = flow(), a = f.steps[from], b = f.steps[to];
+    if (!a || !b || from === to) return;
+    if (to < from) {
+      a.backs.push({ ref: b, msg: '' }); selArrow = { kind: 'back', step: from, bIdx: a.backs.length - 1 }; selStep = -1; commitArrow(); return;
+    }
+    /* a step with no explicit arrows is fed by the step before it; keep that arrow when adding another */
+    if (!b.triggers.length && !b.standalone && to > 0) b.triggers.push({ ref: f.steps[to - 1], team: null, msg: '' });
+    b.standalone = false;
+    var have = b.triggers.findIndex(function(t){ return t.ref === a; });
+    if (have < 0) { b.triggers.push({ ref: a, team: null, msg: '' }); have = b.triggers.length - 1; }
+    selArrow = { kind: 'in', to: to, tIdx: have }; selStep = -1; commitArrow();
+  }
+  function commitArrow(){ showEditor(true); commit(false); }
+  function validArrow(f){
+    var a = selArrow; if (!a || !f) return null;
+    if (a.kind === 'in') {
+      var st = f.steps[a.to]; if (!st) return null;
+      if (a.tIdx < 0) return a.to > 0 && !st.triggers.length && !st.standalone ? a : null;
+      return st.triggers[a.tIdx] ? a : null;
+    }
+    var s = f.steps[a.step]; return s && s.backs[a.bIdx] ? a : null;
+  }
+  function fillArrow(){
+    var f = flow(), a = validArrow(f), box = $('fArrow');
+    if (!a) selArrow = null;
+    box.hidden = !a;
+    if (!a) return;
+    var from = $('aFrom'), items, cur, st, label;
+    if (a.kind === 'in') {
+      st = f.steps[a.to];
+      var t = a.tIdx < 0 ? { ref: f.steps[a.to - 1], msg: '' } : st.triggers[a.tIdx];
+      items = f.teams.map(function(n){ return ['t:' + n, 'Team: ' + n]; });
+      f.steps.forEach(function(o, j){ if (j < a.to) items.push(['s:' + j, 'Step ' + (j + 1) + ' · ' + o.title]); });
+      cur = t.ref ? 's:' + f.steps.indexOf(t.ref) : 't:' + t.team;
+      $('aHead').textContent = 'Arrow into step ' + (a.to + 1);
+      $('aFromLbl').textContent = 'Comes from';
+      $('aMsg').value = t.msg || '';
+    } else {
+      st = f.steps[a.step];
+      var b = st.backs[a.bIdx];
+      items = []; f.steps.forEach(function(o, j){ if (o !== st) items.push(['s:' + j, 'Step ' + (j + 1) + ' · ' + o.title]); });
+      cur = 's:' + f.steps.indexOf(b.ref);
+      $('aHead').textContent = 'Sent back from step ' + (a.step + 1);
+      $('aFromLbl').textContent = 'Goes back to';
+      $('aMsg').value = b.msg || '';
+    }
+    fillOptions(from, items, cur);
+  }
+  $('aFrom').addEventListener('change', function(){
+    var a = validArrow(flow()), v = this.value; if (!a) return;
+    if (a.kind === 'back') flow().steps[a.step].backs[a.bIdx].ref = flow().steps[+v.slice(2)];
+    else {
+      var t = arrowTrigger(); if (!t) return;
+      if (v.charAt(0) === 's') { t.ref = flow().steps[+v.slice(2)]; t.team = null; } else { t.team = v.slice(2); t.ref = null; }
+      t.num = null;
+    }
+    commit(true);
+  });
+  $('aMsg').addEventListener('input', function(){
+    var a = validArrow(flow()), v = clean(this.value); if (!a) return;
+    if (a.kind === 'back') flow().steps[a.step].backs[a.bIdx].msg = v;
+    else { var t = arrowTrigger(); if (!t) return; t.msg = v; }
+    commit(true);
+  });
+  $('aDel').addEventListener('click', function(){
+    var a = validArrow(flow()); if (!a) return;
+    var f = flow();
+    if (a.kind === 'back') f.steps[a.step].backs.splice(a.bIdx, 1);
+    else {
+      var st = f.steps[a.to];
+      if (a.tIdx >= 0) st.triggers.splice(a.tIdx, 1);
+      /* with no arrow left the step must say it starts on its own, or it would fall back to following the step before it */
+      if (!st.triggers.length) st.standalone = true;
+    }
+    selArrow = null; commit(false);
+  });
 
   /* a team's name is used by its steps and by the steps that wait on it; renaming to an existing lane merges the two */
   function renameLane(i, value){
@@ -248,7 +381,7 @@
     if (!now || now === old) { renderFlows(true); return; }
     f.steps.forEach(function(st){
       if (st.team.toLowerCase() === old.toLowerCase()) st.team = now;
-      st.triggers.forEach(function(t){ if (t.team.toLowerCase() === old.toLowerCase()) t.team = now; });
+      st.triggers.forEach(function(t){ if (t.team && t.team.toLowerCase() === old.toLowerCase()) t.team = now; });
     });
     f.teams[i] = now;
     f.teams = f.teams.filter(function(t, k){ return f.teams.findIndex(function(u){ return u.toLowerCase() === t.toLowerCase(); }) === k; });
@@ -260,7 +393,7 @@
   }
   function dropStep(from, lane, pos){
     var f = flow(), st = f.steps.splice(from, 1)[0];
-    st.team = f.teams[lane]; f.steps.splice(pos, 0, st); selStep = pos; commit(false);
+    st.team = f.teams[lane]; f.steps.splice(pos, 0, st); selStep = pos; selArrow = null; commit(false);
   }
   function addLane(){
     var f = flow(), name = cleanTeam($('fLaneName').value);
@@ -298,10 +431,17 @@
     box.textContent = '';
     st.triggers.forEach(function(t, k){
       var row = el('div', 'ftrig'), team = el('select'), msg = el('input'), x = el('button', 'btn', '×');
-      fillOptions(team, f.teams.map(function(n){ return [n, n]; }), t.team);
+      /* wait on a team (its latest earlier step) or on one exact earlier step; add several rows to wait on several steps */
+      var me = f.steps.indexOf(st), items = f.teams.map(function(n){ return ['t:' + n, 'Team: ' + n]; });
+      f.steps.forEach(function(o, j){ if (j < me) items.push(['s:' + j, 'Step ' + (j + 1) + ' · ' + o.title]); });
+      fillOptions(team, items, t.ref ? 's:' + f.steps.indexOf(t.ref) : 't:' + t.team);
       msg.maxLength = 120; msg.placeholder = 'Message, e.g. Top up done'; msg.value = t.msg; msg.setAttribute('aria-label', 'Message');
       x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove');
-      team.addEventListener('change', function(){ step().triggers[k].team = team.value; commit(true); });
+      team.addEventListener('change', function(){
+        var tr = step().triggers[k], v = team.value;
+        if (v.charAt(0) === 's') { tr.ref = flow().steps[+v.slice(2)]; tr.team = null; } else { tr.team = v.slice(2); tr.ref = null; }
+        tr.num = null; commit(true);
+      });
       msg.addEventListener('input', function(){ step().triggers[k].msg = clean(msg.value); commit(true); });
       x.addEventListener('click', function(){ step().triggers.splice(k, 1); commit(false); });
       row.appendChild(team); row.appendChild(msg); row.appendChild(x); box.appendChild(row);
@@ -329,8 +469,9 @@
     var f = flow(), st = step();
     $('fName').disabled = $('fEvery').disabled = !f;
     if (f) { $('fName').value = f.title; $('fEvery').value = f.every; }
-    $('fStepForm').hidden = !st; $('fHint').hidden = !!st;
-    $('fHint').textContent = f ? 'Click a step in the diagram to edit it.' : 'Press New flow to start.';
+    fillArrow();
+    $('fStepForm').hidden = !st; $('fHint').hidden = !!st || !!selArrow;
+    $('fHint').textContent = f ? 'Click a step or an arrow in the diagram to edit it. Drag from the dot on a step to another step to draw a new arrow.' : 'Press New flow to start.';
     if (!st) return;
     $('sHead').textContent = 'Step ' + (selStep + 1);
     $('sTeam').value = st.team; $('sTitle').value = st.title; $('sNote').value = st.note;
@@ -354,7 +495,7 @@
     st.team = now;
     var f = flow(), stillUsed = f.steps.some(function(o){ return o.team.toLowerCase() === old; });
     if (!stillUsed) {
-      f.steps.forEach(function(o){ o.triggers.forEach(function(t){ if (t.team.toLowerCase() === old) t.team = now; }); });
+      f.steps.forEach(function(o){ o.triggers.forEach(function(t){ if (t.team && t.team.toLowerCase() === old) t.team = now; }); });
       f.teams = f.teams.filter(function(t){ return t.toLowerCase() !== old; });
     }
   });
@@ -376,11 +517,11 @@
   });
   function move(d){
     var f = flow(), j = selStep + d; if (!f || j < 0 || j >= f.steps.length) return;
-    var t = f.steps[selStep]; f.steps[selStep] = f.steps[j]; f.steps[j] = t; selStep = j; commit(false);
+    var t = f.steps[selStep]; f.steps[selStep] = f.steps[j]; f.steps[j] = t; selStep = j; selArrow = null; commit(false);
   }
   $('sUp').addEventListener('click', function(){ move(-1); });
   $('sDown').addEventListener('click', function(){ move(1); });
-  $('sDel').addEventListener('click', function(){ var f = flow(); if (!f || !step()) return; f.steps.splice(selStep, 1); selStep = -1; commit(false); });
+  $('sDel').addEventListener('click', function(){ var f = flow(); if (!f || !step()) return; f.steps.splice(selStep, 1); selStep = -1; selArrow = null; commit(false); });
   $('fAddStep').addEventListener('click', function(){
     if (!flows.length) flows.push({ title: 'New flow', every: '', teams: [], steps: [] });
     var f = flow(), last = f.steps[f.steps.length - 1];
@@ -389,20 +530,20 @@
   });
   $('fNew').addEventListener('click', function(){
     flows.push({ title: 'New flow', every: '', teams: [], steps: [] });
-    S.flowIdx = flows.length - 1; selStep = -1; showEditor(true); commit(false);
+    S.flowIdx = flows.length - 1; selStep = -1; selArrow = null; showEditor(true); commit(false);
     $('fName').focus(); $('fName').select();
   });
   $('fDelFlow').addEventListener('click', function(){
     var f = flow(); if (!f || !confirm('Delete the flow "' + f.title + '"?')) return;
-    flows.splice(S.flowIdx, 1); S.flowIdx = 0; selStep = -1; commit(false);
+    flows.splice(S.flowIdx, 1); S.flowIdx = 0; selStep = -1; selArrow = null; commit(false);
   });
 
-  $('fPick').addEventListener('change', function(){ S.flowIdx = +this.value; selStep = -1; renderFlows(); });
+  $('fPick').addEventListener('change', function(){ S.flowIdx = +this.value; selStep = -1; selArrow = null; renderFlows(); });
   $('fEditBtn').addEventListener('click', function(){ showEditor($('fEditor').hidden); });
   $('fEd').addEventListener('input', function(){
     var v = this.value;
     setStatus(v.trim() === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
-    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; selStep = -1; renderFlows(); }, 150);
+    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; selStep = -1; selArrow = null; renderFlows(); }, 150);
   });
   $('fEd').addEventListener('keydown', function(ev){
     if (ev.key === 'Tab') { ev.preventDefault(); var s = this.selectionStart; this.value = this.value.slice(0, s) + '  ' + this.value.slice(this.selectionEnd); this.selectionStart = this.selectionEnd = s + 2; }

@@ -68,3 +68,14 @@
 .flane.over{outline:2px dashed var(--accent);outline-offset:-2px}
 .fdrop{position:absolute;top:0;width:3px;margin-left:-1px;background:var(--accent);border-radius:2px;pointer-events:none}
 .fedit .bar input{flex:1;min-width:0}
+/* clickable arrows */
+.fhit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer}
+.fe.sel{stroke:var(--accent);stroke-width:3.5}
+.fe.pend{stroke:var(--accent);stroke-dasharray:3 4;pointer-events:none}
+.fmsg.click{cursor:pointer}
+.fmsg.sel{outline:2px solid var(--accent)}
+.fconn{display:none;position:absolute;right:4px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);cursor:crosshair;touch-action:none}
+.flayout.editing .fconn{display:block}
+.fconn:hover{background:var(--accent)}
+.fcard.target{outline:2px solid var(--accent);outline-offset:2px}
+.fstep[id=fArrow] .bar{display:flex;gap:6px}

@@ -6,6 +6,8 @@
  *   1. Harvest | Check piece work | Fri
  *   2. IT | Top up | Fri | sheet: Payroll Summary | <- Harvest: Piece work ready
  *   3. Finance | Review OT | Mon | ticket: T20261116.001 | <- IT: Top up done | -> 1: Sent back to step 1
+ *   4. IT | Combine | <- 1 | <- 3: Done      ("<- 1" waits on step 1 itself; use several to wait on several steps)
+ *   5. IT | Start on its own | <- start      (no arrow in; without "<-" a step follows the step before it)
  *     Indented line = note for the step above.
  */
 (function(App){
@@ -22,6 +24,8 @@
     parts.forEach(function(p){
       var m;
       if ((m = /^(?:->|→)\s*(\d+)\s*(?::\s*(.*))?$/.exec(p))) step.backs.push({ num: +m[1], msg: (m[2] || '').trim(), ref: null });
+      else if (/^(?:<-|←)\s*start$/i.test(p)) step.standalone = true;
+      else if ((m = /^(?:<-|←)\s*#?(\d+)\s*(?::\s*(.*))?$/.exec(p))) step.triggers.push({ num: +m[1], msg: (m[2] || '').trim(), ref: null });
       else if ((m = /^(?:<-|←)\s*(.+?)\s*:\s*(.+)$/.exec(p))) step.triggers.push({ team: m[1], msg: m[2] });
       else if ((m = /^(?:<-|←)\s*(.+)$/.exec(p))) step.triggers.push({ team: m[1], msg: '' });
       else if ((m = /^sheet:\s*(.+)$/i.exec(p))) step.sheet = m[1];
@@ -41,10 +45,24 @@
         if (!b.ref || b.ref === st) { flow.warn.push('Step "' + st.title + '" sends back to step ' + b.num + ', which is not another step.'); return false; }
         return true;
       });
-      if (!st.triggers.length) { if (i) flow.edges.push({ from: i - 1, to: i, msg: '' }); return; }
-      st.triggers.forEach(function(t){
+      /* tIdx is the arrow's place in the step's triggers (-1 = the automatic arrow from the step before); "<- start" removes that one */
+      if (!st.triggers.length) { if (i && !st.standalone) flow.edges.push({ from: i - 1, to: i, msg: '', tIdx: -1 }); return; }
+      st.triggers.forEach(function(t, ti){
+        if (t.num != null) {
+          /* "<- 1" waits on that exact step, so a step can wait on several steps, even in the same team */
+          t.ref = flow.steps[t.num - 1] || null;
+          var k = flow.steps.indexOf(t.ref);
+          if (k < 0 || k >= i) flow.warn.push('Step "' + st.title + '" waits on step ' + t.num + ', which is not an earlier step.');
+          else flow.edges.push({ from: k, to: i, msg: t.msg, tIdx: ti });
+          return;
+        }
+        if (t.ref) {
+          var q = flow.steps.indexOf(t.ref);
+          if (q >= 0 && q < i) flow.edges.push({ from: q, to: i, msg: t.msg, tIdx: ti });
+          return;
+        }
         for (var j = i - 1; j >= 0; j--) {
-          if (flow.steps[j].team.toLowerCase() === t.team.toLowerCase()) { flow.edges.push({ from: j, to: i, msg: t.msg }); return; }
+          if (flow.steps[j].team.toLowerCase() === t.team.toLowerCase()) { flow.edges.push({ from: j, to: i, msg: t.msg, tIdx: ti }); return; }
         }
         flow.warn.push('Step "' + st.title + '" waits on "' + t.team + '", which has no earlier step.');
       });
@@ -98,7 +116,11 @@
         if (st.day) p.push(st.day);
         if (st.sheet) p.push('sheet: ' + st.sheet);
         if (st.ticket) p.push('ticket: ' + st.ticket);
-        st.triggers.forEach(function(t){ p.push('<- ' + t.team + (t.msg ? ': ' + t.msg : '')); });
+        st.triggers.forEach(function(t){
+          if (t.ref || t.num != null) { var k = f.steps.indexOf(t.ref); if (k >= 0 && t.ref !== st) p.push('<- ' + (k + 1) + (t.msg ? ': ' + t.msg : '')); return; }
+          p.push('<- ' + t.team + (t.msg ? ': ' + t.msg : ''));
+        });
+        if (st.standalone && !st.triggers.length) p.push('<- start');
         st.backs.forEach(function(b){ var k = f.steps.indexOf(b.ref); if (k >= 0 && b.ref !== st) p.push('-> ' + (k + 1) + (b.msg ? ': ' + b.msg : '')); });
         out.push((i + 1) + '. ' + p.join(' | '));
         if (st.note) st.note.split('\n').forEach(function(l){ out.push('  ' + l); });

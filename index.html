@@ -179,6 +179,12 @@ Lead: free text line (optional)
         <label>Runs<input id="fEvery" maxlength="100" placeholder="e.g. every Friday"></label>
         <div class="bar"><input id="fLaneName" maxlength="60" placeholder="New lane (team or department)" aria-label="New lane name"><button class="btn" id="fAddLane" type="button">+ Add lane</button></div>
         <p class="status" id="fHint">Click a step in the diagram to edit it.</p>
+        <div class="fstep" id="fArrow" hidden role="group" aria-label="Arrow">
+          <h3 id="aHead">Arrow</h3>
+          <label><span id="aFromLbl">Comes from</span><select id="aFrom"></select></label>
+          <label>Message<input id="aMsg" maxlength="120" placeholder="Optional, shown on the arrow"></label>
+          <div class="bar"><button class="btn" id="aDel" type="button">Delete arrow</button></div>
+        </div>
         <form class="fstep" id="fStepForm" hidden aria-label="Step">
           <h3 id="sHead">Step</h3>
           <label>Team<input id="sTeam" list="sTeams" maxlength="60" placeholder="Pick one or type a new team"></label>
@@ -190,7 +196,7 @@ Lead: free text line (optional)
           <div class="lbl">Starts when</div>
           <p class="status" id="sFollows">It follows the step before it.</p>
           <div id="sTrig"></div>
-          <button class="btn" id="sAddTrig" type="button">+ Waits for a message</button>
+          <button class="btn" id="sAddTrig" type="button">+ Waits for a team or step</button>
           <div class="lbl">Sends back to</div>
           <div id="sBack"></div>
           <button class="btn" id="sAddBack" type="button">+ Sends back to a step</button>
@@ -216,7 +222,7 @@ Teams: Harvest, IT     (lane order, optional)
 3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | &lt;- IT: Top up done
 4. Finance | Check again | -&gt; 3: Needs changes
   Indented line = note for the step above</pre>
-          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. "-&gt; 3: message" draws a dashed arrow back to step 3. Editing with the form rewrites this text, so comments you add here are not kept. Drag a step to another lane or place to move it.</p>
+          <p>"&lt;- Team: message" means the step starts when that team sends the message. "&lt;- 2" waits on step 2 itself, and a step can have several (&lt;- 1 | &lt;- 2). A step with no "&lt;-" follows the step before it, and "&lt;- start" gives it no arrow in. "-&gt; 3: message" draws a dashed arrow back to step 3. Editing with the form rewrites this text, so comments you add here are not kept. Drag a step to another lane or place to move it.</p>
         </details>
       </aside>
     </div>
