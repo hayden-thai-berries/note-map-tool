@@ -5,7 +5,7 @@
  *   Teams: Harvest, IT, Finance   (lane order, optional)
  *   1. Harvest | Check piece work | Fri
  *   2. IT | Top up | Fri | sheet: Payroll Summary | <- Harvest: Piece work ready
- *   3. Finance | Review OT | Mon | ticket: T20261116.001 | <- IT: Top up done
+ *   3. Finance | Review OT | Mon | ticket: T20261116.001 | <- IT: Top up done | -> 1: Sent back to step 1
  *     Indented line = note for the step above.
  */
 (function(App){
@@ -18,10 +18,11 @@
 
   function parseStep(body, flow){
     var parts = body.split('|').map(function(s){ return s.trim(); }).filter(function(s){ return s.length; });
-    var step = { team: parts.shift() || '(no team)', title: parts.shift() || '(untitled)', day: null, sheet: null, ticket: null, triggers: [], note: '' };
+    var step = { team: parts.shift() || '(no team)', title: parts.shift() || '(untitled)', day: null, sheet: null, ticket: null, triggers: [], backs: [], note: '' };
     parts.forEach(function(p){
       var m;
-      if ((m = /^(?:<-|←)\s*(.+?)\s*:\s*(.+)$/.exec(p))) step.triggers.push({ team: m[1], msg: m[2] });
+      if ((m = /^(?:->|→)\s*(\d+)\s*(?::\s*(.*))?$/.exec(p))) step.backs.push({ num: +m[1], msg: (m[2] || '').trim(), ref: null });
+      else if ((m = /^(?:<-|←)\s*(.+?)\s*:\s*(.+)$/.exec(p))) step.triggers.push({ team: m[1], msg: m[2] });
       else if ((m = /^(?:<-|←)\s*(.+)$/.exec(p))) step.triggers.push({ team: m[1], msg: '' });
       else if ((m = /^sheet:\s*(.+)$/i.exec(p))) step.sheet = m[1];
       else if ((m = /^ticket:\s*(.+)$/i.exec(p))) step.ticket = m[1];
@@ -35,6 +36,11 @@
   function link(flow){
     flow.edges = [];
     flow.steps.forEach(function(st, i){
+      st.backs = st.backs.filter(function(b){
+        b.ref = flow.steps[b.num - 1] || null;
+        if (!b.ref || b.ref === st) { flow.warn.push('Step "' + st.title + '" sends back to step ' + b.num + ', which is not another step.'); return false; }
+        return true;
+      });
       if (!st.triggers.length) { if (i) flow.edges.push({ from: i - 1, to: i, msg: '' }); return; }
       st.triggers.forEach(function(t){
         for (var j = i - 1; j >= 0; j--) {
@@ -93,6 +99,7 @@
         if (st.sheet) p.push('sheet: ' + st.sheet);
         if (st.ticket) p.push('ticket: ' + st.ticket);
         st.triggers.forEach(function(t){ p.push('<- ' + t.team + (t.msg ? ': ' + t.msg : '')); });
+        st.backs.forEach(function(b){ var k = f.steps.indexOf(b.ref); if (k >= 0 && b.ref !== st) p.push('-> ' + (k + 1) + (b.msg ? ': ' + b.msg : '')); });
         out.push((i + 1) + '. ' + p.join(' | '));
         if (st.note) st.note.split('\n').forEach(function(l){ out.push('  ' + l); });
       });

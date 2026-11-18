@@ -106,6 +106,6 @@ The Flows tab draws business flows as swimlanes: one lane per team, one box per 
     3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | <- IT: Top up done
       Indented line = note for the step above
 
-- `<- Team: message` means the step starts when that team sends the message; the arrow carries the message. A step with no `<-` follows the step before it.
+- `<- Team: message` means the step starts when that team sends the message; the arrow carries the message. A step with no `<-` follows the step before it. `-> 1: message` sends the work back: a dashed red arrow loops from that step to step 1 (use the step's number; in the form, "Sends back to" keeps the target when you reorder steps).
 - `sheet:` must match a sheet or connected app on the map (shown as a chip, with its link). `ticket:` must be a ticket ID (shown with its status). A mismatch shows a warning under the diagram.
 - Start another `# Flow name` for another flow; the drop-down switches between them.

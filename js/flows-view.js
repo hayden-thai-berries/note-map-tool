@@ -101,6 +101,7 @@
     svg.setAttribute('class', 'fwires'); svg.setAttribute('width', width); svg.setAttribute('height', height);
     svg.innerHTML = '<defs>' +
       '<marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ma"/></marker>' +
+      '<marker id="fb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="mb"/></marker>' +
       '<marker id="fw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="mw"/></marker></defs>';
     host.appendChild(svg);
 
@@ -117,6 +118,23 @@
         pill.style.left = (ay === by ? (ax + bx) / 2 : mx) + 'px'; pill.style.top = (ay === by ? ay - 16 : (ay + by) / 2) + 'px';
         host.appendChild(pill);
       }
+    });
+
+    /* a step that sends work back to an earlier one: a dashed loop under the lanes, from the bottom of one box to the bottom of the other */
+    flow.steps.forEach(function(st, i){
+      st.backs.forEach(function(b){
+        var k = flow.steps.indexOf(b.ref); if (k < 0) return;
+        var sx = x(i) + CARD_W / 2, tx = x(k) + CARD_W / 2, sy = top(st) + CARD_H, ty = top(b.ref) + CARD_H;
+        var yl = Math.max(laneOf(st), laneOf(b.ref)) * LANE_H + LANE_H - 17;
+        var path = document.createElementNS(SVGNS, 'path');
+        path.setAttribute('d', 'M' + sx + ' ' + sy + ' V' + yl + ' H' + tx + ' V' + ty);
+        path.setAttribute('class', 'fe back'); path.setAttribute('marker-end', 'url(#fb)');
+        svg.appendChild(path);
+        var pill = el('div', 'fmsg back', '↩ ' + (b.msg || 'Sent back to step ' + (k + 1)));
+        pill.title = st.team + ' sends back to step ' + (k + 1) + (b.msg ? ': ' + b.msg : '');
+        pill.style.left = (sx + tx) / 2 + 'px'; pill.style.top = yl + 'px';
+        host.appendChild(pill);
+      });
     });
 
     /* where a dragged card would land: the lane under the pointer, and its place in the step order (the others keep their order) */
@@ -289,6 +307,23 @@
       row.appendChild(team); row.appendChild(msg); row.appendChild(x); box.appendChild(row);
     });
     $('sFollows').hidden = st.triggers.length > 0 || selStep === 0;
+    fillBacks();
+  }
+  function fillBacks(){
+    var st = step(), f = flow(), box = $('sBack');
+    box.textContent = '';
+    st.backs.forEach(function(b, k){
+      var row = el('div', 'ftrig'), sel = el('select'), msg = el('input'), x = el('button', 'btn', '×');
+      var items = f.steps.map(function(o, j){ return [String(j), (j + 1) + ' · ' + o.title]; }).filter(function(it){ return f.steps[+it[0]] !== st; });
+      fillOptions(sel, items, String(f.steps.indexOf(b.ref)));
+      msg.maxLength = 120; msg.placeholder = 'Message, e.g. Needs changes'; msg.value = b.msg; msg.setAttribute('aria-label', 'Message');
+      x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove');
+      sel.addEventListener('change', function(){ step().backs[k].ref = flow().steps[+sel.value]; commit(true); });
+      msg.addEventListener('input', function(){ step().backs[k].msg = clean(msg.value); commit(true); });
+      x.addEventListener('click', function(){ step().backs.splice(k, 1); commit(false); });
+      row.appendChild(sel); row.appendChild(msg); row.appendChild(x); box.appendChild(row);
+    });
+    $('sAddBack').disabled = f.steps.length < 2;
   }
   function fillForm(){
     var f = flow(), st = step();
@@ -329,6 +364,11 @@
   bindStep('sTicket', 'change', function(st, v){ st.ticket = v || null; });
   bindStep('sNote', 'input', function(st, v){ st.note = v.replace(/\s+$/, ''); });
   $('sTeam').addEventListener('change', function(){ fillTrig(); });
+  $('sAddBack').addEventListener('click', function(){
+    var st = step(), f = flow(); if (!st) return;
+    var i = f.steps.indexOf(st), target = f.steps[i > 0 ? i - 1 : 1];
+    if (target) { st.backs.push({ ref: target, msg: '' }); commit(false); }
+  });
   $('sAddTrig').addEventListener('click', function(){
     var st = step(), f = flow(); if (!st) return;
     var other = f.teams.filter(function(t){ return t.toLowerCase() !== st.team.toLowerCase(); })[0] || f.teams[0];
@@ -344,7 +384,7 @@
   $('fAddStep').addEventListener('click', function(){
     if (!flows.length) flows.push({ title: 'New flow', every: '', teams: [], steps: [] });
     var f = flow(), last = f.steps[f.steps.length - 1];
-    f.steps.push({ team: last ? last.team : f.teams[0] || 'Team', title: 'New step', day: null, sheet: null, ticket: null, triggers: [], note: '' });
+    f.steps.push({ team: last ? last.team : f.teams[0] || 'Team', title: 'New step', day: null, sheet: null, ticket: null, triggers: [], backs: [], note: '' });
     selStep = f.steps.length - 1; showEditor(true); commit(false);
   });
   $('fNew').addEventListener('click', function(){

@@ -187,6 +187,9 @@ Lead: free text line (optional)
           <p class="status" id="sFollows">It follows the step before it.</p>
           <div id="sTrig"></div>
           <button class="btn" id="sAddTrig" type="button">+ Waits for a message</button>
+          <div class="lbl">Sends back to</div>
+          <div id="sBack"></div>
+          <button class="btn" id="sAddBack" type="button">+ Sends back to a step</button>
           <label>Notes<textarea id="sNote" maxlength="1000"></textarea></label>
           <div class="bar">
             <button class="btn" id="sUp" type="button">↑ Move up</button>
@@ -207,8 +210,9 @@ Teams: Harvest, IT     (lane order, optional)
 1. Harvest | Check piece work | Fri
 2. IT | Top up | Fri | &lt;- Harvest: Piece work ready
 3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | &lt;- IT: Top up done
+4. Finance | Check again | -&gt; 3: Needs changes
   Indented line = note for the step above</pre>
-          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. Editing with the form rewrites this text, so comments you add here are not kept. Drag a step to another lane or place to move it.</p>
+          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. "-&gt; 3: message" draws a dashed arrow back to step 3. Editing with the form rewrites this text, so comments you add here are not kept. Drag a step to another lane or place to move it.</p>
         </details>
       </aside>
     </div>
@@ -291,7 +295,7 @@ Teams: Harvest, IT, Finance
 Every: per quote
 Teams: Sales, Finance
 1. Sales | Draft quote | sheet: Quotes
-2. Finance | Sign off quotes over $10k | <- Sales: Quote over $10k | sheet: Invoice Log
+2. Finance | Sign off quotes over $10k | <- Sales: Quote over $10k | sheet: Invoice Log | -> 1: Changes needed
 3. Sales | Send quote to customer | <- Finance: Approved
 </script>
 

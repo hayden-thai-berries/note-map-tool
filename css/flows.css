@@ -15,7 +15,10 @@
 .fwires{position:absolute;left:0;top:0;pointer-events:none}
 .fe{fill:none;stroke:var(--wire);stroke-width:2}
 .fe.msg{stroke:var(--accent)}
+.fe.back{stroke:var(--hi-ink);stroke-dasharray:6 4}
 .ma{fill:var(--accent)}
+.mb{fill:var(--hi-ink)}
+.fmsg.back{background:var(--hi);color:var(--hi-ink)}
 .mw{fill:var(--wire)}
 .fmsg{position:absolute;transform:translate(-50%,-50%);max-width:134px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--doing);color:var(--doing-ink)}
 .fcard{position:absolute;border:1px solid var(--le);background:var(--lc);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;overflow:hidden}

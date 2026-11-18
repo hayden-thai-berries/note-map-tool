@@ -12,5 +12,5 @@ Teams: Harvest, IT, Finance
 Every: per quote
 Teams: Sales, Finance
 1. Sales | Draft quote | sheet: Quotes
-2. Finance | Sign off quotes over $10k | <- Sales: Quote over $10k | sheet: Invoice Log
+2. Finance | Sign off quotes over $10k | <- Sales: Quote over $10k | sheet: Invoice Log | -> 1: Changes needed
 3. Sales | Send quote to customer | <- Finance: Approved
