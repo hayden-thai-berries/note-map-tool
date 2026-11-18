@@ -14,6 +14,7 @@ Then open:
 
 - http://localhost:8000/ for your map (`maps/work.md`)
 - http://localhost:8000/?map=demo.md for the example data (`maps/demo.md`)
+- Add `#flows` or `#tickets` to the address (for example http://localhost:8000/?map=demo.md#flows) to open that tab directly.
 
 `maps/work.md` is private and not tracked by git. Create your own copy (for example from `maps/demo.md`) and edit it. Without it the page shows the built-in demo.
 
@@ -78,19 +79,38 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 ## Files
 
 - `index.html`: the page markup and the built-in demo map. No build step, no dependencies. Fonts load from Google Fonts when online and fall back to system fonts.
-- `css/`: styles. `theme.css` (colours, light and dark), `base.css` (reset, buttons, form controls), `map.css` (map, cards, wires, detail panel), `editor.css` (Markdown editor panel), `tickets.css` (Tickets tab).
+- `css/`: styles. `theme.css` (colours, light and dark), `base.css` (reset, buttons, form controls), `map.css` (map, cards, wires, detail panel), `editor.css` (Markdown editor panel), `tickets.css` (Tickets tab), `flows.css` (Flows tab).
 - `js/`: the app, as plain scripts (not ES modules) so `index.html` still opens from a file path. Each file adds what it shares to the `App` object from `core.js`, and `index.html` loads them in this order:
   - `core.js`: the `App` namespace and the shared state (`App.S`).
   - `parser.js`: Markdown to map model.
+  - `flows-parser.js`: Markdown to flows, and back again for the form editor.
   - `tickets-data.js`: ticket constants, IDs, totals, loading and saving the tickets file.
   - `tickets-board.js`: summary strip, Kanban board, table, filters.
   - `map.js`: map drawing, wires, selection, detail panel.
   - `tickets-form.js`: ticket drawer form, time log, "Add a ticket" row.
+  - `flows-view.js`: Flows tab: swimlane drawing, drag and drop, form editor, loading and saving the flows file.
   - `editor.js`: Markdown editor panel and saving `maps/<map>.md`.
   - `main.js`: tab switching and startup (keep last).
 - `maps/demo.md`: example data.
 - `maps/work.md`: your map. Start here.
 - `maps/demo.tickets.json`: example tickets. `maps/work.tickets.json` holds your own.
+- `maps/demo.flows.md`: example flows. `maps/work.flows.md` holds your own (not tracked by git).
 - `server.py`: the local server. It serves the folder and accepts saves to `maps/*.md` and `maps/*.json` only, from this page only, on localhost only.
 - `start.command`: runs `server.py` and opens the browser on macOS.
 test commitlint
+
+## Flows
+
+The Flows tab draws business flows as swimlanes: one lane per team, one box per step, and arrows for the hand-offs between teams. The text lives in `maps/<map>.flows.md` (for `work.md` that is `maps/work.flows.md`, not tracked by git; `maps/demo.flows.md` is the example). Click a step to edit it in a form (team, text, day, sheet, ticket, what it waits for), or use Add step, New flow and the move/delete buttons; Save writes the file. Drag a step to another lane or to another place in the order. With the editor open, each lane has buttons to rename it (or double-click its name), move it up or down, and remove it when empty; Add lane creates one. A lane named like a department on the map shows a Department tag. Edit as text is there too, but the form rewrites the text, so comments you add by hand are not kept.
+
+    # Weekly payroll
+    Every: Friday, then Monday           (optional text)
+    Teams: Harvest, IT, Finance          (lane order, optional)
+    1. Harvest | Check piece work | Fri
+    2. IT | Top up | Fri | <- Harvest: Piece work ready
+    3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | <- IT: Top up done
+      Indented line = note for the step above
+
+- `<- Team: message` means the step starts when that team sends the message; the arrow carries the message. A step with no `<-` follows the step before it. `-> 1: message` sends the work back: a dashed red arrow loops from that step to step 1 (use the step's number; in the form, "Sends back to" keeps the target when you reorder steps).
+- `sheet:` must match a sheet or connected app on the map (shown as a chip, with its link). `ticket:` must be a ticket ID (shown with its status). A mismatch shows a warning under the diagram.
+- Start another `# Flow name` for another flow; the drop-down switches between them.

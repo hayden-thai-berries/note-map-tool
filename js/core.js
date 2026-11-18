@@ -16,7 +16,11 @@ var App = {
     editingId: null,    /* ticket open in the drawer */
     tview: 'board',
     param: 'work.md',   /* which maps/<name>.md is loaded */
-    savedMd: ''
+    savedMd: '',
+    flowsMd: '',        /* flows text as shown (maps/<map>.flows.md) */
+    flowsSaved: '',
+    flowIdx: 0,
+    flowsDemo: false    /* true while showing the built-in example because the file does not exist yet */
   },
   $: function(id){ return document.getElementById(id); },
   el: function(tag, cls, text){
@@ -27,5 +31,6 @@ var App = {
   }
 };
 App.S.savedMd = App.$('md').textContent.replace(/^\n+|\n+$/g, '');
+App.S.flowsSaved = App.S.flowsMd = App.$('flows-md').textContent.replace(/^\n+|\n+$/g, '');
 App.S.param = new URLSearchParams(location.search).get('map') || 'work.md';
 if (!/^[\w.-]+\.md$/.test(App.S.param)) App.S.param = 'work.md';

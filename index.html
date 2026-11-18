@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/map.css" data-keep>
 <link rel="stylesheet" href="css/editor.css" data-keep>
 <link rel="stylesheet" href="css/tickets.css" data-keep>
+<link rel="stylesheet" href="css/flows.css" data-keep>
 </head>
 <body>
 <div class="page" id="page">
@@ -21,6 +22,7 @@
       <div class="tabs" role="tablist">
         <button class="tab" id="tabMap" type="button" role="tab" aria-selected="true">Map</button>
         <button class="tab" id="tabTix" type="button" role="tab" aria-selected="false">Tickets</button>
+        <button class="tab" id="tabFlows" type="button" role="tab" aria-selected="false">Flows</button>
       </div>
     </div>
     <button class="btn" id="editBtn" type="button">Edit</button>
@@ -157,6 +159,68 @@ Lead: free text line (optional)
 </form>
     </div>
   </section>
+  <section class="flows" id="flowsView" hidden>
+    <div class="fbar">
+      <select id="fPick" aria-label="Flow"></select>
+      <span class="status" id="fsum"></span>
+      <button class="btn" id="fNew" type="button">New flow</button>
+      <button class="btn" id="fEditBtn" type="button">Edit</button>
+      <button class="btn primary" id="fSave" type="button">Save</button>
+      <span class="status" id="fstatus" role="status"></span>
+    </div>
+    <div class="flayout" id="flayout">
+      <div>
+        <div class="fscroll"><div class="fcanvas" id="fcanvas"></div></div>
+        <div class="fwarn" id="fwarn"></div>
+      </div>
+      <aside class="fedit" id="fEditor" hidden>
+        <h2>Edit flow</h2>
+        <label>Flow name<input id="fName" maxlength="100"></label>
+        <label>Runs<input id="fEvery" maxlength="100" placeholder="e.g. every Friday"></label>
+        <div class="bar"><input id="fLaneName" maxlength="60" placeholder="New lane (team or department)" aria-label="New lane name"><button class="btn" id="fAddLane" type="button">+ Add lane</button></div>
+        <p class="status" id="fHint">Click a step in the diagram to edit it.</p>
+        <form class="fstep" id="fStepForm" hidden aria-label="Step">
+          <h3 id="sHead">Step</h3>
+          <label>Team<input id="sTeam" list="sTeams" maxlength="60" placeholder="Pick one or type a new team"></label>
+          <datalist id="sTeams"></datalist>
+          <label>What happens<input id="sTitle" maxlength="120"></label>
+          <label>Day<select id="sDay"></select></label>
+          <label>Sheet or app<select id="sSheet"></select></label>
+          <label>Ticket<select id="sTicket"></select></label>
+          <div class="lbl">Starts when</div>
+          <p class="status" id="sFollows">It follows the step before it.</p>
+          <div id="sTrig"></div>
+          <button class="btn" id="sAddTrig" type="button">+ Waits for a message</button>
+          <div class="lbl">Sends back to</div>
+          <div id="sBack"></div>
+          <button class="btn" id="sAddBack" type="button">+ Sends back to a step</button>
+          <label>Notes<textarea id="sNote" maxlength="1000"></textarea></label>
+          <div class="bar">
+            <button class="btn" id="sUp" type="button">↑ Move up</button>
+            <button class="btn" id="sDown" type="button">↓ Move down</button>
+            <button class="btn" id="sDel" type="button">Delete step</button>
+          </div>
+        </form>
+        <div class="bar">
+          <button class="btn" id="fAddStep" type="button">+ Add step</button>
+          <button class="btn" id="fDelFlow" type="button">Delete flow</button>
+        </div>
+        <details>
+          <summary>Edit as text</summary>
+          <textarea id="fEd" spellcheck="false" aria-label="Flows source in Markdown"></textarea>
+<pre># Flow name
+Every: Friday          (optional text)
+Teams: Harvest, IT     (lane order, optional)
+1. Harvest | Check piece work | Fri
+2. IT | Top up | Fri | &lt;- Harvest: Piece work ready
+3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | &lt;- IT: Top up done
+4. Finance | Check again | -&gt; 3: Needs changes
+  Indented line = note for the step above</pre>
+          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. "-&gt; 3: message" draws a dashed arrow back to step 3. Editing with the form rewrites this text, so comments you add here are not kept. Drag a step to another lane or place to move it.</p>
+        </details>
+      </aside>
+    </div>
+  </section>
 </div>
 
 <div class="detail" id="detail" hidden role="region" aria-label="Details"></div>
@@ -220,13 +284,34 @@ Lead: Jo Park
 - Onboarding Checklist -> Slack | Apps Script
 </script>
 
+<script type="text/plain" id="flows-md" data-keep>
+# Weekly payroll
+Every: Friday, then Monday
+Teams: Harvest, IT, Finance
+1. Harvest | Check piece work | Fri
+  Count each picker's boxes against the weighbridge slips.
+2. IT | Top up | Fri | <- Harvest: Piece work ready
+3. Finance | Review shortage hours | Mon | sheet: Payroll Summary | <- IT: Top up done
+  Headcount is copied in by hand first, so check it against HR.
+4. Finance | Review OT | Mon | sheet: Headcount
+
+# Quote approval
+Every: per quote
+Teams: Sales, Finance
+1. Sales | Draft quote | sheet: Quotes
+2. Finance | Sign off quotes over $10k | <- Sales: Quote over $10k | sheet: Invoice Log | -> 1: Changes needed
+3. Sales | Send quote to customer | <- Finance: Approved
+</script>
+
 <!-- Plain scripts, not ES modules, so the page also opens from file://. Order matters: core first, main last. -->
 <script src="js/core.js" data-keep></script>
 <script src="js/parser.js" data-keep></script>
+<script src="js/flows-parser.js" data-keep></script>
 <script src="js/tickets-data.js" data-keep></script>
 <script src="js/tickets-board.js" data-keep></script>
 <script src="js/map.js" data-keep></script>
 <script src="js/tickets-form.js" data-keep></script>
+<script src="js/flows-view.js" data-keep></script>
 <script src="js/editor.js" data-keep></script>
 <script src="js/main.js" data-keep></script>
 </body>
