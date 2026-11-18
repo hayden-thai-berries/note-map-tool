@@ -257,6 +257,24 @@
     if (!items.some(function(it){ return it[0] === value; })) { var o = el('option', null, value); o.value = value; sel.appendChild(o); }
     sel.value = value;
   }
+  /* sheets grouped by department, then connected apps, as they are on the map */
+  function fillSheets(value){
+    var sel = $('sSheet'), found = !value;
+    sel.textContent = '';
+    var none = el('option', null, 'None'); none.value = ''; sel.appendChild(none);
+    function group(label, nodes){
+      if (!nodes.length) return;
+      var g = el('optgroup'); g.label = label;
+      nodes.forEach(function(n){ var o = el('option', null, n.name); o.value = n.name; g.appendChild(o); if (n.name.toLowerCase() === value.toLowerCase()) { found = true; value = n.name; } });
+      sel.appendChild(g);
+    }
+    if (S.model) {
+      S.model.depts.forEach(function(d){ group(d.name, App.deptNodes(d)); });
+      group('Connected apps', S.model.apps);
+    }
+    if (!found) { var o = el('option', null, value + ' (not on the map)'); o.value = value; sel.appendChild(o); }
+    sel.value = value;
+  }
   function fillTrig(){
     var st = step(), box = $('sTrig'), f = flow();
     box.textContent = '';
@@ -280,16 +298,11 @@
     $('fHint').textContent = f ? 'Click a step in the diagram to edit it.' : 'Press New flow to start.';
     if (!st) return;
     $('sHead').textContent = 'Step ' + (selStep + 1);
-    $('sTeam').value = st.team; $('sTitle').value = st.title; $('sSheet').value = st.sheet || ''; $('sNote').value = st.note;
+    $('sTeam').value = st.team; $('sTitle').value = st.title; $('sNote').value = st.note;
     var teamNames = f.teams.slice();
     if (S.model) S.model.depts.forEach(function(d){ if (teamNames.indexOf(d.name) < 0) teamNames.push(d.name); });
     $('sTeams').textContent = ''; teamNames.forEach(function(t){ var o = el('option'); o.value = t; $('sTeams').appendChild(o); });
-    $('sSheets').textContent = '';
-    if (S.model) {
-      var names = []; S.model.depts.forEach(function(d){ App.deptNodes(d).forEach(function(n){ names.push(n.name); }); });
-      S.model.apps.forEach(function(n){ names.push(n.name); });
-      names.forEach(function(n){ var o = el('option'); o.value = n; $('sSheets').appendChild(o); });
-    }
+    fillSheets(st.sheet || '');
     fillOptions($('sDay'), [['', 'No day']].concat(App.FLOW_DAYS.map(function(d){ return [d, d]; })), st.day || '');
     fillOptions($('sTicket'), [['', 'None']].concat(S.tdata.tickets.map(function(t){ return [t.id, t.id + ' · ' + t.title]; })), st.ticket || '');
     $('sUp').disabled = selStep === 0; $('sDown').disabled = selStep === f.steps.length - 1;
@@ -312,7 +325,7 @@
   });
   bindStep('sTitle', 'input', function(st, v){ st.title = clean(v) || '(untitled)'; });
   bindStep('sDay', 'change', function(st, v){ st.day = v || null; });
-  bindStep('sSheet', 'input', function(st, v){ st.sheet = clean(v) || null; });
+  bindStep('sSheet', 'change', function(st, v){ st.sheet = v || null; });
   bindStep('sTicket', 'change', function(st, v){ st.ticket = v || null; });
   bindStep('sNote', 'input', function(st, v){ st.note = v.replace(/\s+$/, ''); });
   $('sTeam').addEventListener('change', function(){ fillTrig(); });
