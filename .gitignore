@@ -4,6 +4,8 @@
 
 # private work map (use maps/demo.md for the example data)
 maps/work.md
+maps/*.flows.md
+!maps/demo.flows.md
 
 # private tickets (use maps/demo.tickets.json for the example data)
 maps/*.tickets.json

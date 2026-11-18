@@ -93,3 +93,19 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 - `server.py`: the local server. It serves the folder and accepts saves to `maps/*.md` and `maps/*.json` only, from this page only, on localhost only.
 - `start.command`: runs `server.py` and opens the browser on macOS.
 test commitlint
+
+## Flows
+
+The Flows tab draws business flows as swimlanes: one lane per team, one box per step, and arrows for the hand-offs between teams. The text lives in `maps/<map>.flows.md` (for `work.md` that is `maps/work.flows.md`, not tracked by git; `maps/demo.flows.md` is the example). Edit it in the tab and press Save, same as the map.
+
+    # Weekly payroll
+    Every: Friday, then Monday           (optional text)
+    Teams: Harvest, IT, Finance          (lane order, optional)
+    1. Harvest | Check piece work | Fri
+    2. IT | Top up | Fri | <- Harvest: Piece work ready
+    3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | <- IT: Top up done
+      Indented line = note for the step above
+
+- `<- Team: message` means the step starts when that team sends the message; the arrow carries the message. A step with no `<-` follows the step before it.
+- `sheet:` must match a sheet or connected app on the map (shown as a chip, with its link). `ticket:` must be a ticket ID (shown with its status). A mismatch shows a warning under the diagram.
+- Start another `# Flow name` for another flow; the drop-down switches between them.
