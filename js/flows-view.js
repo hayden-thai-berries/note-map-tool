@@ -3,7 +3,7 @@
   var S = App.S, $ = App.$, el = App.el;
 
   var LANE_W = 110, LANE_H = 150, CARD_W = 190, CARD_H = 100, GAP = 140, PAD = 20, SVGNS = 'http://www.w3.org/2000/svg';
-  var timer = null;
+  var timer = null, flows = [], selStep = -1;
 
   function flowsFile(){ return S.param.replace(/\.md$/, '') + '.flows.md'; }
   function setStatus(t){ $('fstatus').textContent = t || ''; }
@@ -77,7 +77,9 @@
     });
 
     flow.steps.forEach(function(st, i){
-      var card = el('div', 'fcard c' + (laneOf(st) % 4)); card.style.left = x(i) + 'px'; card.style.top = top(st) + 'px';
+      var card = el('div', 'fcard c' + (laneOf(st) % 4) + (i === selStep ? ' sel' : '')); card.tabIndex = 0; card.setAttribute('role', 'button');
+      card.addEventListener('click', function(ev){ if (!ev.target.closest('a')) pickStep(i); });
+      card.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickStep(i); } }); card.style.left = x(i) + 'px'; card.style.top = top(st) + 'px';
       card.style.width = CARD_W + 'px'; card.style.height = CARD_H + 'px';
       card.appendChild(el('div', 'fmeta', (i + 1) + (st.day ? ' · ' + st.day : '')));
       var title = el('div', 'ftitle', st.title); if (st.note) title.title = st.note;
@@ -90,20 +92,23 @@
     $('fsum').textContent = [flow.every && 'Runs: ' + flow.every, flow.teams.length + ' teams', n + ' steps'].filter(Boolean).join(' · ');
   }
 
-  function renderFlows(){
-    var flows = App.parseFlows(S.flowsMd), sel = $('fPick');
+  function renderFlows(keepForm){
+    var sel = $('fPick');
+    flows = App.parseFlows(S.flowsMd);
     if (S.flowIdx >= flows.length) S.flowIdx = 0;
     sel.textContent = '';
     flows.forEach(function(f, i){ var o = el('option', null, f.title); o.value = i; sel.appendChild(o); });
     sel.value = S.flowIdx; sel.hidden = !flows.length;
-    if (!flows.length) { $('fcanvas').textContent = ''; $('fsum').textContent = 'No flows yet. Edit and add a "# Flow name" line.'; $('fwarn').textContent = ''; return; }
-    drawFlow(flows[S.flowIdx]);
+    if (!flows.length) { $('fcanvas').textContent = ''; $('fcanvas').style.height = '0'; $('fsum').textContent = 'No flows yet. Press New flow.'; $('fwarn').textContent = ''; }
+    else drawFlow(flows[S.flowIdx]);
+    $('fDelFlow').hidden = !flows.length;
+    if (keepForm !== true) fillForm();
   }
   App.renderFlows = renderFlows;
   App.flowStats = function(){ var n = App.parseFlows(S.flowsMd).length; return n + (n === 1 ? ' flow' : ' flows'); };
 
   function saveFlows(){
-    var text = $('fEd').value.replace(/\s+$/, '') + '\n', btn = $('fSave');
+    var text = S.flowsMd.replace(/\s+$/, '') + '\n', btn = $('fSave');
     btn.disabled = true; setStatus('Saving…');
     fetch('maps/' + flowsFile(), { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'text/markdown' }, body: text })
       .then(function(r){ if (!r.ok) throw new Error(r.status); S.flowsSaved = text.replace(/^\n+|\n+$/g, ''); S.flowsDemo = false; setStatus('Saved to maps/' + flowsFile() + '. The previous version is kept as ' + flowsFile() + '.bak.'); })
@@ -123,17 +128,118 @@
   }
   App.loadFlows = loadFlows;
 
-  $('fPick').addEventListener('change', function(){ S.flowIdx = +this.value; renderFlows(); });
-  $('fEditBtn').addEventListener('click', function(){
-    var open = $('fEditor').hidden;
+  /* ---- form editor: edits the parsed flow, then writes it back to the text and redraws ---- */
+  function flow(){ return flows[S.flowIdx]; }
+  function step(){ var f = flow(); return f && f.steps[selStep]; }
+  function clean(v){ return String(v).replace(/[|\n]/g, ' ').trim(); }
+  function cleanTeam(v){ return clean(String(v).replace(/[,:]/g, ' ')); }
+  function showEditor(open){
     $('fEditor').hidden = !open; $('fEditBtn').textContent = open ? 'Close editor' : 'Edit';
     $('flayout').classList.toggle('editing', open);
-    if (open) $('fEd').value = S.flowsMd;
+  }
+  /* keepForm: the user is typing in the form, so redraw the diagram but leave the inputs alone */
+  function commit(keepForm){
+    S.flowsMd = App.stringifyFlows(flows).replace(/^\n+|\n+$/g, '');
+    $('fEd').value = S.flowsMd;
+    setStatus(S.flowsMd === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
+    renderFlows(keepForm);
+  }
+  function pickStep(i){ selStep = i; showEditor(true); renderFlows(); }
+
+  function fillOptions(sel, items, value){
+    sel.textContent = '';
+    items.forEach(function(it){ var o = el('option', null, it[1]); o.value = it[0]; sel.appendChild(o); });
+    if (!items.some(function(it){ return it[0] === value; })) { var o = el('option', null, value); o.value = value; sel.appendChild(o); }
+    sel.value = value;
+  }
+  function fillTrig(){
+    var st = step(), box = $('sTrig'), f = flow();
+    box.textContent = '';
+    st.triggers.forEach(function(t, k){
+      var row = el('div', 'ftrig'), team = el('select'), msg = el('input'), x = el('button', 'btn', '×');
+      fillOptions(team, f.teams.map(function(n){ return [n, n]; }), t.team);
+      msg.maxLength = 120; msg.placeholder = 'Message, e.g. Top up done'; msg.value = t.msg; msg.setAttribute('aria-label', 'Message');
+      x.type = 'button'; x.title = 'Remove'; x.setAttribute('aria-label', 'Remove');
+      team.addEventListener('change', function(){ step().triggers[k].team = team.value; commit(true); });
+      msg.addEventListener('input', function(){ step().triggers[k].msg = clean(msg.value); commit(true); });
+      x.addEventListener('click', function(){ step().triggers.splice(k, 1); commit(false); });
+      row.appendChild(team); row.appendChild(msg); row.appendChild(x); box.appendChild(row);
+    });
+    $('sFollows').hidden = st.triggers.length > 0 || selStep === 0;
+  }
+  function fillForm(){
+    var f = flow(), st = step();
+    $('fName').disabled = $('fEvery').disabled = !f;
+    if (f) { $('fName').value = f.title; $('fEvery').value = f.every; }
+    $('fStepForm').hidden = !st; $('fHint').hidden = !!st;
+    $('fHint').textContent = f ? 'Click a step in the diagram to edit it.' : 'Press New flow to start.';
+    if (!st) return;
+    $('sHead').textContent = 'Step ' + (selStep + 1);
+    $('sTeam').value = st.team; $('sTitle').value = st.title; $('sSheet').value = st.sheet || ''; $('sNote').value = st.note;
+    $('sTeams').textContent = ''; f.teams.forEach(function(t){ var o = el('option'); o.value = t; $('sTeams').appendChild(o); });
+    $('sSheets').textContent = '';
+    if (S.model) {
+      var names = []; S.model.depts.forEach(function(d){ App.deptNodes(d).forEach(function(n){ names.push(n.name); }); });
+      S.model.apps.forEach(function(n){ names.push(n.name); });
+      names.forEach(function(n){ var o = el('option'); o.value = n; $('sSheets').appendChild(o); });
+    }
+    fillOptions($('sDay'), [['', 'No day']].concat(App.FLOW_DAYS.map(function(d){ return [d, d]; })), st.day || '');
+    fillOptions($('sTicket'), [['', 'None']].concat(S.tdata.tickets.map(function(t){ return [t.id, t.id + ' · ' + t.title]; })), st.ticket || '');
+    $('sUp').disabled = selStep === 0; $('sDown').disabled = selStep === f.steps.length - 1;
+    fillTrig();
+  }
+  function bind(id, ev, fn){ $(id).addEventListener(ev, function(){ if (flow()) { fn(this.value); commit(true); } }); }
+  function bindStep(id, ev, fn){ $(id).addEventListener(ev, function(){ var st = step(); if (st) { fn(st, this.value); commit(true); } }); }
+
+  bind('fName', 'input', function(v){ flow().title = clean(v) || 'Untitled flow'; });
+  bind('fEvery', 'input', function(v){ flow().every = clean(v); });
+  /* renaming the only user of a team also renames it where other steps wait on it */
+  bindStep('sTeam', 'change', function(st, v){
+    var old = st.team.toLowerCase(), now = cleanTeam(v) || '(no team)';
+    st.team = now;
+    var f = flow(), stillUsed = f.steps.some(function(o){ return o.team.toLowerCase() === old; });
+    if (!stillUsed) f.steps.forEach(function(o){ o.triggers.forEach(function(t){ if (t.team.toLowerCase() === old) t.team = now; }); });
   });
+  bindStep('sTitle', 'input', function(st, v){ st.title = clean(v) || '(untitled)'; });
+  bindStep('sDay', 'change', function(st, v){ st.day = v || null; });
+  bindStep('sSheet', 'input', function(st, v){ st.sheet = clean(v) || null; });
+  bindStep('sTicket', 'change', function(st, v){ st.ticket = v || null; });
+  bindStep('sNote', 'input', function(st, v){ st.note = v.replace(/\s+$/, ''); });
+  $('sTeam').addEventListener('change', function(){ fillTrig(); });
+  $('sAddTrig').addEventListener('click', function(){
+    var st = step(), f = flow(); if (!st) return;
+    var other = f.teams.filter(function(t){ return t.toLowerCase() !== st.team.toLowerCase(); })[0] || f.teams[0];
+    st.triggers.push({ team: other, msg: '' }); commit(false);
+  });
+  function move(d){
+    var f = flow(), j = selStep + d; if (!f || j < 0 || j >= f.steps.length) return;
+    var t = f.steps[selStep]; f.steps[selStep] = f.steps[j]; f.steps[j] = t; selStep = j; commit(false);
+  }
+  $('sUp').addEventListener('click', function(){ move(-1); });
+  $('sDown').addEventListener('click', function(){ move(1); });
+  $('sDel').addEventListener('click', function(){ var f = flow(); if (!f || !step()) return; f.steps.splice(selStep, 1); selStep = -1; commit(false); });
+  $('fAddStep').addEventListener('click', function(){
+    if (!flows.length) flows.push({ title: 'New flow', every: '', teams: [], steps: [] });
+    var f = flow(), last = f.steps[f.steps.length - 1];
+    f.steps.push({ team: last ? last.team : f.teams[0] || 'Team', title: 'New step', day: null, sheet: null, ticket: null, triggers: [], note: '' });
+    selStep = f.steps.length - 1; showEditor(true); commit(false);
+  });
+  $('fNew').addEventListener('click', function(){
+    flows.push({ title: 'New flow', every: '', teams: [], steps: [] });
+    S.flowIdx = flows.length - 1; selStep = -1; showEditor(true); commit(false);
+    $('fName').focus(); $('fName').select();
+  });
+  $('fDelFlow').addEventListener('click', function(){
+    var f = flow(); if (!f || !confirm('Delete the flow "' + f.title + '"?')) return;
+    flows.splice(S.flowIdx, 1); S.flowIdx = 0; selStep = -1; commit(false);
+  });
+
+  $('fPick').addEventListener('change', function(){ S.flowIdx = +this.value; selStep = -1; renderFlows(); });
+  $('fEditBtn').addEventListener('click', function(){ showEditor($('fEditor').hidden); });
   $('fEd').addEventListener('input', function(){
     var v = this.value;
     setStatus(v.trim() === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
-    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; renderFlows(); }, 150);
+    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; selStep = -1; renderFlows(); }, 150);
   });
   $('fEd').addEventListener('keydown', function(ev){
     if (ev.key === 'Tab') { ev.preventDefault(); var s = this.selectionStart; this.value = this.value.slice(0, s) + '  ' + this.value.slice(this.selectionEnd); this.selectionStart = this.selectionEnd = s + 2; }

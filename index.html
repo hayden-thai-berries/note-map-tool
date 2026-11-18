@@ -159,7 +159,9 @@ Lead: free text line (optional)
     <div class="fbar">
       <select id="fPick" aria-label="Flow"></select>
       <span class="status" id="fsum"></span>
+      <button class="btn" id="fNew" type="button">New flow</button>
       <button class="btn" id="fEditBtn" type="button">Edit</button>
+      <button class="btn primary" id="fSave" type="button">Save</button>
       <span class="status" id="fstatus" role="status"></span>
     </div>
     <div class="flayout" id="flayout">
@@ -168,11 +170,37 @@ Lead: free text line (optional)
         <div class="fwarn" id="fwarn"></div>
       </div>
       <aside class="fedit" id="fEditor" hidden>
-        <h2>Edit flows as Markdown</h2>
-        <textarea id="fEd" spellcheck="false" aria-label="Flows source in Markdown"></textarea>
-        <div class="bar"><button class="btn primary" id="fSave" type="button">Save</button></div>
+        <h2>Edit flow</h2>
+        <label>Flow name<input id="fName" maxlength="100"></label>
+        <label>Runs<input id="fEvery" maxlength="100" placeholder="e.g. every Friday"></label>
+        <p class="status" id="fHint">Click a step in the diagram to edit it.</p>
+        <form class="fstep" id="fStepForm" hidden aria-label="Step">
+          <h3 id="sHead">Step</h3>
+          <label>Team<input id="sTeam" list="sTeams" maxlength="60" placeholder="Pick one or type a new team"></label>
+          <datalist id="sTeams"></datalist>
+          <label>What happens<input id="sTitle" maxlength="120"></label>
+          <label>Day<select id="sDay"></select></label>
+          <label>Sheet or app<input id="sSheet" list="sSheets" maxlength="100" placeholder="Optional, from the map"></label>
+          <datalist id="sSheets"></datalist>
+          <label>Ticket<select id="sTicket"></select></label>
+          <div class="lbl">Starts when</div>
+          <p class="status" id="sFollows">It follows the step before it.</p>
+          <div id="sTrig"></div>
+          <button class="btn" id="sAddTrig" type="button">+ Waits for a message</button>
+          <label>Notes<textarea id="sNote" maxlength="1000"></textarea></label>
+          <div class="bar">
+            <button class="btn" id="sUp" type="button">↑ Move up</button>
+            <button class="btn" id="sDown" type="button">↓ Move down</button>
+            <button class="btn" id="sDel" type="button">Delete step</button>
+          </div>
+        </form>
+        <div class="bar">
+          <button class="btn" id="fAddStep" type="button">+ Add step</button>
+          <button class="btn" id="fDelFlow" type="button">Delete flow</button>
+        </div>
         <details>
-          <summary>Syntax</summary>
+          <summary>Edit as text</summary>
+          <textarea id="fEd" spellcheck="false" aria-label="Flows source in Markdown"></textarea>
 <pre># Flow name
 Every: Friday          (optional text)
 Teams: Harvest, IT     (lane order, optional)
@@ -180,7 +208,7 @@ Teams: Harvest, IT     (lane order, optional)
 2. IT | Top up | Fri | &lt;- Harvest: Piece work ready
 3. Finance | Review OT | Mon | sheet: Payroll Summary | ticket: T20261116.001 | &lt;- IT: Top up done
   Indented line = note for the step above</pre>
-          <p>One lane per team, one box per step, in order. "&lt;- Team: message" means the step starts when that team sends the message; the arrow carries it. A step with no "&lt;-" follows the step before it. "sheet:" must match a sheet or app on the map, "ticket:" a ticket ID. Start a new "# Flow name" for another flow.</p>
+          <p>"&lt;- Team: message" means the step starts when that team sends the message. A step with no "&lt;-" follows the step before it. Editing with the form rewrites this text, so comments you add here are not kept.</p>
         </details>
       </aside>
     </div>

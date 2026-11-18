@@ -77,6 +77,31 @@
     return flows;
   }
 
+  /* the reverse of parseFlows, so the form editor can write the text file. Lanes nobody uses are dropped from the Teams line. */
+  function stringifyFlows(flows){
+    return flows.map(function(f){
+      var used = {}, seen = {}, teams = [], out = ['# ' + f.title];
+      f.steps.forEach(function(st){ used[st.team.toLowerCase()] = true; });
+      f.teams.concat(f.steps.map(function(st){ return st.team; })).forEach(function(t){
+        var k = t.toLowerCase();
+        if (used[k] && !seen[k]) { seen[k] = true; teams.push(t); }
+      });
+      if (f.every) out.push('Every: ' + f.every);
+      if (teams.length) out.push('Teams: ' + teams.join(', '));
+      f.steps.forEach(function(st, i){
+        var p = [st.team, st.title];
+        if (st.day) p.push(st.day);
+        if (st.sheet) p.push('sheet: ' + st.sheet);
+        if (st.ticket) p.push('ticket: ' + st.ticket);
+        st.triggers.forEach(function(t){ p.push('<- ' + t.team + (t.msg ? ': ' + t.msg : '')); });
+        out.push((i + 1) + '. ' + p.join(' | '));
+        if (st.note) st.note.split('\n').forEach(function(l){ out.push('  ' + l); });
+      });
+      return out.join('\n');
+    }).join('\n\n') + '\n';
+  }
+
   App.parseFlows = parseFlows;
+  App.stringifyFlows = stringifyFlows;
   App.FLOW_DAYS = DAYS;
 })(App);

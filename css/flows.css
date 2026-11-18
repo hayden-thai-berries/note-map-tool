@@ -37,3 +37,17 @@
 .fedit h2{margin:0;font-size:16px}
 .fedit textarea{width:100%;min-height:340px;font:13px/1.5 var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
 @media (max-width:900px){.flayout.editing{grid-template-columns:minmax(0,1fr)}}
+.fcard{cursor:pointer}
+.fcard:hover{border-color:var(--accent)}
+.fcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fcard.sel{outline:2px solid var(--accent);outline-offset:1px}
+.fedit label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.fedit input,.fedit select{width:100%}
+.fedit details textarea{margin-top:8px}
+.fstep{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.fstep[hidden]{display:none}
+.fstep h3{margin:0;font-size:15px}
+.fstep textarea{min-height:70px;font:14px/1.45 var(--font)}
+.fstep .lbl{font-size:13px;color:var(--muted);margin-bottom:-6px}
+.fstep .status[hidden]{display:none}
+.ftrig{display:grid;grid-template-columns:minmax(80px,.8fr) 1.4fr auto;gap:6px;margin-bottom:6px}
