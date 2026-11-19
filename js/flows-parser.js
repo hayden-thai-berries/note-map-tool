@@ -31,7 +31,7 @@
       else if ((m = /^sheet:\s*(.+)$/i.exec(p))) step.sheet = m[1];
       else if ((m = /^ticket:\s*(.+)$/i.exec(p))) step.ticket = m[1];
       else if (dayOf(p)) step.day = dayOf(p);
-      else flow.warn.push('Step "' + step.title + '": cannot read "' + p + '"');
+      else { flow.warn.push('Step "' + step.title + '": cannot read "' + p + '"'); flow.dropped.push('Step "' + step.title + '": ' + p); }
     });
     return step;
   }
@@ -42,7 +42,7 @@
     flow.steps.forEach(function(st, i){
       st.backs = st.backs.filter(function(b){
         b.ref = flow.steps[b.num - 1] || null;
-        if (!b.ref || b.ref === st) { flow.warn.push('Step "' + st.title + '" sends back to step ' + b.num + ', which is not another step.'); return false; }
+        if (!b.ref || b.ref === st) { flow.warn.push('Step "' + st.title + '" sends back to step ' + b.num + ', which is not another step.'); flow.dropped.push('Step "' + st.title + '": -> ' + b.num); return false; }
         return true;
       });
       /* tIdx is the arrow's place in the step's triggers (-1 = the automatic arrow from the step before); "<- start" removes that one */
@@ -53,6 +53,7 @@
           t.ref = flow.steps[t.num - 1] || null;
           var k = flow.steps.indexOf(t.ref);
           if (k < 0 || k >= i) flow.warn.push('Step "' + st.title + '" waits on step ' + t.num + ', which is not an earlier step.');
+          if (k < 0) flow.dropped.push('Step "' + st.title + '": <- ' + t.num);
           else flow.edges.push({ from: k, to: i, msg: t.msg, tIdx: ti });
           return;
         }
@@ -87,7 +88,7 @@
       if (!line || /^<!--/.test(line)) return;
       if (/^[ \t]+/.test(raw) && last) { last.note = last.note ? last.note + '\n' + line : line; return; }
       last = null;
-      if ((m = /^#\s+(.+)$/.exec(line))) { cur = { title: m[1].trim(), every: '', teams: [], steps: [], edges: [], warn: [] }; flows.push(cur); return; }
+      if ((m = /^#\s+(.+)$/.exec(line))) { cur = { title: m[1].trim(), every: '', teams: [], steps: [], edges: [], warn: [], dropped: [] }; flows.push(cur); return; }
       if (!cur) return;
       if ((m = /^every:\s*(.*)$/i.exec(line))) { cur.every = m[1]; return; }
       if ((m = /^teams:\s*(.*)$/i.exec(line))) {
@@ -95,13 +96,14 @@
         return;
       }
       if ((m = /^(?:\d+[.)]|[-*])\s+(.+)$/.exec(line))) { last = parseStep(m[1], cur); cur.steps.push(last); return; }
-      cur.warn.push('Cannot read line: ' + line);
+      cur.warn.push('Cannot read line: ' + line); cur.dropped.push(line);
     });
     flows.forEach(function(f){ lanes(f); link(f); });
     return flows;
   }
 
-  /* the reverse of parseFlows, so the form editor can write the text file. Empty lanes are kept in the Teams line. */
+  /* the reverse of parseFlows, so the form editor can write the text file. Empty lanes are kept in the Teams line.
+   Text the parser could not use (flow.dropped) is not in the model, so it is not written back. */
   function stringifyFlows(flows){
     return flows.map(function(f){
       var seen = {}, teams = [], out = ['# ' + f.title];

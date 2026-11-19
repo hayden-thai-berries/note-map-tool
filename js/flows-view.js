@@ -280,7 +280,15 @@
     $('flayout').classList.toggle('editing', open);
   }
   /* keepForm: the user is typing in the form, so redraw the diagram but leave the inputs alone */
+  /* the form rewrites the whole file from the parsed flows, so anything the parser could not read would be erased: ask first */
+  function droppedParts(){
+    var out = [];
+    App.parseFlows(S.flowsMd).forEach(function(f){ f.dropped.forEach(function(d){ out.push(f.title + ' › ' + d); }); });
+    return out;
+  }
   function commit(keepForm){
+    var lost = droppedParts();
+    if (lost.length && !confirm('These parts of the flows text cannot be read and will be removed if you keep editing here:\n\n' + lost.slice(0, 6).join('\n') + (lost.length > 6 ? '\n…and ' + (lost.length - 6) + ' more' : '') + '\n\nFix them in the text editor instead, or press OK to remove them.')) { renderFlows(); return; }
     S.flowsMd = App.stringifyFlows(flows).replace(/^\n+|\n+$/g, '');
     $('fEd').value = S.flowsMd;
     setStatus(S.flowsMd === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
