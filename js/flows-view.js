@@ -238,6 +238,8 @@
     sel.textContent = '';
     flows.forEach(function(f, i){ var o = el('option', null, f.title); o.value = i; sel.appendChild(o); });
     sel.value = S.flowIdx; sel.hidden = !flows.length;
+    /* keep the text box in step with the flows, unless the user is typing in it (the debounced input handler sets flowsMd then) */
+    if (document.activeElement !== $('fEd')) $('fEd').value = S.flowsMd;
     if (!flows.length) { $('fcanvas').textContent = ''; $('fcanvas').style.height = '0'; $('fsum').textContent = 'No flows yet. Press New flow.'; $('fwarn').textContent = ''; }
     else drawFlow(flows[S.flowIdx]);
     $('fDelFlow').hidden = !flows.length;
