@@ -3,7 +3,7 @@
   var S = App.S, $ = App.$, el = App.el;
 
   var LANE_W = 110, LANE_H = 150, CARD_W = 190, CARD_H = 100, GAP = 140, PAD = 20, SVGNS = 'http://www.w3.org/2000/svg';
-  var timer = null, flows = [], selStep = -1, suppressClick = false;
+  var timer = null, pending = null, flows = [], selStep = -1, suppressClick = false;
   /* the arrow open in the editor: { kind: 'in', to: step index, tIdx: index in that step's triggers, -1 = automatic arrow }
    * or { kind: 'back', step: step index, bIdx: index in its backs }. Indices, because every edit re-reads the text. */
   var selArrow = null;
@@ -249,6 +249,7 @@
   App.flowStats = function(){ var n = App.parseFlows(S.flowsMd).length; return n + (n === 1 ? ' flow' : ' flows'); };
 
   function saveFlows(){
+    if (pending != null) { clearTimeout(timer); S.flowsMd = pending; pending = null; selStep = -1; selArrow = null; renderFlows(); }
     var text = S.flowsMd.replace(/\s+$/, '') + '\n', btn = $('fSave');
     btn.disabled = true; setStatus('Saving…');
     fetch('maps/' + flowsFile(), { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'text/markdown' }, body: text })
@@ -545,7 +546,8 @@
   $('fEd').addEventListener('input', function(){
     var v = this.value;
     setStatus(v.trim() === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
-    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; selStep = -1; selArrow = null; renderFlows(); }, 150);
+    pending = v;
+    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; pending = null; selStep = -1; selArrow = null; renderFlows(); }, 150);
   });
   $('fEd').addEventListener('keydown', function(ev){
     if (ev.key === 'Tab') { ev.preventDefault(); var s = this.selectionStart; this.value = this.value.slice(0, s) + '  ' + this.value.slice(this.selectionEnd); this.selectionStart = this.selectionEnd = s + 2; }
