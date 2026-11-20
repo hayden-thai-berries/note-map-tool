@@ -43,8 +43,13 @@
       </p>
     </section>
     <aside class="editor" id="editor" hidden>
-      <h2>Edit as Markdown</h2>
-      <textarea id="ed" spellcheck="false" aria-label="Map source in Markdown"></textarea>
+      <h2>Edit map</h2>
+      <div class="seg" role="group" aria-label="Editor">
+        <button type="button" id="mfBtn" aria-pressed="true">Form</button>
+        <button type="button" id="mtBtn" aria-pressed="false">Markdown text</button>
+      </div>
+      <div class="mform" id="mform"></div>
+      <textarea id="ed" spellcheck="false" aria-label="Map source in Markdown" hidden></textarea>
       <div class="bar">
         <button class="btn primary" id="fileSaveBtn" type="button">Save</button>
         <button class="btn" id="saveBtn" type="button">Download .md</button>
@@ -53,7 +58,7 @@
         <input type="file" id="file" accept=".md,.txt,text/markdown,text/plain" hidden>
       </div>
       <div class="status" id="status" role="status"></div>
-      <details>
+      <details id="syntax" hidden>
         <summary>Syntax</summary>
 <pre>## Department name
 Lead: free text line (optional)
@@ -312,6 +317,7 @@ Teams: Sales, Finance
 <!-- Plain scripts, not ES modules, so the page also opens from file://. Order matters: core first, main last. -->
 <script src="js/core.js" data-keep></script>
 <script src="js/parser.js" data-keep></script>
+<script src="js/serialize.js" data-keep></script>
 <script src="js/flows-parser.js" data-keep></script>
 <script src="js/tickets-data.js" data-keep></script>
 <script src="js/tickets-board.js" data-keep></script>
@@ -319,6 +325,7 @@ Teams: Sales, Finance
 <script src="js/tickets-form.js" data-keep></script>
 <script src="js/flows-view.js" data-keep></script>
 <script src="js/editor.js" data-keep></script>
+<script src="js/map-form.js" data-keep></script>
 <script src="js/main.js" data-keep></script>
 </body>
 </html>

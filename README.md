@@ -22,7 +22,10 @@ Opening `index.html` directly also works, but it can only show the built-in demo
 
 ## Edit
 
-1. Edit `maps/work.md` in any text editor, then refresh the page. Or tap Edit in the page and change the text there.
+1. Edit `maps/work.md` in any text editor, then refresh the page. Or tap Edit in the page.
+   - **Form** (default): click a sheet, app, section or department name on the map and change it in the side panel (name, owner, criticality, link, note, move, delete). Use "+ Sheet", "+ Section", "+ Department" and "+ App" to add things, and the Links box to add, change or delete connections. Renaming a sheet updates its links and tickets.
+   - **Markdown text**: the same file as plain text. Both views stay in sync.
+   - Comments (`<!-- -->`) and unreadable lines are not kept by the form; it asks before the first change if your file has any.
 2. In the page, press Save (or Cmd/Ctrl+S in the editor). It writes straight to `maps/work.md` and keeps the previous version as `maps/work.md.bak`. This needs `server.py`, which `start.command` runs.
 3. Download .md is still there if you want a separate copy.
 

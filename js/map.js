@@ -46,6 +46,8 @@
       var box = el('section', 'dept');
       var h2 = el('h2', null, dp.name), dOpen = App.openFor('dept:' + dp.name).length;
       if (dOpen) h2.appendChild(App.tixBadge(dOpen));
+      h2.tabIndex = 0;
+      S.items['edept:' + di] = { kind: 'dept', name: dp.name, note: '', ref: dp, el: h2 };
       box.appendChild(h2);
       dp.text.forEach(function(t){ box.appendChild(el('p', 'meta', t)); });
       dp.sections.forEach(function(sc, si){
@@ -56,7 +58,7 @@
           h.appendChild(document.createTextNode(sc.title));
           if (sc.note) h.appendChild(infoDot());
           h.tabIndex = 0; h.setAttribute('role', 'button');
-          S.items[key] = { kind: 'section', name: sc.title, note: sc.note, dept: dp.name, el: h };
+          S.items[key] = { kind: 'section', name: sc.title, note: sc.note, dept: dp.name, ref: sc, el: h };
           wrap.appendChild(h);
         }
         sc.nodes.forEach(function(n){ var d = makeNode(n, dp.name); reg(n, d); wrap.appendChild(d); });
@@ -73,9 +75,9 @@
       ab.appendChild(row); map.appendChild(ab);
     }
     Object.keys(S.items).forEach(function(k){
-      var d = S.items[k].el;
-      d.addEventListener('click', function(ev){ ev.stopPropagation(); select(S.selected === k ? null : k); });
-      d.addEventListener('keydown', function(ev){ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(S.selected === k ? null : k); } });
+      var d = S.items[k].el, dept = S.items[k].kind === 'dept';
+      d.addEventListener('click', function(ev){ if (dept && !formOn()) return; ev.stopPropagation(); select(S.selected === k ? null : k); });
+      d.addEventListener('keydown', function(ev){ if (dept && !formOn()) return; if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(S.selected === k ? null : k); } });
     });
     map.onclick = function(){ select(null); };
 
@@ -142,6 +144,7 @@
   }
 
   /* ---------- selection and detail panel ---------- */
+  function formOn(){ return !!(App.formActive && App.formActive()); }
   function select(k){ if (k !== S.selected) { S.detailNote = ''; S.detailWarn = ''; } S.selected = k; applySelection(); }
   function applySelection(){
     var map = $('map'), on = {}, isNode = !!(S.selected && S.nodeEls[S.selected]);
@@ -155,10 +158,11 @@
     Object.keys(S.items).forEach(function(k){ S.items[k].el.classList.toggle('sel', k === S.selected); });
     map.classList.toggle('focus', isNode);
     showDetail();
+    if (App.onSelect) App.onSelect();
   }
   function showDetail(){
     var box = $('detail'), it = S.selected && S.items[S.selected];
-    if (!it) { box.hidden = true; box.innerHTML = ''; $('page').classList.remove('detailOpen'); return; }
+    if (!it || formOn()) { box.hidden = true; box.innerHTML = ''; $('page').classList.remove('detailOpen'); return; }
     /* keep a half-typed quick-add title when the detail is redrawn for the same item */
     var prevQ = box.dataset.key === S.selected ? box.querySelector('.quick input') : null;
     var prevVal = prevQ ? prevQ.value : '', hadFocus = !!prevQ && document.activeElement === prevQ;
