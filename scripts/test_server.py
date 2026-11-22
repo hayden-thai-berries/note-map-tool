@@ -109,6 +109,32 @@ class StorageRules(unittest.TestCase):
         self.assertEqual(self.req("PUT", "/data/../maps/x.json", self.GOOD)[0], 403)
         self.assertEqual(self.req("PUT", "/data/c.md", b"x")[0], 403)
 
+    def page(self, rel, text):
+        full = os.path.join(self.tmp.name, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w") as f: f.write(text)
+
+    def test_root_serves_built_app_and_legacy_serves_old_page(self):
+        self.page("index.html", "OLD"); self.page("app/dist/index.html", "NEW"); self.page("app/dist/assets/a.js", "JS")
+        self.assertEqual(self.req("GET", "/")[2], b"NEW")
+        self.assertEqual(self.req("GET", "/?map=demo.md")[2], b"NEW")
+        self.assertEqual(self.req("GET", "/assets/a.js")[2], b"JS")
+        self.assertEqual(self.req("GET", "/legacy/")[2], b"OLD")
+        self.assertEqual(self.req("GET", "/legacy")[2], b"OLD")
+
+    def test_root_falls_back_to_old_page_when_not_built(self):
+        self.page("index.html", "OLD")
+        self.assertEqual(self.req("GET", "/")[2], b"OLD")
+
+    def test_legacy_relative_calls_still_reach_maps(self):
+        self.assertEqual(self.req("PUT", "/legacy/maps/a.md", b"x", X_Map_Create="1")[0], 204)
+        self.assertEqual(self.read("a.md"), b"x")
+        self.assertEqual(self.req("GET", "/legacy/api/maps")[2], b'["a.md"]')
+
+    def test_legacy_prefix_cannot_write_elsewhere(self):
+        self.assertEqual(self.req("PUT", "/legacy/index.html", b"x")[0], 403)
+        self.assertEqual(self.req("PUT", "/legacy/app/dist/index.html", b"x")[0], 403)
+
     def test_no_tmp_file_left_behind(self):
         self.req("PUT", "/maps/a.md", b"v1", X_Map_Create="1")
         self.assertFalse([n for n in os.listdir(os.path.join(self.tmp.name, "maps")) if n.endswith(".tmp")])

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Local server for the Sheets Ecosystem Map.
 
-Serves this folder on http://localhost:8000 and lets the page save maps/<name>.md
+Serves the app on http://localhost:8000 (one port) and lets the page save maps/<name>.md
 and maps/<name>.json (tickets). Only PUT /maps/<name>.md or .json, or /data/<name>.json, is writable, only
 from this same page, and the previous version is kept as a .bak next to it.
+The built React app (app/dist) is served at / and /assets/ (falls back to the old page if it is not built);
+the old vanilla page stays at /legacy/ (its relative maps/ and api/ calls are mapped back to /maps and /api).
 GET /api/maps lists the old maps (maps/*.md without the .flows.md files); GET /api/data lists data/*.json.
 PUT /data/<name>.json saves a Data file (must be a JSON object with an integer schemaVersion and the entry lists). A PUT with
 X-Map-Create: 1 only creates the file and answers 409 if the name is taken.
@@ -63,7 +65,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         p = self.server.server_port
         return ("http://localhost:%d" % p, "http://127.0.0.1:%d" % p)
 
+    def route(self):
+        """Map the public URL to a file: / and /assets/ come from app/dist, /legacy/... is the old page at the repo root."""
+        path, _, query = self.path.partition("?")
+        if path == "/legacy":
+            path = "/legacy/"
+        if path.startswith("/legacy/"):
+            path = "/" + path[len("/legacy/"):] or "/"
+            if path == "/":
+                path = "/index.html"
+        elif os.path.isfile(os.path.join(ROOT, "app", "dist", "index.html")) and (path == "/" or path.startswith("/assets/")):
+            path = "/app/dist" + ("/index.html" if path == "/" else path)
+        self.path = path + ("?" + query if query else "")
+
     def do_GET(self):
+        self.route()
         m = SAVE_PATH.match(self.path.split("?")[0])
         if m and os.path.isfile(os.path.join(ROOT, m.group(1), m.group(2))):
             self.content_hash = file_hash(os.path.join(ROOT, m.group(1), m.group(2)))
@@ -81,6 +97,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_PUT(self):
+        self.route()
         m = SAVE_PATH.match(self.path.split("?")[0])
         if (not m or (m.group(1) == "data" and not m.group(2).endswith(".json"))
                 or self.headers.get("Origin", "") not in self.origins()

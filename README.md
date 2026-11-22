@@ -103,7 +103,7 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
 - `maps/demo.tickets.json`: example tickets. `maps/work.tickets.json` holds your own.
 - `maps/demo.flows.md`: example flows. `maps/work.flows.md` holds your own (not tracked by git).
 - `server.py`: the local server. It serves the folder and accepts saves to `maps/*.md` and `maps/*.json` only, from this page only, on localhost only.
-- `start.command`: runs `server.py` and opens the browser on macOS.
+- `start.command`: builds the React app if needed, restarts `server.py` (one port, 8000) and opens the browser on macOS. The new app is at `/`, the old page at `/legacy/`.
 test commitlint
 
 ## Flows

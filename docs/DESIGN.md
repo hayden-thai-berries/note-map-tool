@@ -48,7 +48,7 @@ CI can only run the gate on the `demo.*` files; run it locally before each commi
 
 ## Layout
 
-`app/` Vite + React 19 + Tailwind v4 + React Flow. Left rail: Overview (canvas + layers), Journey, Catalog, Detail, Tickets & projects, Business flows. Dev: `cd app && npm run dev` (proxies `/maps` and `/api` to `server.py`). Build: `app/dist`.
+`app/` Vite + React 19 + Tailwind v4 + React Flow. Left rail: Overview (canvas + layers), Journey, Catalog, Detail, Tickets & projects, Business flows. Build: `app/dist`. **One port for use:** `./start.command` builds `app/dist` when it is missing or older than `app/src`, and `server.py` serves it at `/` (assets at `/assets/`) on port 8000; the old page stays at `/legacy/` until the switch-over. The launcher replaces any server already on the port. Dev only: `cd app && npm run dev` (a second port, with hot reload; proxies `/maps`, `/data`, `/api` to `server.py`). `npm run e2e` builds and tests the one-port setup (`E2E_DEV=1` uses Vite).
 
 ## Migration order
 

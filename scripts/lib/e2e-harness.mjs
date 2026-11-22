@@ -11,10 +11,12 @@ export async function harness({ files = [], data = {} } = {}) {
   for (const f of files) fs.copyFileSync(path.join(root, 'maps', f), path.join(sandbox, 'maps', f));
   for (const [name, obj] of Object.entries(data)) fs.writeFileSync(path.join(sandbox, 'data', name), JSON.stringify(obj, null, 2) + '\n');
   const run = (cmd, args, opts) => { const p = spawn(cmd, args, { stdio: 'ignore', ...opts }); procs.push(p); return p; };
+  const dev = !!process.env.E2E_DEV; // default: the real one-port setup (server.py serves the built app/dist); E2E_DEV=1 uses Vite instead
+  if (!dev) { fs.mkdirSync(path.join(sandbox, 'app')); fs.symlinkSync(path.join(root, 'app/dist'), path.join(sandbox, 'app/dist')); }
   run('python3', ['server.py'], { cwd: root, env: { ...process.env, SHEETS_MAP_ROOT: sandbox, PORT: String(SERVER) } });
-  run('node', [path.join(root, 'app/node_modules/vite/bin/vite.js'), '--port', String(VITE), '--strictPort'], { cwd: path.join(root, 'app'), env: { ...process.env, SHEETS_MAP_SERVER: `http://127.0.0.1:${SERVER}` } });
+  if (dev) run('node', [path.join(root, 'app/node_modules/vite/bin/vite.js'), '--port', String(VITE), '--strictPort'], { cwd: path.join(root, 'app'), env: { ...process.env, SHEETS_MAP_SERVER: `http://127.0.0.1:${SERVER}` } });
   run(CHROME, ['--headless=new', '--disable-gpu', `--remote-debugging-port=${CDP}`, `--user-data-dir=${path.join(sandbox, 'chrome')}`, '--window-size=1440,900', 'about:blank']);
-  for (let i = 0; i < 80; i++) { try { await fetch(`http://localhost:${VITE}/`); await fetch(`http://127.0.0.1:${CDP}/json/version`); await fetch(`http://127.0.0.1:${SERVER}/api/data`); break; } catch { await sleep(250); } }
+  for (let i = 0; i < 80; i++) { try { await fetch(`http://localhost:${dev ? VITE : SERVER}/`); await fetch(`http://127.0.0.1:${CDP}/json/version`); await fetch(`http://127.0.0.1:${SERVER}/api/data`); break; } catch { await sleep(250); } }
   const tab = await (await fetch(`http://127.0.0.1:${CDP}/json/new?about:blank`, { method: 'PUT' })).json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl); await new Promise((r) => (ws.onopen = r));
   let id = 0; const wait = new Map(), errors = [];
@@ -25,7 +27,7 @@ export async function harness({ files = [], data = {} } = {}) {
   const until = async (expr, what, ms = 8000) => { const t = Date.now(); while (Date.now() - t < ms) { try { if (await js(expr)) return true; } catch {} await sleep(150); } throw new Error('timed out waiting for ' + what + ' | page says: ' + JSON.stringify(await js('document.body.innerText.slice(0, 260)').catch(() => '?')) + ' | errors: ' + errors.slice(0, 2).join(' ; ')); };
   const q = JSON.stringify;
   const H = {
-    sandbox, errors, js, until, sleep, url: `http://localhost:${VITE}`,
+    sandbox, errors, js, until, sleep, url: `http://localhost:${dev ? VITE : SERVER}`,
     /* via about:blank so a URL that differs only by #hash is still a real reload */
     goto: async (u) => { await send('Page.navigate', { url: 'about:blank' }); await sleep(200); await send('Page.navigate', { url: u }); await sleep(900); },
     shot: async (name) => fs.writeFileSync(path.join(sandbox, name + '.png'), Buffer.from((await send('Page.captureScreenshot')).result.data, 'base64')),
