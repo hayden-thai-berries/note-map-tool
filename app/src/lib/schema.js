@@ -15,7 +15,8 @@
  * Sheets, links, tickets, flows and flow steps carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
 export const STEP = 1024;
-export const FILE_TYPES = ['sheet', 'doc', 'excel', 'pdf', 'other']; /* a missing `type` means 'sheet' */ /* gap between neighbouring `sort` numbers */
+export const FILE_TYPE_LABEL = { sheet: 'Google Sheet', doc: 'Doc', excel: 'Excel', pdf: 'PDF', other: 'Other' };
+export const FILE_TYPES = Object.keys(FILE_TYPE_LABEL); /* a missing `type` means 'sheet' */ /* gap between neighbouring `sort` numbers */
 
 function cyrb53(str) {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;

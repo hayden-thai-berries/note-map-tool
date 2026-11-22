@@ -32,17 +32,28 @@ export function openData(name, loaded, hash) {
     notice: changes.length ? `This file was written by an earlier version and has been brought up to date (${changes.join('; ')}). Nothing is lost. Press Save to keep it; a snapshot of the old file is taken first.` : null });
 }
 
-/* fn changes a copy of the data; the copy replaces it only if it is still a valid file */
-export function apply(fn, { key = null } = {}) {
+/* fn changes a copy of the data; the copy replaces it only if it is still a valid file. Returns { ok } or { ok: false, error }. */
+function tryApply(fn, { key = null } = {}) {
   const next = structuredClone(s.data);
-  try { fn(next); } catch (e) { set({ error: e.message }); return false; }
+  try { fn(next); } catch (e) { return { ok: false, error: e.message }; }
   const bad = validate(next);
-  if (bad.length) { console.error('edit refused:', bad); set({ error: 'That change would break the data file, so it was not made: ' + bad[0] }); return false; }
+  if (bad.length) { console.error('edit refused:', bad); return { ok: false, error: 'That change would break the data file, so it was not made: ' + bad[0] }; }
   const last = s.undo[s.undo.length - 1], t = Date.now(), merge = key && last && last.key === key && t - last.t < COALESCE_MS;
   const undo = merge ? s.undo.map((u, i) => (i === s.undo.length - 1 ? { ...u, t } : u)) : [...s.undo, { data: s.data, key, t }].slice(-MAX_UNDO);
   derive(next);
   set({ data: next, undo, redo: [], error: null });
-  return true;
+  return { ok: true };
+}
+/* an edit from the page: a refusal shows in the banner above the page */
+export function apply(fn, opts = {}) { const r = tryApply(fn, opts); if (!r.ok) set({ error: r.error }); return r.ok; }
+/* an edit from a modal: apply it and write the file at once (a Snapshot is taken as always). The answer goes back to the modal:
+ * { ok: true }, { ok: false, error } (nothing changed, or the write failed), or { ok: false, conflict: true } (the file changed on disk; the edit is kept in memory). */
+export async function commit(fn) {
+  const r = tryApply(fn); if (!r.ok) return r;
+  await save();
+  if (s.conflict) return { ok: false, conflict: true };
+  if (s.status === 'error') return { ok: false, error: s.error || 'Could not save.' };
+  return { ok: true };
 }
 export function undo() { if (!s.undo.length) return; const u = s.undo[s.undo.length - 1]; derive(u.data); set({ data: u.data, undo: s.undo.slice(0, -1), redo: [...s.redo, { data: s.data }] }); }
 export function redo() { if (!s.redo.length) return; const r = s.redo[s.redo.length - 1]; derive(r.data); set({ data: r.data, redo: s.redo.slice(0, -1), undo: [...s.undo, { data: s.data, key: null, t: 0 }] }); }

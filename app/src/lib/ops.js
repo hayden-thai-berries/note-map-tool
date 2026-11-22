@@ -64,6 +64,16 @@ export function removeMember(d, depId, id) {
   const dep = pick(d.departments, depId, 'department'); findMember(d, depId, id);
   dep.members = dep.members.filter((m) => m.id !== id); if (!dep.members.length) delete dep.members;
 }
+/* replace the whole members list (a modal edits it as a draft). Rows without a name are dropped; new rows get an id; none left removes the field. */
+export function setMembers(d, depId, list) {
+  const dep = pick(d.departments, depId, 'department'), out = [];
+  for (const m of list) {
+    if (!String(m.name || '').trim()) continue;
+    const x = { id: m.id || newId('m'), name: m.name.trim(), role: String(m.role || '').trim() }; if (String(m.email || '').trim()) x.email = m.email.trim();
+    out.push(x);
+  }
+  if (out.length) dep.members = out; else delete dep.members;
+}
 export function shiftDepartment(d, id, dir) { const i = d.departments.findIndex((x) => x.id === id), j = i + dir; if (d.departments[j]) [d.departments[i], d.departments[j]] = [d.departments[j], d.departments[i]]; }
 export function addSection(d, departmentId, title) { const sec = { id: newId('c'), title: title.trim() || null, note: '' }; pick(d.departments, departmentId, 'department').sections.push(sec); return sec.id; }
 const findSection = (d, id) => { for (const dep of d.departments) { const s = dep.sections.find((x) => x.id === id); if (s) return { dep, s }; } throw new Error('That function no longer exists.'); };
@@ -87,6 +97,11 @@ export function updateSheet(d, id, patch) {
   if ('type' in patch) need(!patch.type || FILE_TYPES.includes(patch.type), 'Unknown file type.');
   Object.assign(s, patch);
   if (!s.type || s.type === 'sheet') delete s.type; /* a Google Sheet is the default, so it is not written */
+}
+/* replace all documentation links (a modal edits them as a draft); rows without an address are dropped */
+export function setDocs(d, sheetId, list) {
+  const s = pick(d.sheets, sheetId, 'sheet'), docs = list.filter((x) => String(x.url || '').trim()).map((x) => ({ label: String(x.label || '').trim(), url: x.url.trim() }));
+  if (docs.length) s.docs = docs; else delete s.docs;
 }
 /* documentation links of a file */
 export function addDoc(d, sheetId, { label = '', url }) {
