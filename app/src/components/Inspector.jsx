@@ -1,4 +1,5 @@
 import { model, flows, tickets, low, allNodes, whereIs, STATUS } from '../data.js';
+import SheetEdit from './SheetEdit.jsx';
 
 const Field = ({ label, children, stub }) => (
   <div className={`border-t border-slate-200 py-2 ${stub ? 'mt-1 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-2.5' : ''}`}>
@@ -40,6 +41,7 @@ export default function Inspector({ id, onPick, onClose }) {
       <Field label={`In flows (${fl.length})`}>
         {fl.length ? fl.map((x, i) => <div key={i} className="mb-1 rounded border border-slate-200 px-2 py-1"><b>{x.f.title}</b> › {x.s.title} <span className="text-xs text-slate-500">({x.s.team}{x.s.day ? ' · ' + x.s.day : ''})</span></div>) : <span className="text-slate-400">None</span>}
       </Field>
+      <SheetEdit k={n.key} onSel={onPick} />
     </div>
   );
 }

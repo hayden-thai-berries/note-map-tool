@@ -12,8 +12,9 @@ The files are the database (see *Data file* in `GLOSSARY.md`). `server.py` is th
 | 2 | Every save first copies the old file to `maps/.history/<name>/` (last 20) and to `<name>.bak`. | `server.py`, `scripts/test_server.py` |
 | 3 | A save carries the *base hash*. If the file changed on disk since it was loaded, the server answers 409 and writes nothing. The page then offers Reload or Overwrite (Overwrite still snapshots the other version). | same |
 | 4 | Writes go to a temp file, then replace, so a crash never leaves half a file. | same |
-| 5 | Explicit **Save** with an unsaved-changes dot and a leave-page warning. No autosave. | UI (to port) |
-| 6 | If a file holds something the form cannot keep (a comment, an unreadable line: `mapLossy`), the form editor is blocked for that file; only the raw Markdown editor can save it. | UI (to port) |
+| 5 | Explicit **Save** (⌘S) with an unsaved-changes marker and a leave-page warning. No autosave. A save refused with 409 shows *Reload* or *Overwrite*. | `Toolbar.jsx`, `lib/records.js`, `scripts/e2e-local.mjs` |
+| 6 | Deleting never destroys: an entry goes to **Removed** with its links, and Restore puts it back exactly (every sheet, link and ticket has a permanent `sort` number). Only Purge deletes. Text the importer cannot model is kept word for word in `meta.legacy`. | `lib/ops.js`, `scripts/test-migration.mjs` |
+| 7 | Every edit goes through one function that refuses a change which would make the file invalid, and keeps the previous copy for undo/redo. | `lib/records.js` |
 
 ```mermaid
 sequenceDiagram
@@ -37,11 +38,13 @@ sequenceDiagram
 `npm run verify` (read-only) must pass before any migration step:
 
 1. The new ES-module parsers (`app/src/lib/`) give byte-identical results to the original `js/` parsers on **every** file in `maps/`, private ones included.
-2. Every file round-trips parse → write with no data lost (the app's own `mapLossy` rule).
-3. Tickets keep all fields: they are read and written as plain JSON, never reshaped.
-4. `server.py` storage tests (history, 409, force, size and origin limits).
+2. Every old file round-trips parse → write with no data lost.
+3. Every map imports into a Data file and exports back to the old formats with nothing lost, the same result every run.
+4. Edit tests: remove/restore is exact for every order (exhaustive cases and 2000 random sequences), edits keep the file valid, renames never break links.
+5. `server.py` storage tests (history, 409, force, size, origin, data-file shape).
 
-CI can only run it on the `demo.*` files; run it locally before each commit.
+`node scripts/e2e-local.mjs` drives the real app in Chrome on a throwaway copy (import, edit, save, undo, delete, restore, conflict).
+CI can only run the gate on the `demo.*` files; run it locally before each commit.
 
 ## Layout
 
@@ -49,10 +52,10 @@ CI can only run it on the `demo.*` files; run it locally before each commit.
 
 ## Migration order
 
-1. **Done:** read-only app on the real records; storage hardening; verify gate.
-2. Port the editors, each behind the gate: map form + Markdown, ticket form (log time, projects, change requests), flows editor, New map, Save/conflict UI (rules 5 and 6).
-3. When parity is reached: serve `app/dist` at `/`, then delete the old `index.html`, `js/` and `css/`.
-4. Never touched at any step: `maps/` and every `.bak`.
+1. **Done:** read-only app on the real records; storage hardening; verify gate; the Data file format with import and legacy export; Save, undo/redo, conflict handling, delete to Removed, sheet and ticket-status editing.
+2. Next: ticket form (log time, projects, change requests), add/move sheets and links, flows editor, New map, map import for private maps (`npm run import -- --all`), Backup button, search (`⌘K`), shared filters, the three Exports, Export as legacy files.
+3. When parity is reached and the switch-over rule below is met: serve `app/dist` at `/`, then delete the old `index.html`, `js/` and `css/`.
+4. Never touched at any step: the old files in `maps/` and every `.bak`.
 
 ## Decided (storage format round)
 

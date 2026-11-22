@@ -1,3 +1,4 @@
+import { useRecords } from '../lib/records.js';
 import { useMemo } from 'react';
 import { Handle, Position, MarkerType } from '@xyflow/react';
 import { allNodes, model, low, deptOf, toneOf, CRIT, openFor } from '../data.js';
@@ -45,7 +46,8 @@ function build(sel) {
 }
 
 export default function Journey({ sel, setSel, onDetail }) {
-  const graph = useMemo(() => build(sel), [sel]);
+  const { rev } = useRecords();
+  const graph = useMemo(() => build(sel), [sel, rev]);
   return (
     <div className="flex h-full flex-col">
       <header className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-slate-200 bg-white px-5 py-3">

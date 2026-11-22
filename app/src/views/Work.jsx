@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { tickets, STATUS, allNodes, low } from '../data.js';
+import { tickets, STATUS, allNodes } from '../data.js';
+import { apply } from '../lib/records.js';
+import { updateTicket, removeTicket } from '../lib/ops.js';
 
 const hours = (t) => (t.log || []).reduce((a, e) => a + (+e.hours || 0), 0);
 const nameOf = (k) => (k?.startsWith('dept:') ? k.slice(5) : allNodes().find((n) => n.key === k)?.name || k);
+const field = 'rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs';
 
-/* Tickets / projects as a plain Tailwind board: React Flow is the wrong tool for this part. */
+/* Tickets and projects as a board. Change the status or owner on a card; Remove sends it to Removed. */
 export default function Work() {
   const [type, setType] = useState('');
   const list = tickets.filter((t) => !type || t.type === type);
+  const edit = (t, patch, f) => apply((d) => updateTicket(d, t.id, patch), { key: `ticket:${t.id}:${f}` });
   return (
     <div className="p-5">
       <div className="mb-4 flex items-center gap-3">
@@ -26,8 +30,13 @@ export default function Work() {
                 <article key={t.id} className={`rounded-lg border p-2.5 text-sm ${k === 'blocked' ? 'border-red-400' : 'border-slate-200'}`}>
                   <div className="flex justify-between text-xs text-slate-500"><code>{t.id}</code><span className="uppercase">{t.type}</span></div>
                   <div className="font-semibold">{t.title}</div>
-                  {t.blocked && <div className="mt-1 rounded bg-red-100 px-2 py-0.5 text-xs text-red-800">{t.blocked}</div>}
-                  <div className="mt-1.5 flex items-center justify-between text-xs"><span className="rounded bg-emerald-100 px-1.5">{nameOf(t.target)}</span><span className="text-slate-500">{hours(t) ? hours(t) + ' h · ' : ''}{t.owner}</span></div>
+                  {k === 'blocked' && <input className={`${field} mt-1 w-full border-red-300 bg-red-50 text-red-800`} placeholder="Blocked because…" value={t.blocked || ''} onChange={(e) => edit(t, { blocked: e.target.value }, 'blocked')} />}
+                  <div className="mt-1.5 flex items-center justify-between text-xs"><span className="rounded bg-emerald-100 px-1.5">{nameOf(t.target)}</span><span className="text-slate-500">{hours(t) ? hours(t) + ' h' : ''}</span></div>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <select aria-label="Status" className={field} value={t.status} onChange={(e) => edit(t, { status: e.target.value }, 'status')}>{Object.entries(STATUS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+                    <input aria-label="Owner" className={`${field} w-16 min-w-0 flex-1`} placeholder="Owner" value={t.owner || ''} onChange={(e) => edit(t, { owner: e.target.value }, 'owner')} />
+                    <button className="rounded-md px-1.5 text-xs text-red-700 hover:bg-red-50" title="Move to Removed" onClick={() => window.confirm(`Move "${t.title}" to Removed? You can restore it.`) && apply((d) => removeTicket(d, t.id))}>Remove</button>
+                  </div>
                 </article>
               ))}
             </div>

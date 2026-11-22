@@ -1,3 +1,4 @@
+import { useRecords } from '../lib/records.js';
 import { useMemo, useState } from 'react';
 import { allNodes, whereIs, feedsOf, fedByOf, flowsOf, openFor, toneOf, deptOf, low, model, CRIT } from '../data.js';
 import DocTiles, { Chip } from '../components/Docs.jsx';
@@ -7,8 +8,8 @@ const COLS = 'grid grid-cols-[minmax(190px,1.3fr)_80px_84px_minmax(150px,1.5fr)_
 const FILTERS = [['all', 'All'], ['high', 'High criticality'], ['tix', 'Has open tickets'], ['manual', 'Manual copies']];
 
 export default function Catalog({ sel: open, setSel: setOpen, onDetail }) {
-  const [q, setQ] = useState(''), [f, setF] = useState('all');
-  const rows = useMemo(() => allNodes().map((n) => ({ n, dept: deptOf(n.key), feeds: feedsOf(n.key), fedBy: fedByOf(n.key), tx: openFor(n.key), fl: flowsOf(n.name) })), []);
+  const { rev } = useRecords(), [q, setQ] = useState(''), [f, setF] = useState('all');
+  const rows = useMemo(() => allNodes().map((n) => ({ n, dept: deptOf(n.key), feeds: feedsOf(n.key), fedBy: fedByOf(n.key), tx: openFor(n.key), fl: flowsOf(n.name) })), [rev]);
   const keep = (r) => (!q || low(r.n.name + ' ' + r.dept + ' ' + (r.n.parts?.[0] || '')).includes(low(q)))
     && (f === 'all' || (f === 'high' && r.n.crit === 'high') || (f === 'tix' && r.tx.length) || (f === 'manual' && [...r.feeds, ...r.fedBy].some((l) => l.manual)));
   const groups = [...model.depts.map((d) => d.name), 'Connected apps'].map((d) => [d, rows.filter((r) => r.dept === d && keep(r))]).filter((g) => g[1].length);

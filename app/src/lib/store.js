@@ -16,7 +16,19 @@ export async function listMaps() {
   return r.json();
 }
 
-/* maps/<name>.md + <name>.flows.md + <name>.tickets.json; the last two may not exist yet */
+export async function listData() {
+  const r = await fetch('/api/data', { cache: 'no-store' });
+  if (!r.ok) throw new Error('Cannot list data files: is server.py running?');
+  return r.json();
+}
+
+/* data/<name>.json, or null if there is none yet */
+export async function loadData(name) {
+  const r = await read(`/data/${name}.json`, { optional: true });
+  return r.text == null ? null : { data: JSON.parse(r.text), hash: r.hash };
+}
+
+/* the old files: maps/<name>.md + <name>.flows.md + <name>.tickets.json; the last two may not exist yet */
 export async function loadRecords(mapFile) {
   const base = mapFile.replace(/\.md$/, '');
   const [map, flows, tix] = await Promise.all([read(`/maps/${mapFile}`), read(`/maps/${base}.flows.md`, { optional: true }), read(`/maps/${base}.tickets.json`, { optional: true })]);
@@ -28,12 +40,12 @@ export async function loadRecords(mapFile) {
 
 /* ok: saved, hash is the new base hash. conflict: the file changed on disk, nothing written.
  * Pass base = null for a file that does not exist yet (creates it, refuses if the name is taken). */
-export async function saveFile(name, text, base, { force = false } = {}) {
+export async function saveFile(url, text, base, { force = false } = {}) {
   const headers = { 'X-Map-Save': '1', 'Content-Type': 'text/plain' };
   if (base) headers['X-Base-Hash'] = base; else headers['X-Map-Create'] = '1';
   if (force) headers['X-Force'] = '1';
-  const r = await fetch(`/maps/${name}`, { method: 'PUT', headers, body: text.replace(/\s+$/, '') + '\n' });
+  const r = await fetch(url, { method: 'PUT', headers, body: text.replace(/\s+$/, '') + '\n' });
   if (r.status === 204) return { ok: true, hash: r.headers.get('X-Content-Hash') };
   if (r.status === 409) return { conflict: true };
-  throw new Error(`Could not save ${name}: ${r.status}`);
+  throw new Error(`Could not save ${url}: ${r.status}`);
 }

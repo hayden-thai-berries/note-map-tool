@@ -1,3 +1,4 @@
+import { useRecords } from '../lib/records.js';
 import { useMemo, useState } from 'react';
 import { buildMap } from '../graph.js';
 import { flows } from '../data.js';
@@ -6,8 +7,8 @@ import Inspector from '../components/Inspector.jsx';
 
 /* Map canvas: departments as boxes, links as arrows. Layers: tickets on sheets, a business flow drawn over the sheets it uses. */
 export default function Overview({ sel, setSel }) {
-  const [flowIdx, setFlowIdx] = useState(-1), [showTix, setShowTix] = useState(true);
-  const graph = useMemo(() => buildMap({ flow: flowIdx >= 0 ? flows[flowIdx] : null, showTix }), [flowIdx, showTix]);
+  const { rev } = useRecords(), [flowIdx, setFlowIdx] = useState(-1), [showTix, setShowTix] = useState(true);
+  const graph = useMemo(() => buildMap({ flow: flowIdx >= 0 ? flows[flowIdx] : null, showTix }), [flowIdx, showTix, rev]);
   return (
     <div className="flex h-full">
       <div className="relative min-w-0 flex-1">
