@@ -8,8 +8,9 @@
     "husky": "^9.1.7"
   },
   "scripts": {
-    "prepare": "husky",
-    "verify": "node scripts/verify-records.mjs && python3 scripts/test_server.py"
+    "verify": "node scripts/verify-records.mjs && node --test scripts/test-migration.mjs && python3 scripts/test_server.py",
+    "import": "node scripts/import-legacy.mjs",
+    "prepare": "husky"
   },
   "type": "module"
 }

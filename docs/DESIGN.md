@@ -4,7 +4,7 @@
 
 ## Storage rules
 
-The files are the database (see *Record* in `GLOSSARY.md`). `server.py` is the only thing that writes, so every rule lives in one place and has tests.
+The files are the database (see *Data file* in `GLOSSARY.md`). `server.py` is the only thing that writes, so every rule lives in one place and has tests.
 
 | # | Rule | Where it is enforced |
 |---|------|----------------------|
@@ -54,7 +54,19 @@ CI can only run it on the `demo.*` files; run it locally before each commit.
 3. When parity is reached: serve `app/dist` at `/`, then delete the old `index.html`, `js/` and `css/`.
 4. Never touched at any step: `maps/` and every `.bak`.
 
+## Decided (storage format round)
+
+See [ADR 0001](adr/0001-one-json-data-file-per-map.md). In short:
+
+- One JSON Data file per map in `data/`; entries have permanent IDs (links point at IDs, names are labels); `schemaVersion` in every file.
+- One-time, re-runnable import from the old files, which are never modified. `npm run verify` proves import → export-as-legacy-files matches every old file.
+- Deleting moves an Entry to **Removed** (restorable until purged), on top of Snapshots.
+- Off-disk **Backup** button to a folder you choose, with a reminder after 7 days.
+- Exports (map document, ticket report, flow document with Mermaid) are buttons in the app that download `.md`.
+- Build order: undo/redo + Removed, global search (`⌘K`), shared filters, export buttons.
+- Switch-over: editors ported, `npm run verify` passes on real files, a week of normal use; then the old app and old files stay 30 more days; only the old UI code is deleted, never old data.
+
 ## Not decided yet
 
-- Whether Catalog and Detail both stay in the rail.
+- Whether Catalog and Detail both stay in the rail (both stay for now).
 - The "What it is for" field: stored as `Purpose:` (rule 1) once the map form is ported.
