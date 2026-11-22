@@ -26,6 +26,13 @@
     return d;
   }
 
+  /* "+" buttons shown while the form editor is open (CSS hides them otherwise); map-form.js supplies App.formAdd */
+  function addBtn(label, fn){
+    var b = el('button', 'addHere', label); b.type = 'button';
+    b.addEventListener('click', function(ev){ ev.stopPropagation(); if (App.formAdd) fn(App.formAdd); });
+    return b;
+  }
+
   function render(md){
     var model = S.model = App.parse(md);
     var map = $('map');
@@ -62,11 +69,20 @@
           wrap.appendChild(h);
         }
         sc.nodes.forEach(function(n){ var d = makeNode(n, dp.name); reg(n, d); wrap.appendChild(d); });
+        wrap.appendChild(addBtn('+ Sheet', function(f){ f.sheet(di, si); }));
         box.appendChild(wrap);
       });
+      var tail = el('div', 'addRow');
+      if (!dp.sections.length) tail.appendChild(addBtn('+ Sheet', function(f){ f.sheet(di, -1); }));
+      tail.appendChild(addBtn('+ Section', function(f){ f.section(di); }));
+      box.appendChild(tail);
       cols.appendChild(box);
     });
     map.appendChild(cols);
+    var foot = el('div', 'addRow addFoot');
+    foot.appendChild(addBtn('+ Department', function(f){ f.dept(); }));
+    foot.appendChild(addBtn('+ App', function(f){ f.app(); }));
+    map.appendChild(foot);
     if (model.apps.length) {
       var ab = el('section', 'appsBox');
       ab.appendChild(el('h2', null, 'Connected apps'));

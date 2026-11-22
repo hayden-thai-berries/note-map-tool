@@ -4,6 +4,8 @@
 Serves this folder on http://localhost:8000 and lets the page save maps/<name>.md
 and maps/<name>.json (tickets). Only PUT /maps/<name>.md or .json is writable, only
 from this same page, and the previous version is kept as a .bak next to it.
+GET /api/maps lists the maps (maps/*.md without the .flows.md files). A PUT with
+X-Map-Create: 1 only creates the file and answers 409 if the name is taken.
 """
 import http.server, json, os, re, shutil
 
@@ -21,6 +23,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    def do_GET(self):
+        if self.path.split("?")[0] != "/api/maps":
+            return super().do_GET()
+        names = sorted(n for n in os.listdir(os.path.join(ROOT, "maps"))
+                       if n.endswith(".md") and not n.endswith(".flows.md") and re.match(r"^[\w.-]+$", n))
+        body = json.dumps(names).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def do_PUT(self):
         m = SAVE_PATH.match(self.path.split("?")[0])
@@ -44,6 +58,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except ValueError:
                 return self.send_error(400, "Not JSON")
         path = os.path.join(ROOT, "maps", m.group(1))
+        if self.headers.get("X-Map-Create") == "1" and os.path.exists(path):
+            return self.send_error(409, "Already exists")
         if os.path.exists(path):
             shutil.copyfile(path, path + ".bak")
         tmp = path + ".tmp"

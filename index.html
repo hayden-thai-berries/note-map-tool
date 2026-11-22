@@ -25,8 +25,24 @@
         <button class="tab" id="tabFlows" type="button" role="tab" aria-selected="false">Flows</button>
       </div>
     </div>
-    <button class="btn" id="editBtn" type="button">Edit</button>
+    <div class="topBtns">
+      <select id="mapPick" aria-label="Map" hidden></select>
+      <button class="btn" id="newMapBtn" type="button" hidden>+ New map</button>
+      <button class="btn" id="editBtn" type="button">Edit</button>
+    </div>
   </header>
+  <dialog id="newMapDlg" aria-labelledby="newMapH">
+    <form method="dialog" id="newMapForm">
+      <h3 id="newMapH">New map</h3>
+      <label>Title<input id="newMapTitle" maxlength="100" placeholder="For example: Finance sheets" required></label>
+      <p class="hint" id="newMapFile"></p>
+      <p class="hint bad" id="newMapErr" role="alert"></p>
+      <div class="mrow">
+        <button class="btn primary" id="newMapOk" type="submit">Create and edit</button>
+        <button class="btn" id="newMapCancel" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
   <div class="main" id="mapView">
     <section class="mapPane">
       <div class="map" id="map"></div>
@@ -326,6 +342,7 @@ Teams: Sales, Finance
 <script src="js/flows-view.js" data-keep></script>
 <script src="js/editor.js" data-keep></script>
 <script src="js/map-form.js" data-keep></script>
+<script src="js/map-switch.js" data-keep></script>
 <script src="js/main.js" data-keep></script>
 </body>
 </html>

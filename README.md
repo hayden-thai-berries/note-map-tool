@@ -23,11 +23,14 @@ Opening `index.html` directly also works, but it can only show the built-in demo
 ## Edit
 
 1. Edit `maps/work.md` in any text editor, then refresh the page. Or tap Edit in the page.
-   - **Form** (default): click a sheet, app, section or department name on the map and change it in the side panel (name, owner, criticality, link, note, move, delete). Use "+ Sheet", "+ Section", "+ Department" and "+ App" to add things, and the Links box to add, change or delete connections. Renaming a sheet updates its links and tickets.
+   - **Form** (default): click a sheet, app, section or department name on the map and change it in the side panel. A sheet shows name, owner and criticality, then "Connected to"; link, note and move are under "More". The "+ Sheet", "+ Section", "+ Department" and "+ App" buttons on the map add things, and the new item's name is selected so you can type straight away. Press Enter in a sheet's Name to add the next one below it. Renaming a sheet updates its links and tickets.
+   - **Connected to**: pick a sheet or app from the search box, choose Sends to or Receives from, optionally tap how it is linked (IMPORTRANGE, manual copy, ...), then Add link. Existing links can be re-worded or removed, and a name opens that card.
+   - **Undo / Redo** (buttons or Cmd/Ctrl+Z, Shift+Z) cover form changes. Typing in the Markdown box starts a fresh history.
    - **Markdown text**: the same file as plain text. Both views stay in sync.
    - Comments (`<!-- -->`) and unreadable lines are not kept by the form; it asks before the first change if your file has any.
-2. In the page, press Save (or Cmd/Ctrl+S in the editor). It writes straight to `maps/work.md` and keeps the previous version as `maps/work.md.bak`. This needs `server.py`, which `start.command` runs.
-3. Download .md is still there if you want a separate copy.
+2. New map: press "+ New map" in the header, enter a title and it creates `maps/<title>.md` (never over an existing file) with one department, one section and one example sheet, and opens it in the form. The drop-down next to it switches between the maps in `maps/`. Both need `server.py`.
+3. In the page, press Save (or Cmd/Ctrl+S in the editor). It writes straight to `maps/work.md` and keeps the previous version as `maps/work.md.bak`. This needs `server.py`, which `start.command` runs.
+4. Download .md is still there if you want a separate copy.
 
 ## Markdown format
 
@@ -93,6 +96,7 @@ The Tickets tab shows tickets and projects as a Kanban board (To do, In progress
   - `tickets-form.js`: ticket drawer form, time log, "Add a ticket" row.
   - `flows-view.js`: Flows tab: swimlane drawing, drag and drop, form editor, loading and saving the flows file.
   - `editor.js`: Markdown editor panel and saving `maps/<map>.md`.
+  - `map-switch.js`: map drop-down and "+ New map" in the header.
   - `main.js`: tab switching and startup (keep last).
 - `maps/demo.md`: example data.
 - `maps/work.md`: your map. Start here.
