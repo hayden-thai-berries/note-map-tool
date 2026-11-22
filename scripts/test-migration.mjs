@@ -1,7 +1,7 @@
 // Edge cases for the import / export / validate code. Run: node --test scripts/test-migration.mjs
 import test from 'node:test'; import assert from 'node:assert/strict'; import path from 'node:path'; import { pathToFileURL } from 'node:url';
 const lib = (f) => import(pathToFileURL(path.join(import.meta.dirname, '../app/src/lib', f)).href);
-const { importLegacy } = await lib('import-legacy.js'), { exportLegacy } = await lib('export-legacy.js'), { roundTrip } = await lib('roundtrip.js'), { validate, emptyData, newId, SCHEMA_VERSION } = await lib('schema.js');
+const { importLegacy } = await lib('import-legacy.js'), { exportLegacy } = await lib('export-legacy.js'), { roundTrip } = await lib('roundtrip.js'), { validate, emptyData, newId, SCHEMA_VERSION, upgrade } = await lib('schema.js');
 const MAP = `# T
 ## Ops
 Lead: Kim
@@ -189,4 +189,15 @@ test('a step cannot come back before its flow, and a link not before its sheets'
   assert.throws(() => restore(d, d.removed[0].id), /flow first/); restore(d, d.removed[1].id); restore(d, d.removed[0].id);
   const e = importLegacy({ mapMd: MAP }).data, link = e.links[0], from = link.fromId; ops.removeLink(e, link.id); ops.removeSheet(e, from);
   assert.throws(() => restore(e, e.removed[0].id), /sheets this link connects first/); restore(e, e.removed[1].id); restore(e, e.removed[0].id);
+});
+
+test('a file from an earlier build (no sort numbers on flows) is upgraded without changing anything else', () => {
+  const d = importLegacy({ mapMd: MAP, flowsMd: FLOWS, ticketsJson: TICKETS }).data, old = structuredClone(d);
+  delete old.flows[0].sort; old.flows[0].steps.forEach((s) => delete s.sort);
+  assert.ok(validate(old).length > 0, 'the old file would be refused as it is');
+  const { data, changes } = upgrade(old); assert.deepEqual(validate(data), []); assert.equal(changes.length, 2);
+  same(data, d);                                    /* identical to a fresh import */
+  assert.deepEqual(upgrade(data).changes, []);       /* running it again changes nothing */
+  assert.equal(exportLegacy(data).flowsMd, exportLegacy(d).flowsMd);
+  assert.deepEqual(old.flows[0].steps.map((s) => s.sort), old.flows[0].steps.map(() => undefined), 'the original object is not modified');
 });

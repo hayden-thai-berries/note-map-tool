@@ -11,6 +11,8 @@ import Work from './views/Work.jsx';
 import Flows from './views/Flows.jsx';
 import Removed from './views/Removed.jsx';
 import ImportPanel from './views/ImportPanel.jsx';
+import Structure from './views/Structure.jsx';
+import NewMap from './components/NewMap.jsx';
 
 const hashWs = () => location.hash.replace('#', '') || 'overview';
 
@@ -21,7 +23,8 @@ function Message({ title, children }) {
 export default function App() {
   const r = useRecords();
   const [names, setNames] = useState(null), [file, setFile] = useState(null), [state, setState] = useState({ status: 'loading' });
-  const [ws, setWsState] = useState(hashWs), [sel, setSel] = useState(null), [fIdx, setFIdx] = useState(0);
+  const [ws, setWsState] = useState(hashWs), [sel, setSel] = useState(null), [fIdx, setFIdx] = useState(0), [creating, setCreating] = useState(false);
+  const created = (n) => { setCreating(false); setNames((l) => [...(l || []).filter((x) => x.name !== n), { name: n, hasData: true }].sort((a, b) => a.name.localeCompare(b.name))); setFile(n); setState({ status: 'ready' }); };
   const setWs = (k) => { setWsState(k); history.replaceState(null, '', '#' + k); };
   const pickMap = (n) => { if (!isDirty() || window.confirm('You have unsaved changes in this map. Discard them?')) setFile(n); };
 
@@ -49,15 +52,16 @@ export default function App() {
   useEffect(() => { if (state.status === 'needs-import' && r.name === file && r.data) { setState({ status: 'ready' }); setNames((l) => l.map((x) => (x.name === file ? { ...x, hasData: true } : x))); } }, [r.name, r.data, state.status, file]);
 
   if (state.status === 'error') return <Message title="Cannot load your records">{state.message}. Start the app with <code>./start.command</code> so <code>server.py</code> is running. Nothing has been changed.</Message>;
-  if (state.status === 'empty') return <Message title="No maps yet">Add a <code>maps/&lt;name&gt;.md</code> file, or create one in the current app.</Message>;
+  if (state.status === 'empty') return <div className="grid h-full place-items-center p-8"><div className="w-80"><h1 className="mb-1 text-lg font-semibold">Start your first map</h1><p className="mb-3 text-sm text-slate-600">A map is the sheets your organisation uses, who owns them, and how data flows between them.</p><NewMap onCreated={created} /></div></div>;
   if (!names || !file || state.status === 'loading') return <Message title="Loading…" />;
 
   const picker = names.length > 1 && <select aria-label="Map" value={file} onChange={(e) => pickMap(e.target.value)} className="mb-3 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm">{names.map((m) => <option key={m.name} value={m.name}>{m.name}{m.hasData ? '' : ' (not imported)'}</option>)}</select>;
-  if (state.status === 'needs-import') return <div className="flex h-full"><nav className="w-60 shrink-0 border-r border-slate-200 bg-white p-3"><div className="mb-2 px-2 font-semibold">Sheets map</div>{picker}</nav><main className="flex-1 overflow-auto"><ImportPanel name={file} /></main></div>;
+  const newMap = creating ? <div className="mb-3"><NewMap onCreated={created} onCancel={() => setCreating(false)} /></div> : <button type="button" className="mb-3 rounded-lg border border-dashed border-slate-300 px-2 py-1 text-left text-sm text-slate-600 hover:border-blue-500" onClick={() => setCreating(true)}>＋ New map</button>;
+  if (state.status === 'needs-import') return <div className="flex h-full"><nav className="w-60 shrink-0 border-r border-slate-200 bg-white p-3"><div className="mb-2 px-2 font-semibold">Sheets map</div>{picker}{newMap}</nav><main className="flex-1 overflow-auto"><ImportPanel name={file} /></main></div>;
 
   const open = tickets.filter((t) => t.status !== 'done'), blocked = open.filter((t) => t.status === 'blocked').length;
   const groups = [
-    ['Map', [['overview', 'Overview', 'canvas + layers'], ['journey', 'Journey', 'how data travels']]],
+    ['Map', [['overview', 'Overview', 'canvas + layers'], ['journey', 'Journey', 'how data travels'], ['structure', 'Edit map', 'add, move, link']]],
     ['Docs', [['catalog', 'Catalog', allNodes().length], ['detail', 'Detail', '']]],
     ['Work', [['work', 'Tickets & projects', open.length + (blocked ? ' · ' + blocked + '!' : '')]]],
     ['Workflows', [['flows', 'Business flows', flows.length]]],
@@ -69,6 +73,7 @@ export default function App() {
       <nav className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-3">
         <div className="mb-1 px-2 text-base font-semibold tracking-tight">{model.title}</div>
         {picker}
+        {newMap}
         {groups.map(([g, items]) => (
           <div key={g} className="mb-3"><div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{g}</div>
             {items.map(([k, label, hint]) => (
@@ -84,6 +89,7 @@ export default function App() {
         <Toolbar />
         <main className="min-h-0 flex-1">
           {ws === 'overview' && <Overview key={file} sel={sel} setSel={setSel} />}
+          {ws === 'structure' && <Structure key={file} sel={sel} setSel={setSel} />}
           {ws === 'journey' && <Journey key={file} sel={sel} setSel={setSel} onDetail={toDetail} />}
           {ws === 'catalog' && <Catalog key={file} sel={sel} setSel={setSel} onDetail={toDetail} />}
           {ws === 'detail' && <Detail key={file} sel={sel} setSel={setSel} />}

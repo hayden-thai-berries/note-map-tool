@@ -5,12 +5,12 @@ import { useSyncExternalStore } from 'react';
 import { exportLegacy } from './export-legacy.js';
 import { importLegacy } from './import-legacy.js';
 import { roundTrip } from './roundtrip.js';
-import { validate } from './schema.js';
+import { validate, emptyData, upgrade } from './schema.js';
 import { loadData, loadRecords, saveFile } from './store.js';
 import { setRecords } from '../data.js';
 
 const COALESCE_MS = 2000, MAX_UNDO = 100;
-let s = { name: null, data: null, baseHash: null, savedText: '', undo: [], redo: [], status: 'idle', savedAt: null, conflict: false, error: null, rev: 0 };
+let s = { name: null, data: null, baseHash: null, savedText: '', undo: [], redo: [], status: 'idle', savedAt: null, conflict: false, error: null, notice: null, rev: 0 };
 const listeners = new Set();
 export const subscribe = (f) => (listeners.add(f), () => listeners.delete(f));
 export const getState = () => s;
@@ -22,16 +22,20 @@ function derive(d) { const x = exportLegacy(d); setRecords({ mapMd: x.mapMd, flo
 export const isDirty = (st = s) => !!st.data && JSON.stringify(st.data) !== st.savedText;
 export const sheetByKey = (key) => s.data?.sheets.find((x) => x.name.toLowerCase() === key);
 
-export function openData(name, data, hash) {
+export function openData(name, loaded, hash) {
+  /* an older file is upgraded in memory only; the saved copy stays as it was until you press Save */
+  const { data, changes } = upgrade(loaded);
   const bad = validate(data);
   if (bad.length) throw new Error('This data file is not valid: ' + bad.slice(0, 3).join('; '));
   derive(data);
-  set({ name, data, baseHash: hash, savedText: JSON.stringify(data), undo: [], redo: [], status: 'idle', conflict: false, error: null });
+  set({ name, data, baseHash: hash, savedText: changes.length ? JSON.stringify(loaded) : JSON.stringify(data), undo: [], redo: [], status: 'idle', conflict: false, error: null,
+    notice: changes.length ? `This file was written by an earlier version and has been brought up to date (${changes.join('; ')}). Nothing is lost. Press Save to keep it; a snapshot of the old file is taken first.` : null });
 }
 
 /* fn changes a copy of the data; the copy replaces it only if it is still a valid file */
 export function apply(fn, { key = null } = {}) {
-  const next = structuredClone(s.data); fn(next);
+  const next = structuredClone(s.data);
+  try { fn(next); } catch (e) { set({ error: e.message }); return false; }
   const bad = validate(next);
   if (bad.length) { console.error('edit refused:', bad); set({ error: 'That change would break the data file, so it was not made: ' + bad[0] }); return false; }
   const last = s.undo[s.undo.length - 1], t = Date.now(), merge = key && last && last.key === key && t - last.t < COALESCE_MS;
@@ -50,7 +54,7 @@ export async function save({ force = false } = {}) {
   try {
     const r = await saveFile(`/data/${s.name}.json`, body, s.baseHash, { force });
     if (r.conflict) set({ status: 'idle', conflict: true });
-    else set({ status: 'saved', savedAt: new Date(), baseHash: r.hash, savedText: snap, conflict: false });
+    else set({ status: 'saved', savedAt: new Date(), baseHash: r.hash, savedText: snap, conflict: false, notice: null });
   } catch (e) { set({ status: 'error', error: e.message }); }
 }
 /* the file changed on disk since it was opened: keep my edits (overwrite) or take the file as it is now (reload) */
@@ -69,5 +73,13 @@ export async function previewImport(name) {
 export async function createFromLegacy(name, data) {
   const r = await saveFile(`/data/${name}.json`, text(data), null);
   if (r.conflict) throw new Error(`data/${name}.json already exists`);
+  const got = await loadData(name); openData(name, got.data, got.hash);
+}
+
+/* A brand-new, empty map. The name becomes the file name, so it is kept to letters, numbers, - and _. */
+export async function createMap(name, title) {
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(name)) throw new Error('Use only letters, numbers, - and _ in the file name.');
+  const r = await saveFile(`/data/${name}.json`, text(emptyData(title.trim() || name)), null);
+  if (r.conflict) throw new Error(`A map called "${name}" already exists.`);
   const got = await loadData(name); openData(name, got.data, got.hash);
 }

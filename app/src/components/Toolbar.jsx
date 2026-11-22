@@ -34,6 +34,7 @@ export default function Toolbar() {
           <button className={btn} onClick={() => resolveConflict('overwrite')}>Overwrite (keep my edits)</button>
         </div>
       )}
+      {r.notice && <div role="status" className="border-b border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">{r.notice}</div>}
       {r.error && <div role="alert" className="border-b border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">{r.error}</div>}
     </>
   );

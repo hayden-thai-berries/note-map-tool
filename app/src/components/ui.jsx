@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ReactFlow, Background, Controls, MiniMap, useNodesState, useEdgesState } from '@xyflow/react';
 import { nodeTypes } from './nodes.jsx';
 
@@ -16,3 +16,15 @@ export function Canvas({ graph, onNode, fitKey, types = nodeTypes, minimap = tru
 export const Select = ({ value, onChange, children }) => (
   <select value={value} onChange={(e) => onChange(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm">{children}</select>
 );
+
+/* A text field that applies its change when you leave it (or press Enter), so a rename is one edit, not one per keystroke. */
+export function CommitInput({ value, onCommit, multiline = false, className = '', ...rest }) {
+  const [v, setV] = useState(value ?? '');
+  useEffect(() => setV(value ?? ''), [value]);
+  const commit = () => { if (v !== (value ?? '')) onCommit(v); };
+  const base = `rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-blue-500 ${className}`;
+  return multiline
+    ? <textarea {...rest} className={`${base} min-h-16 w-full`} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} />
+    : <input {...rest} className={`${base} w-full`} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />;
+}
+export const Btn = ({ danger, primary, className = '', ...p }) => <button type="button" {...p} className={`rounded-lg border px-2.5 py-1 text-sm disabled:opacity-40 ${primary ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700' : danger ? 'border-red-300 bg-white text-red-700 hover:bg-red-50' : 'border-slate-300 bg-white hover:border-blue-500'} ${className}`} />;

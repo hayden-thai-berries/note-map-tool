@@ -43,7 +43,7 @@ sequenceDiagram
 4. Edit tests: remove/restore is exact for every order (exhaustive cases and 2000 random sequences), edits keep the file valid, renames never break links.
 5. `server.py` storage tests (history, 409, force, size, origin, data-file shape).
 
-`node scripts/e2e-local.mjs` drives the real app in Chrome on a throwaway copy (import, edit, save, undo, delete, restore, conflict).
+`npm run e2e` drives the real app in Chrome on throwaway sandboxes: import, edit, save, undo, delete, restore and conflict (`e2e-local`); a whole map built from an empty folder with no legacy file (`e2e-from-scratch`); and opening a file from an earlier build (`e2e-upgrade`).
 CI can only run the gate on the `demo.*` files; run it locally before each commit.
 
 ## Layout
@@ -52,8 +52,8 @@ CI can only run the gate on the `demo.*` files; run it locally before each commi
 
 ## Migration order
 
-1. **Done:** read-only app on the real records; storage hardening; verify gate; the Data file format with import and legacy export; Save, undo/redo, conflict handling, delete to Removed, sheet and ticket-status editing.
-2. Next: ticket form (log time, projects, change requests), add/move sheets and links, flows editor, New map, map import for private maps (`npm run import -- --all`), Backup button, search (`⌘K`), shared filters, the three Exports, Export as legacy files.
+1. **Done:** read-only app on the real records; storage hardening; verify gate; the Data file format with import and legacy export; Save, undo/redo, conflict handling; Removed with exact restore; **create a map from nothing and add, edit, move and delete every kind of entry** (departments, sections, sheets, apps, links, tickets with time log, flows and steps) without any legacy file or the old app.
+2. Next: Backup button, search (`⌘K`), shared filters on every list, the three Exports, Export as legacy files, a table view of tickets.
 3. When parity is reached and the switch-over rule below is met: serve `app/dist` at `/`, then delete the old `index.html`, `js/` and `css/`.
 4. Never touched at any step: the old files in `maps/` and every `.bak`.
 
@@ -62,6 +62,7 @@ CI can only run the gate on the `demo.*` files; run it locally before each commi
 See [ADR 0001](adr/0001-one-json-data-file-per-map.md). In short:
 
 - One JSON Data file per map in `data/`; entries have permanent IDs (links point at IDs, names are labels); `schemaVersion` in every file.
+- A Data file written by an earlier build is brought up to date in memory when opened (`upgrade` in `schema.js`: it only fills in missing sort numbers); the file on disk changes only when you press Save, which snapshots the old one first.
 - One-time, re-runnable import from the old files, which are never modified. `npm run verify` proves import → export-as-legacy-files matches every old file.
 - Deleting moves an Entry to **Removed** (restorable until purged), on top of Snapshots.
 - Off-disk **Backup** button to a folder you choose, with a reminder after 7 days.

@@ -11,7 +11,7 @@ const ctx = { App: {} }; vm.createContext(ctx);
 for (const f of ['js/parser.js', 'js/serialize.js', 'js/flows-parser.js']) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 const Old = ctx.App;
 const lib = (f) => import(pathToFileURL(path.join(root, 'app/src/lib', f)).href);
-const { importLegacy } = await lib('import-legacy.js'), { roundTrip } = await lib('roundtrip.js'), { validate } = await lib('schema.js');
+const { importLegacy } = await lib('import-legacy.js'), { roundTrip } = await lib('roundtrip.js'), { validate, upgrade } = await lib('schema.js');
 const { parse } = await lib('parser.js'), { stringify, mapLossy } = await lib('serialize.js'), { parseFlows, stringifyFlows } = await lib('flows-parser.js');
 const plain = (m) => JSON.stringify(m, (k, v) => (k === 'el' ? undefined : v));
 const norm = (s) => s.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !/^<!--.*-->$/.test(l));
@@ -50,6 +50,6 @@ for (const f of fs.readdirSync(dir).sort().filter((x) => x.endsWith('.md') && !x
 }
 /* 5. data files already written */
 const dd = path.join(root, 'data');
-if (fs.existsSync(dd)) for (const f of fs.readdirSync(dd).filter((x) => x.endsWith('.json')).sort()) { const p = validate(JSON.parse(fs.readFileSync(path.join(dd, f), 'utf8'))); say('data/' + f, 'valid data file', !p.length, p.length ? ' | ' + p.join('; ') : ''); }
+if (fs.existsSync(dd)) for (const f of fs.readdirSync(dd).filter((x) => x.endsWith('.json')).sort()) { const raw = JSON.parse(fs.readFileSync(path.join(dd, f), 'utf8')), up = upgrade(raw), p = validate(up.data); say('data/' + f, 'valid data file', !p.length, p.length ? ' | ' + p.join('; ') : up.changes.length ? ` | will be upgraded when opened (${up.changes.join('; ')}); nothing is lost` : ''); }
 console.log(bad ? `\n${bad} PROBLEM(S): do not migrate.` : '\nAll records pass: nothing lost, new parsers identical to the old ones.');
 process.exit(bad ? 1 : 0);

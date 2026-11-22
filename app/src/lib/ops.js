@@ -7,9 +7,9 @@
  * restored later goes back exactly where it was. Tickets and flow steps keep pointing at a removed sheet's id, and arrows keep pointing at a removed step's id
  * (the file stays valid while it is in Removed), so restoring needs no re-linking. Departments and sections can only be deleted when empty,
  * so nothing is lost with them. */
-import { newId } from './schema.js';
+import { newId, STEP } from './schema.js';
 
-export const STEP = 1024;
+export { STEP };
 const now = () => new Date().toISOString();
 const today = () => now().slice(0, 10);
 const need = (cond, why) => { if (!cond) throw new Error(why); };
@@ -105,7 +105,8 @@ export function newTicketId(d, type) {
 export function addTicket(d, fields) {
   const type = fields.type || 'ticket'; need((fields.title || '').trim(), 'A ticket needs a title.');
   const t = { id: newTicketId(d, type), title: fields.title.trim(), type, status: 'todo', owner: '', ...fields, updated: today(), sort: sortAfter(d, 'tickets', d.tickets.items) };
-  t.title = t.title.trim(); d.tickets.items.push(t); return t.id;
+  t.title = t.title.trim(); for (const [k, v] of Object.entries(t)) if (v === undefined) delete t[k];
+  d.tickets.items.push(t); return t.id;
 }
 export function updateTicket(d, id, patch) {
   const t = pick(d.tickets.items, id, 'ticket');

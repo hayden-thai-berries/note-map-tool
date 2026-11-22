@@ -13,6 +13,7 @@
  * }
  * Sheets, links, tickets, flows and flow steps carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
+export const STEP = 1024; /* gap between neighbouring `sort` numbers */
 
 function cyrb53(str) {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
@@ -82,4 +83,19 @@ export function validate(d) {
   const sorted = (list, what) => list.forEach((x, i) => { if (typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort)) bad.push(`${what} ${x.id ?? i} is out of order or has no sort number`); });
   sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket'); sorted(d.flows, 'flow'); d.flows.forEach((f) => sorted(f.steps || [], 'step'));
   return bad;
+}
+
+/* Data files written by an earlier build can lack some `sort` numbers (flows and steps got them later). This fills them in,
+ * keeping the order the entries are already in, and changes nothing else. It is safe to run on any file, any number of times.
+ * The app applies it when a file is opened and asks you to Save, which takes a Snapshot first. */
+export function upgrade(d) {
+  const out = structuredClone(d), changes = [];
+  out.removed ||= []; out.meta ||= {};
+  const fill = (list, what) => {
+    if (!Array.isArray(list) || !list.some((x, i) => typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort))) return;
+    list.forEach((x, i) => { x.sort = (i + 1) * STEP; }); changes.push(`numbered the ${what}`);
+  };
+  fill(out.sheets, 'sheets'); fill(out.links, 'links'); fill(out.tickets?.items, 'tickets'); fill(out.flows, 'flows');
+  (out.flows || []).forEach((f) => fill(f.steps, `steps of "${f.title}"`));
+  return { data: out, changes };
 }
