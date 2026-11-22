@@ -33,6 +33,10 @@ sequenceDiagram
   end
 ```
 
+## Tickets board
+
+`views/Work.jsx` + `components/TicketBoard.jsx`; pure helpers in `lib/board.js`. Board (drag a card onto a column to change its status; Blocked asks why first, any other status clears the reason) or Table (grouped by department), a summary strip with the blocked tickets, cards sorted by priority (file order breaks ties), project progress, and `+ Add` per column. Title, status, priority, owner and blocked reason edit in place; each change is one undo step and needs Save. The full form is still there for the rest (click the ID or the card body). The Board/Table choice is remembered in `localStorage` only.
+
 ## Departments, functions and files
 
 Department → Function → Sheet, all optional additions to the Data file (an older file loads unchanged and `upgrade()` adds nothing):

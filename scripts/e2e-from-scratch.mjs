@@ -36,7 +36,7 @@ try {
   await typeLabel('Title', 'Rebuild Orders import'); await typeLabel('Type', 'project'); await typeLabel('About', await js(`[...document.querySelectorAll('select option')].find((o) => o.text === 'Orders').value`));
   await click('Create'); await until(`document.body.textContent.includes('Rebuild Orders import')`, 'ticket on board');
   r.check('ticket created from the form', true);
-  await click('Rebuild Orders import'); await until(`!!document.querySelector('[aria-label="Hours worked"]')`, 'ticket opened again');
+  await js(`document.querySelector('[aria-label^="Open P"]').click(), true`); await until(`!!document.querySelector('[aria-label="Hours worked"]')`, 'ticket opened again');
   await type('Hours worked', '2.5'); await type('What did you do', 'First test'); await click('Log'); await until(`document.body.textContent.includes('2.5 h')`, 'time logged');
   await click('Save'); await H.sleep(300);
 

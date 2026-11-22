@@ -11,7 +11,7 @@
     "verify": "node scripts/verify-records.mjs && node --test scripts/test-migration.mjs scripts/test-org.mjs scripts/test-board.mjs && python3 scripts/test_server.py",
     "import": "node scripts/import-legacy.mjs",
     "prepare": "husky",
-    "e2e": "npm --prefix app run build && node scripts/e2e-local.mjs && node scripts/e2e-from-scratch.mjs && node scripts/e2e-upgrade.mjs"
+    "e2e": "npm --prefix app run build && node scripts/e2e-local.mjs && node scripts/e2e-from-scratch.mjs && node scripts/e2e-upgrade.mjs && node scripts/e2e-tickets.mjs"
   },
   "type": "module"
 }
