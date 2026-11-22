@@ -1,17 +1,16 @@
-/* PROTOTYPE data layer: runs the app's REAL parsers (../js/*.js) on the demo files. Read-only. */
-import mapMd from '../../maps/demo.md?raw';
-import flowsMd from '../../maps/demo.flows.md?raw';
-import ticketsJson from '../../maps/demo.tickets.json';
-import parserSrc from '../../js/parser.js?raw';
-import flowsParserSrc from '../../js/flows-parser.js?raw';
+/* Records for the page: the parsed map, flows and tickets of the map that is open.
+ * setRecords() swaps them (live bindings), and App remounts the views when it does. Read helpers only; saving lives in lib/store.js. */
+import { parse } from './lib/parser.js';
+import { parseFlows } from './lib/flows-parser.js';
 
-globalThis.App = {};
-(0, eval)(parserSrc);
-(0, eval)(flowsParserSrc);
-
-export const model = globalThis.App.parse(mapMd);
-export const flows = globalThis.App.parseFlows(flowsMd);
-export const tickets = ticketsJson.tickets;
+export let model = parse('');
+export let flows = [];
+export let tickets = [];
+export function setRecords({ mapMd, flowsMd, ticketsJson }) {
+  model = parse(mapMd);
+  flows = parseFlows(flowsMd);
+  tickets = ticketsJson.tickets || [];
+}
 export const low = (s) => String(s || '').toLowerCase();
 
 export const allNodes = () => model.depts.flatMap((d) => d.sections.flatMap((s) => s.nodes)).concat(model.apps);

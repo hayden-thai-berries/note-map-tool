@@ -1,4 +1,4 @@
-import { low, toneOf, deptOf, whereIs, feedsOf, fedByOf, flowsOf, nodeByKey } from './data.js';
+import { low, toneOf, deptOf, whereIs, feedsOf, fedByOf, flowsOf, nodeByKey } from '../data.js';
 
 export function Chip({ l, onPick }) {
   const t = toneOf(deptOf(l.key));

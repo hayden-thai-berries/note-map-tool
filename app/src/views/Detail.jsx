@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { allNodes, model, deptOf, toneOf, feedsOf, fedByOf, flowsOf, openFor, low, CRIT, STATUS } from './data.js';
-import DocTiles from './Docs.jsx';
+import { allNodes, model, deptOf, toneOf, feedsOf, fedByOf, flowsOf, openFor, low, CRIT, STATUS } from '../data.js';
+import DocTiles from '../components/Docs.jsx';
 
 /* Concept E: spotlight. One sheet at a time, shown with what comes in and what goes out.
  * Navigate by clicking neighbours, like a wiki. Left rail is just a finder. */
@@ -14,9 +14,9 @@ function Neighbour({ l, dir, onPick }) {
   );
 }
 
-export default function Spotlight({ sel, setSel }) {
-  const [keyL, setKeyL] = useState(new URLSearchParams(location.search).get('pick') || 'orders'), [q, setQ] = useState('');
-  const key = setSel ? sel || 'orders' : keyL, setKey = setSel || setKeyL;
+export default function Detail({ sel, setSel: setKey }) {
+  const [q, setQ] = useState('');
+  const key = sel || allNodes()[0]?.key;
   const n = allNodes().find((x) => x.key === key) || allNodes()[0], dept = deptOf(n.key), t = toneOf(dept);
   const feeds = feedsOf(n.key), fedBy = fedByOf(n.key), tx = openFor(n.key), fl = flowsOf(n.name);
   const groups = [...model.depts.map((d) => d.name), 'Connected apps'];

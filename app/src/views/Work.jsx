@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { tickets, STATUS, allNodes, low } from './data.js';
+import { tickets, STATUS, allNodes, low } from '../data.js';
 
 const hours = (t) => (t.log || []).reduce((a, e) => a + (+e.hours || 0), 0);
 const nameOf = (k) => (k?.startsWith('dept:') ? k.slice(5) : allNodes().find((n) => n.key === k)?.name || k);

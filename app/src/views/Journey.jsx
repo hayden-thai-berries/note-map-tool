@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Handle, Position, MarkerType } from '@xyflow/react';
-import { allNodes, model, low, deptOf, toneOf, CRIT, openFor } from './data.js';
-import { Canvas } from './ui.jsx';
-import Inspector from './Inspector.jsx';
+import { allNodes, model, low, deptOf, toneOf, CRIT, openFor } from '../data.js';
+import { Canvas } from '../components/ui.jsx';
+import Inspector from '../components/Inspector.jsx';
 
 /* Concept D: "data journey". Columns come from the links, not from departments:
  * inputs -> working sheets -> outputs. Department is a colour, not a box. */
@@ -44,9 +44,7 @@ function build(sel) {
   return { nodes: out, edges };
 }
 
-export default function Journey({ sel: selP, setSel: setSelP, onDetail }) {
-  const [selL, setSelL] = useState(new URLSearchParams(location.search).get('pick'));
-  const sel = setSelP ? selP : selL, setSel = setSelP || setSelL;
+export default function Journey({ sel, setSel, onDetail }) {
   const graph = useMemo(() => build(sel), [sel]);
   return (
     <div className="flex h-full flex-col">

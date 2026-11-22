@@ -1,4 +1,4 @@
-import { model, flows, tickets, low, allNodes, whereIs, STATUS } from './data.js';
+import { model, flows, tickets, low, allNodes, whereIs, STATUS } from '../data.js';
 
 const Field = ({ label, children, stub }) => (
   <div className={`border-t border-slate-200 py-2 ${stub ? 'mt-1 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-2.5' : ''}`}>

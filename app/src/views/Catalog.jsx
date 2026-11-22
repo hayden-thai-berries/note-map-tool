@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react';
-import { allNodes, whereIs, feedsOf, fedByOf, flowsOf, openFor, toneOf, deptOf, low, model, CRIT } from './data.js';
-import DocTiles, { Chip } from './Docs.jsx';
+import { allNodes, whereIs, feedsOf, fedByOf, flowsOf, openFor, toneOf, deptOf, low, model, CRIT } from '../data.js';
+import DocTiles, { Chip } from '../components/Docs.jsx';
 
 /* Concept C: the map as a catalog. Think Linear / Notion database: dense, searchable, expands in place. */
 const COLS = 'grid grid-cols-[minmax(190px,1.3fr)_80px_84px_minmax(150px,1.5fr)_minmax(150px,1.5fr)_64px_64px] items-center gap-3';
 const FILTERS = [['all', 'All'], ['high', 'High criticality'], ['tix', 'Has open tickets'], ['manual', 'Manual copies']];
 
-export default function Catalog({ sel, setSel, onDetail }) {
-  const [q, setQ] = useState(''), [f, setF] = useState('all'), [openL, setOpenL] = useState(new URLSearchParams(location.search).get('pick'));
-  const open = setSel ? sel : openL, setOpen = setSel || setOpenL;
+export default function Catalog({ sel: open, setSel: setOpen, onDetail }) {
+  const [q, setQ] = useState(''), [f, setF] = useState('all');
   const rows = useMemo(() => allNodes().map((n) => ({ n, dept: deptOf(n.key), feeds: feedsOf(n.key), fedBy: fedByOf(n.key), tx: openFor(n.key), fl: flowsOf(n.name) })), []);
   const keep = (r) => (!q || low(r.n.name + ' ' + r.dept + ' ' + (r.n.parts?.[0] || '')).includes(low(q)))
     && (f === 'all' || (f === 'high' && r.n.crit === 'high') || (f === 'tix' && r.tx.length) || (f === 'manual' && [...r.feeds, ...r.fedBy].some((l) => l.manual)));
