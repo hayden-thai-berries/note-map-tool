@@ -1,0 +1,74 @@
+/* PROTOTYPE (throwaway, branch proto/ux-shell). Styles for js/proto-shell.js. Delete with it. */
+.pvBar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:6px;background:#18212d;color:#fff;border-radius:99px;padding:5px 8px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:13px}
+.pvBar .pvTag{font-size:10px;letter-spacing:.08em;font-weight:600;background:#f5b301;color:#18212d;border-radius:99px;padding:2px 8px}
+.pvBar .pvLab{min-width:150px;text-align:center}
+.pvBar .pvArrow{border:0;background:#2e3a4a;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1}
+.pvBar .pvArrow:hover{background:var(--accent)}
+body[class*="pv-"] .detail{bottom:64px}
+body[class*="pv-"] .page{padding-bottom:84px}
+.muted{color:var(--muted)}
+.pvH{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted);margin:14px 0 6px}
+.pvRow{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:7px 10px;cursor:pointer;min-height:34px}
+.pvRow:hover,.pvRow.act{background:var(--bg)}
+.pvRow small{color:var(--muted);font-size:12px;white-space:nowrap}
+.pvRow.tall{align-items:flex-start;border:1px solid var(--line);margin-bottom:6px;background:var(--surface)}
+.pvRow code{font:12px var(--mono);color:var(--muted)}
+.pvChip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--lo);color:var(--lo-ink);white-space:nowrap;text-decoration:none}
+.pvChip.link{background:var(--sheet);color:var(--ink);border:1px solid var(--sheet-edge);cursor:pointer}
+.pvChip.s-blocked{background:var(--hi);color:var(--hi-ink)}
+.pvChip.s-doing{background:var(--doing);color:var(--doing-ink)}
+.pvChip.s-done{color:var(--done-ink)}
+.pvChips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+/* A: left rail */
+.pv-A .page{max-width:1640px;display:grid;grid-template-columns:240px minmax(0,1fr);column-gap:28px;align-items:start}
+.pv-A .page>*{grid-column:2}
+.pv-A .page>.pvRail{grid-column:1;grid-row:1/span 12;position:sticky;top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;max-height:calc(100vh - 32px);overflow:auto}
+.pv-A .pvBrand{font-weight:600;font-size:16px;margin-bottom:10px}
+.pv-A .topBtns{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.pv-A .topBtns select{width:100%}
+.pv-A .tabs{flex-direction:column;margin:0;gap:2px}
+.pv-A .tab{display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;border-radius:8px;padding:8px 10px}
+.pv-A .tab small{font-size:12px;color:var(--muted);font-weight:400}
+.pv-A .tab[aria-selected="true"]{background:var(--bg);box-shadow:inset 3px 0 0 var(--accent)}
+
+/* B: entity lens inspector */
+.pv-B .page{max-width:1640px;display:grid;grid-template-columns:minmax(0,1fr) 360px;column-gap:22px;align-items:start}
+.pv-B .page>*{grid-column:1}
+.pv-B .page>.pvIns{grid-column:2;grid-row:1/span 12;position:sticky;top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;max-height:calc(100vh - 32px);overflow:auto}
+.pv-B .detail{display:none!important}
+.pv-B .pvIns input{width:100%;margin:6px 0 4px}
+.pv-B .pvBack{border:0;background:none;color:var(--accent);cursor:pointer;padding:0 0 6px;font-size:13px}
+.pv-B .pvName{margin:0 0 6px;font-size:20px;line-height:1.2}
+.pv-B .pvCrumbS{margin:8px 0 10px;color:var(--muted);font-size:13px}
+.pv-B .pvSeg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.pv-B .pvSeg button{flex:1;border:0;background:var(--surface);padding:7px 4px;cursor:pointer;font-size:13px}
+.pv-B .pvSeg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.pv-B .pvF{padding:9px 0;border-top:1px solid var(--line)}
+.pv-B .pvF.stub{border:1px dashed var(--note-edge);background:var(--note);border-radius:8px;padding:8px 10px;margin-top:6px}
+.pv-B .pvFL{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px}
+.pv-B .pvFV{white-space:pre-wrap;font-size:14px}
+.pv-B .pvGroup{font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 2px}
+.pv-B .pvNote{color:var(--muted);font-size:13px;white-space:pre-wrap}
+
+/* C: hub + omnibox */
+.pv-C .topBtns{align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pv-C .pvCrumb{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--muted)}
+.pv-C .pvHomeBtn{border:0;background:none;cursor:pointer;color:var(--accent);padding:0;font-weight:500}
+.pv-C .pvHere{color:var(--ink);font-weight:600}
+.pv-C .pvOmni{position:relative;width:min(380px,60vw)}
+.pv-C .pvOmni input{width:100%}
+.pv-C .pvRes{list-style:none;margin:4px 0 0;padding:4px;position:absolute;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.2)}
+.pv-C .pvRes[hidden]{display:none}
+.pv-C .pvHome[hidden]{display:none}
+.pv-C .pvDoors{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.pv-C .pvDoor{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.pv-C .pvDoor h2{margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pv-C .pvBig{font-size:38px;font-weight:600;line-height:1.1}
+.pv-C .pvSubT{margin:0 0 6px;color:var(--muted);font-size:14px}
+.pv-C .pvRows{list-style:none;margin:0 0 10px;padding:0;flex:1}
+.pv-C .pvRows li{border-top:1px solid var(--line)}
+.pv-C .pvAttn{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.pv-C .pvAttn h2{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pv-C .pvAttn .pvRow{justify-content:flex-start}
+.pv-C .tabs{display:none}
