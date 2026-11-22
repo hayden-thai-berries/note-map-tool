@@ -12,7 +12,7 @@ The files are the database (see *Data file* in `GLOSSARY.md`). `server.py` is th
 | 2 | Every save first copies the old file to `maps/.history/<name>/` (last 20) and to `<name>.bak`. | `server.py`, `scripts/test_server.py` |
 | 3 | A save carries the *base hash*. If the file changed on disk since it was loaded, the server answers 409 and writes nothing. The page then offers Reload or Overwrite (Overwrite still snapshots the other version). | same |
 | 4 | Writes go to a temp file, then replace, so a crash never leaves half a file. | same |
-| 5 | Explicit **Save** (⌘S) with an unsaved-changes marker and a leave-page warning. No autosave. A save refused with 409 shows *Reload* or *Overwrite*. | `Toolbar.jsx`, `lib/records.js`, `scripts/e2e-local.mjs` |
+| 5 | Explicit **Save** (⌘S) with an unsaved-changes marker and a leave-page warning. No autosave. A save refused with 409 shows *Reload* or *Overwrite*. A modal's own Save is the exception: it writes at once ([ADR 0002](adr/0002-modal-save-writes-to-disk.md)). | `Toolbar.jsx`, `lib/records.js`, `scripts/e2e-local.mjs` |
 | 6 | Deleting never destroys: an entry goes to **Removed** with its links, and Restore puts it back exactly (every sheet, link and ticket has a permanent `sort` number). Only Purge deletes. Text the importer cannot model is kept word for word in `meta.legacy`. | `lib/ops.js`, `scripts/test-migration.mjs` |
 | 7 | Every edit goes through one function that refuses a change which would make the file invalid, and keeps the previous copy for undo/redo. | `lib/records.js` |
 
@@ -32,6 +32,12 @@ sequenceDiagram
     S-->>P: 409, nothing written
   end
 ```
+
+## Editing on the map
+
+The Overview map is where you work (there is no separate edit screen). Click a department, function, file, app or arrow to open its modal; use `+ Function` (on a department), `+ File` (on a function) and the top bar (`+ Department`, `+ File`, `+ App`, `+ Link`) to add; drag from the edge of one card to another to link. Modals live in `components/modals/`; `lib/records.js` `commit()` applies an edit and writes the file, returning the error or the 409 to the modal. A file's function is chosen in one type-to-filter box (`lib/pick.js`). **New map** asks only for a title; the file name is made from it (`slugFromTitle`). Moving a file between functions or reordering is done in its modal, not by dragging cards.
+
+![The map with a file modal](screenshots/map-edit-file-modal.png)
 
 ## Tickets board
 
