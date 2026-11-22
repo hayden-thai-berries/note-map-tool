@@ -4,6 +4,15 @@ A map of departments, Google Sheets, connected apps and the links between them. 
 
 ![Sheets Ecosystem Map demo](docs/screenshot.png)
 
+## Quick start with your existing (legacy) files
+
+Your old `maps/*.md`, `*.flows.md` and `*.tickets.json` work as they are. Two commands, from this folder:
+
+    ./start.command                          # builds the app if needed, serves it on http://localhost:8000/
+    node scripts/import-legacy.mjs --all     # optional: import every old map into data/ (add --dry-run to only check)
+
+Without the second command, opening a map that has only old files shows an **Import** button that does the same and checks nothing is lost. Your old files are only read, never changed; the old page stays at http://localhost:8000/legacy/. Needs Node (first run builds `app/`) and Python 3.
+
 ## Run locally
 
 Double-click `start.command` (macOS), or in a terminal in this folder:
