@@ -24,7 +24,7 @@ class StorageRules(unittest.TestCase):
         r = c.getresponse(); data = r.read(); c.close()
         return r.status, r.getheader("X-Content-Hash"), data
 
-    def file(self, name): return os.path.join(self.tmp.name, "maps", name)
+    def file(self, name, folder="maps"): return os.path.join(self.tmp.name, folder, name)
     def read(self, name):
         with open(self.file(name), "rb") as f: return f.read()
     def history(self, name):
@@ -86,6 +86,28 @@ class StorageRules(unittest.TestCase):
         self.assertEqual(self.req("PUT", "/maps/../x.md", b"x")[0], 403)
         self.assertEqual(self.req("PUT", "/maps/a.md", b"\xff\xfe")[0], 400)
         self.assertFalse(os.path.exists(self.file("a.md")))
+
+    GOOD = json.dumps({"schemaVersion": 1, "departments": [], "sheets": [], "links": [], "flows": [], "removed": [], "tickets": {"nextId": 1, "extra": {}, "items": []}}).encode()
+
+    def test_data_file_create_save_snapshot_and_list(self):
+        self.assertEqual(self.req("PUT", "/data/a.json", self.GOOD, X_Map_Create="1")[0], 204)
+        self.assertEqual(self.req("PUT", "/data/a.json", self.GOOD, X_Map_Create="1")[0], 409)
+        v2 = self.GOOD.replace(b"nextId\": 1", b"nextId\": 2")
+        st, h, _ = self.req("PUT", "/data/a.json", v2, X_Base_Hash=self.sha(self.GOOD))
+        self.assertEqual((st, h), (204, self.sha(v2)))
+        folder = os.path.join(self.tmp.name, "data", ".history", "a.json")
+        self.assertEqual(len(os.listdir(folder)), 1)
+        self.assertEqual(self.req("PUT", "/data/a.json", self.GOOD, X_Base_Hash=self.sha(self.GOOD))[0], 409)
+        st, _, body = self.req("GET", "/api/data")
+        self.assertEqual((st, json.loads(body)), (200, ["a.json"]))
+        self.assertEqual(self.req("GET", "/data/a.json")[1], self.sha(v2))
+
+    def test_data_file_shape_is_checked(self):
+        for bad in (b"[]", b'{"schemaVersion": "1"}', b'{"schemaVersion": 1}', json.dumps({"schemaVersion": 1, "departments": [], "sheets": [], "links": [], "flows": [], "removed": [], "tickets": []}).encode()):
+            self.assertEqual(self.req("PUT", "/data/b.json", bad)[0], 400, bad)
+        self.assertFalse(os.path.exists(self.file("b.json", "data")))
+        self.assertEqual(self.req("PUT", "/data/../maps/x.json", self.GOOD)[0], 403)
+        self.assertEqual(self.req("PUT", "/data/c.md", b"x")[0], 403)
 
     def test_no_tmp_file_left_behind(self):
         self.req("PUT", "/maps/a.md", b"v1", X_Map_Create="1")

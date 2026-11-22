@@ -4,6 +4,7 @@ import { parse } from './parser.js';
 import { mapLossy } from './serialize.js';
 import { parseFlows } from './flows-parser.js';
 import { SCHEMA_VERSION, idFactory } from './schema.js';
+import { STEP } from './ops.js';
 
 export function importLegacy({ mapMd, flowsMd = '', ticketsJson = null, source = {} }) {
   const id = idFactory(), model = parse(mapMd), flows = parseFlows(flowsMd), report = { unresolved: [], mapWarnings: model.warn.slice(), flowsDropped: [] };
@@ -12,7 +13,7 @@ export function importLegacy({ mapMd, flowsMd = '', ticketsJson = null, source =
 
   const addSheet = (n, kind, departmentId, sectionId, seed) => {
     const [owner = '', ...details] = n.parts || [];
-    const s = { id: id('s', seed), kind, name: n.name, departmentId, sectionId, owner, details, crit: n.crit || null, url: n.url || null, note: n.note || '' };
+    const s = { id: id('s', seed), kind, name: n.name, departmentId, sectionId, owner, details, crit: n.crit || null, url: n.url || null, note: n.note || '', sort: (data.sheets.length + 1) * STEP };
     data.sheets.push(s);
     if (!byKey.has(n.key)) byKey.set(n.key, s.id);
   };
@@ -32,7 +33,7 @@ export function importLegacy({ mapMd, flowsMd = '', ticketsJson = null, source =
     const from = byKey.get(l.from.toLowerCase()), to = byKey.get(l.to.toLowerCase()), k = { id: id('l', 'link' + i) };
     if (from) k.fromId = from; else { k.fromName = l.from; report.unresolved.push(`link ${i + 1} starts at "${l.from}", which is not a sheet or app`); }
     if (to) k.toId = to; else { k.toName = l.to; report.unresolved.push(`link ${i + 1} ends at "${l.to}", which is not a sheet or app`); }
-    k.label = l.label;
+    k.label = l.label; k.sort = (i + 1) * STEP;
     data.links.push(k);
   });
 
@@ -62,6 +63,7 @@ export function importLegacy({ mapMd, flowsMd = '', ticketsJson = null, source =
       if (dept || sheet) o.targetId = dept || sheet;
       else { o.targetRaw = v; if (v) report.unresolved.push(`ticket ${t.id} is about "${v}", which is not on the map`); }
     }
+    o.sort = (data.tickets.items.length + 1) * STEP;
     data.tickets.items.push(o);
   });
 

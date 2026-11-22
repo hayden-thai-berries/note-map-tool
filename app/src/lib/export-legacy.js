@@ -3,7 +3,8 @@ import { stringify } from './serialize.js';
 import { stringifyFlows } from './flows-parser.js';
 
 export function exportLegacy(data) {
-  const nameOf = (id) => data.sheets.find((s) => s.id === id)?.name;
+  /* a sheet in Removed keeps its name for anything still pointing at it */
+  const nameOf = (id) => data.sheets.find((s) => s.id === id)?.name ?? data.removed.find((r) => r.kind !== 'ticket' && r.entry.id === id)?.entry.name;
   const node = (s) => ({ name: s.name, parts: [s.owner, ...(s.details || [])].filter((p) => p), crit: s.crit, url: s.url, note: s.note });
   const model = {
     title: data.title,
@@ -21,12 +22,12 @@ export function exportLegacy(data) {
     return { title: f.title, every: f.every, teams: f.teams, steps };
   });
   const target = (t) => {
-    const sheet = data.sheets.find((s) => s.id === t), dept = data.departments.find((d) => d.id === t);
-    return sheet ? sheet.name.toLowerCase() : dept ? 'dept:' + dept.name : '';
+    const name = nameOf(t), dept = data.departments.find((d) => d.id === t);
+    return name ? name.toLowerCase() : dept ? 'dept:' + dept.name : '';
   };
   const items = data.tickets.items.map((t) => {
     const o = {};
-    for (const [k, v] of Object.entries(t)) { if (k === 'targetId') o.target = target(v); else if (k === 'targetRaw') o.target = v; else o[k] = v; }
+    for (const [k, v] of Object.entries(t)) { if (k === 'sort') continue; else if (k === 'targetId') o.target = target(v); else if (k === 'targetRaw') o.target = v; else o[k] = v; }
     return o;
   });
   return { mapMd: stringify(model), flowsMd: flows.length ? stringifyFlows(flows) : '', ticketsJson: { nextId: data.tickets.nextId, ...data.tickets.extra, tickets: items } };

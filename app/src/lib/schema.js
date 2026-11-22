@@ -8,10 +8,10 @@
  *   flows:       [{ id, title, every, teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?,
  *                   triggers: [{ stepId, msg } | { team, msg }], backs: [{ stepId, msg }] }] }],
  *   tickets:     { nextId, extra: {}, items: [ticket as before, with target replaced by targetId (or targetRaw if it points at nothing)] },
- *   removed:     [{ kind, removedAt, entry }],
+ *   removed:     [{ id, kind, label, removedAt, entry, ... where it sat, so it can be put back }],
  *   meta:        { importedFrom?, legacy?: { mapMd?, flowsMd? } }
  * }
- * Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
+ * Sheets, links and tickets carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
 
 function cyrb53(str) {
@@ -56,6 +56,8 @@ export function validate(d) {
   const secs = new Map();
   d.departments.forEach((x) => { dup(x.id, 'department'); (x.sections || []).forEach((s) => { dup(s.id, 'section'); secs.set(s.id, x.id); }); });
   const deptIds = new Set(d.departments.map((x) => x.id)), sheetIds = new Set(d.sheets.map((x) => x.id));
+  /* a sheet in Removed can still be pointed at by tickets and flow steps */
+  const known = new Set([...sheetIds, ...d.removed.filter((r) => r.entry && r.kind !== 'ticket').map((r) => r.entry.id)]);
   d.sheets.forEach((s) => {
     dup(s.id, 'sheet');
     if (s.departmentId && !deptIds.has(s.departmentId)) bad.push(`sheet ${s.id} points at a missing department`);
@@ -71,10 +73,12 @@ export function validate(d) {
     const steps = new Set((f.steps || []).map((s) => s.id));
     (f.steps || []).forEach((s) => {
       dup(s.id, 'step');
-      if (s.sheetId && !sheetIds.has(s.sheetId)) bad.push(`step ${s.id} points at a missing sheet`);
+      if (s.sheetId && !known.has(s.sheetId)) bad.push(`step ${s.id} points at a missing sheet`);
       [...(s.triggers || []), ...(s.backs || [])].forEach((t) => { if (t.stepId && !steps.has(t.stepId)) bad.push(`step ${s.id} points at a missing step`); });
     });
   });
-  d.tickets.items.forEach((t) => { if (t.targetId && !sheetIds.has(t.targetId) && !deptIds.has(t.targetId)) bad.push(`ticket ${t.id} points at a missing target`); });
+  d.tickets.items.forEach((t) => { if (t.targetId && !known.has(t.targetId) && !deptIds.has(t.targetId)) bad.push(`ticket ${t.id} points at a missing target`); });
+  const sorted = (list, what) => list.forEach((x, i) => { if (typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort)) bad.push(`${what} ${x.id ?? i} is out of order or has no sort number`); });
+  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket');
   return bad;
 }

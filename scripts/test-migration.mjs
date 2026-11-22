@@ -78,3 +78,64 @@ test('an empty map imports and exports cleanly', () => {
   const o = { mapMd: '# Empty\n' }; assert.deepEqual(run(o).problems, []); assert.deepEqual(validate(emptyData()), []);
 });
 test('new ids are unique enough', () => { const s = new Set(Array.from({ length: 500 }, () => newId('s'))); assert.equal(s.size, 500); });
+
+/* ---- edits: delete / restore / purge ---- */
+const { removeSheet, removeTicket, restore, purge, updateSheet, updateTicket } = await lib('ops.js');
+const canon = (v) => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
+const same = (a, b) => assert.equal(JSON.stringify(canon(a)), JSON.stringify(canon(b)));
+const fresh = () => importLegacy({ mapMd: MAP.replace('Orders -> Ghost | manual copy', 'CRM -> Orders | back'), flowsMd: FLOWS.replace('Nowhere', 'CRM'), ticketsJson: { nextId: 9, tickets: [{ id: 'P1', title: 'proj', type: 'project', target: 'orders' }, { id: 'T1', title: 'a', type: 'ticket', target: 'orders', project: 'P1' }, { id: 'T2', title: 'b', target: 'crm' }] } }).data;
+
+for (const name of ['Loose', 'CRM']) {
+  test(`removing "${name}" and restoring it gives back exactly the original`, () => {
+    const d = fresh(), before = structuredClone(d), id = d.sheets.find((s) => s.name === name).id;
+    removeSheet(d, id);
+    assert.equal(d.sheets.some((s) => s.id === id), false); assert.equal(d.removed.length, 1);
+    assert.deepEqual(validate(d), [], 'no dangling reference is left behind');
+    restore(d, d.removed[0].id);
+    same(d, before);
+  });
+}
+test('removing a sheet leaves its tickets and flow steps pointing at it, and the file stays valid', () => {
+  const d = fresh(), id = d.sheets.find((s) => s.name === 'CRM').id;
+  removeSheet(d, id);
+  assert.equal(d.tickets.items.find((t) => t.id === 'T2').targetId, id); assert.equal(d.flows[0].steps[1].sheetId, id);
+  assert.deepEqual(validate(d), []); assert.equal(d.links.some((l) => l.fromId === id || l.toId === id), false);
+  assert.equal(exportLegacy(d).ticketsJson.tickets.find((t) => t.id === 'T2').target, 'crm', 'the name is still known while it is in Removed');
+});
+test('removing a project leaves its items alone, and restoring it is lossless', () => {
+  const d = fresh(), before = structuredClone(d);
+  removeTicket(d, 'P1'); assert.equal(d.tickets.items.find((x) => x.id === 'T1').project, 'P1');
+  restore(d, d.removed[0].id); same(d, before);
+});
+test('removing a ticket and restoring it gives back exactly the original', () => {
+  const d = fresh(), before = structuredClone(d); removeTicket(d, 'T2'); assert.equal(d.tickets.items.length, 2);
+  restore(d, d.removed[0].id); same(d, before);
+});
+test('removing then restoring several entries in any order is lossless', () => {
+  const d = fresh(), before = structuredClone(d), a = d.sheets[0].id, b = d.sheets[2].id;
+  removeSheet(d, a); removeSheet(d, b); removeTicket(d, 'T1');
+  restore(d, d.removed[2].id); restore(d, d.removed[0].id); restore(d, d.removed[0].id);
+  same(d, before);
+});
+test('purge is the only thing that really deletes', () => {
+  const d = fresh(); removeSheet(d, d.sheets[0].id); const r = d.removed[0].id; purge(d, r); assert.equal(d.removed.length, 0);
+});
+test('edits change only what they are told to, and a removed-then-edited file still exports', () => {
+  const d = fresh(); updateSheet(d, d.sheets[1].id, { name: 'Orders v2', crit: 'low' }); updateTicket(d, 'T2', { status: 'doing' });
+  assert.equal(d.tickets.items.find((t) => t.id === 'T2').status, 'doing'); assert.deepEqual(validate(d), []);
+  assert.match(exportLegacy(d).mapMd, /Orders v2/); removeSheet(d, d.sheets[0].id); assert.ok(exportLegacy(d).mapMd.length > 0);
+});
+test('2000 random remove/restore sequences always end exactly where they started', () => {
+  let seed = 12345; const rnd = (n) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+  for (let run = 0; run < 2000; run++) {
+    const d = fresh(), before = structuredClone(d), steps = 2 + rnd(6);
+    for (let k = 0; k < steps; k++) {
+      const pickTicket = rnd(3) === 0 && d.tickets.items.length, pool = pickTicket ? d.tickets.items : d.sheets;
+      if (pool.length) (pickTicket ? removeTicket : removeSheet)(d, pool[rnd(pool.length)].id);
+      if (d.removed.length && rnd(3) === 0) restore(d, d.removed[rnd(d.removed.length)].id);
+      assert.deepEqual(validate(d), []);
+    }
+    while (d.removed.length) restore(d, d.removed[rnd(d.removed.length)].id);
+    same(d, before);
+  }
+});

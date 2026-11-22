@@ -90,7 +90,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": "Master stock levels. Only Kim and Raj can edit."
+      "note": "Master stock levels. Only Kim and Raj can edit.",
+      "sort": 1024
     },
     {
       "id": "s_275tf8ru",
@@ -102,7 +103,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": "Feeds the Sales pipeline through IMPORTRANGE."
+      "note": "Feeds the Sales pipeline through IMPORTRANGE.",
+      "sort": 2048
     },
     {
       "id": "s_1xy9vgwa",
@@ -114,7 +116,8 @@
       "details": [],
       "crit": "medium",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 3072
     },
     {
       "id": "s_pbtbrnfs",
@@ -126,7 +129,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 4096
     },
     {
       "id": "s_1l1u6giw",
@@ -138,7 +142,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": "Quotes over $10k need Finance sign-off before they go out."
+      "note": "Quotes over $10k need Finance sign-off before they go out.",
+      "sort": 5120
     },
     {
       "id": "s_7v7laax7",
@@ -150,7 +155,8 @@
       "details": [],
       "crit": "medium",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 6144
     },
     {
       "id": "s_26ih2gr3",
@@ -162,7 +168,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 7168
     },
     {
       "id": "s_5kgspmk6",
@@ -174,7 +181,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 8192
     },
     {
       "id": "s_wysa0kz3",
@@ -186,7 +194,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": "Headcount is copied in by hand before each run. Check the totals against HR."
+      "note": "Headcount is copied in by hand before each run. Check the totals against HR.",
+      "sort": 9216
     },
     {
       "id": "s_13dddj2x",
@@ -198,7 +207,8 @@
       "details": [],
       "crit": "low",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 10240
     },
     {
       "id": "s_1ih0k6bk",
@@ -210,7 +220,8 @@
       "details": [],
       "crit": "high",
       "url": null,
-      "note": "Source of truth for payroll. Update within one day of any change."
+      "note": "Source of truth for payroll. Update within one day of any change.",
+      "sort": 11264
     },
     {
       "id": "s_11r2ugxa",
@@ -222,7 +233,8 @@
       "details": [],
       "crit": "medium",
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 12288
     },
     {
       "id": "s_8ycqjhdi",
@@ -234,7 +246,8 @@
       "details": [],
       "crit": null,
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 13312
     },
     {
       "id": "s_19me76j7",
@@ -246,7 +259,8 @@
       "details": [],
       "crit": null,
       "url": null,
-      "note": "Owned by Sales ops. If the sync fails, Quotes stops updating."
+      "note": "Owned by Sales ops. If the sync fails, Quotes stops updating.",
+      "sort": 14336
     },
     {
       "id": "s_1efeqbr0",
@@ -258,7 +272,8 @@
       "details": [],
       "crit": null,
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 15360
     },
     {
       "id": "s_kbs2ddsk",
@@ -270,7 +285,8 @@
       "details": [],
       "crit": null,
       "url": null,
-      "note": ""
+      "note": "",
+      "sort": 16384
     }
   ],
   "links": [
@@ -278,43 +294,50 @@
       "id": "l_c9445gs5",
       "fromId": "s_275tf8ru",
       "toId": "s_pbtbrnfs",
-      "label": "IMPORTRANGE"
+      "label": "IMPORTRANGE",
+      "sort": 1024
     },
     {
       "id": "l_e7o1e24u",
       "fromId": "s_1l1u6giw",
       "toId": "s_5kgspmk6",
-      "label": "IMPORTRANGE"
+      "label": "IMPORTRANGE",
+      "sort": 2048
     },
     {
       "id": "l_1acem9dy",
       "fromId": "s_1ih0k6bk",
       "toId": "s_wysa0kz3",
-      "label": "manual copy"
+      "label": "manual copy",
+      "sort": 3072
     },
     {
       "id": "l_67bspq8r",
       "fromId": "s_8ycqjhdi",
       "toId": "s_1xy9vgwa",
-      "label": "CSV import"
+      "label": "CSV import",
+      "sort": 4096
     },
     {
       "id": "l_14j63w6s",
       "fromId": "s_19me76j7",
       "toId": "s_1l1u6giw",
-      "label": "connector, daily"
+      "label": "connector, daily",
+      "sort": 5120
     },
     {
       "id": "l_19mweq7s",
       "fromId": "s_5kgspmk6",
       "toId": "s_1efeqbr0",
-      "label": "connector"
+      "label": "connector",
+      "sort": 6144
     },
     {
       "id": "l_1q3oht4b",
       "fromId": "s_13dddj2x",
       "toId": "s_kbs2ddsk",
-      "label": "Apps Script"
+      "label": "Apps Script",
+      "sort": 7168
     }
   ],
   "flows": [
@@ -474,7 +497,8 @@
           }
         ],
         "updated": "2026-11-15",
-        "blocked": ""
+        "blocked": "",
+        "sort": 1024
       },
       {
         "id": "T20261112.001",
@@ -493,7 +517,8 @@
           }
         ],
         "blocked": "Waiting on vendor API key",
-        "updated": "2026-11-12"
+        "updated": "2026-11-12",
+        "sort": 2048
       },
       {
         "id": "T20261113.001",
@@ -504,7 +529,8 @@
         "url": "",
         "targetId": "s_wysa0kz3",
         "notes": "Remove the manual copy before each payroll run.",
-        "updated": "2026-11-13"
+        "updated": "2026-11-13",
+        "sort": 3072
       },
       {
         "id": "P20261114.001",
@@ -515,7 +541,8 @@
         "url": "",
         "targetId": "d_1qmycci1",
         "notes": "",
-        "updated": "2026-11-14"
+        "updated": "2026-11-14",
+        "sort": 4096
       },
       {
         "id": "T20261101.001",
@@ -526,7 +553,8 @@
         "url": "",
         "targetId": "s_26ih2gr3",
         "notes": "",
-        "updated": "2026-11-01"
+        "updated": "2026-11-01",
+        "sort": 5120
       },
       {
         "id": "T20261115.001",
@@ -537,7 +565,8 @@
         "url": "",
         "targetId": "s_kbs2ddsk",
         "notes": "",
-        "updated": "2026-11-15"
+        "updated": "2026-11-15",
+        "sort": 6144
       }
     ]
   },
