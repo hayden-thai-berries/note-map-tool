@@ -1,5 +1,5 @@
 import { useRecords } from '../lib/records.js';
-import { FILE_TYPE_LABEL } from './SheetEdit.jsx';
+import { FILE_TYPE_LABEL } from '../lib/schema.js';
 import { low, toneOf, deptOf, whereIs, feedsOf, fedByOf, flowsOf, nodeByKey } from '../data.js';
 
 export function Chip({ l, onPick }) {

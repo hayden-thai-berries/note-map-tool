@@ -1,19 +1,28 @@
 import { Handle, Position } from '@xyflow/react';
+import { useModals } from './modals/ModalHost.jsx';
 
 const CRIT = { high: 'bg-red-100 text-red-800', medium: 'bg-amber-100 text-amber-800', low: 'bg-slate-200 text-slate-700' };
 
+const mini = 'nodrag nopan shrink-0 rounded border border-slate-300 bg-white px-1.5 text-[10px] font-medium text-slate-600 hover:border-blue-500 hover:text-blue-700';
+
 export function DeptNode({ data }) {
+  const { open } = useModals();
   return (
     <div className="h-full w-full rounded-xl border border-slate-300 bg-white/80">
-      <div className="px-3.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-700">{data.name}</div>
+      <div className="flex items-center justify-between gap-2 px-3.5 pt-3">
+        <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-slate-700">{data.name}</span>
+        {data.depId && <button type="button" className={mini} onClick={(e) => { e.stopPropagation(); open('function', { depId: data.depId }); }}>+ Function</button>}
+      </div>
     </div>
   );
 }
 
 export function SectionNode({ data }) {
+  const { open } = useModals();
   return (
-    <div className="w-[230px] rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-xs" title={data.note}>
-      {data.title}
+    <div className="flex w-[230px] items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs" title={data.note}>
+      <span className={`truncate ${data.title ? '' : 'italic text-amber-800'}`}>{data.title || '(untitled function)'}</span>
+      <button type="button" className={mini} onClick={(e) => { e.stopPropagation(); open('file', { sectionId: data.secId }); }}>+ File</button>
     </div>
   );
 }

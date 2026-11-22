@@ -11,7 +11,7 @@ import Work from './views/Work.jsx';
 import Flows from './views/Flows.jsx';
 import Removed from './views/Removed.jsx';
 import ImportPanel from './views/ImportPanel.jsx';
-import Structure from './views/Structure.jsx';
+import { ModalProvider } from './components/modals/ModalHost.jsx';
 import NewMap from './components/NewMap.jsx';
 
 const hashWs = () => location.hash.replace('#', '') || 'overview';
@@ -56,12 +56,12 @@ export default function App() {
   if (!names || !file || state.status === 'loading') return <Message title="Loading…" />;
 
   const picker = names.length > 1 && <select aria-label="Map" value={file} onChange={(e) => pickMap(e.target.value)} className="mb-3 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm">{names.map((m) => <option key={m.name} value={m.name}>{m.name}{m.hasData ? '' : ' (not imported)'}</option>)}</select>;
-  const newMap = creating ? <div className="mb-3"><NewMap onCreated={created} onCancel={() => setCreating(false)} /></div> : <button type="button" className="mb-3 rounded-lg border border-dashed border-slate-300 px-2 py-1 text-left text-sm text-slate-600 hover:border-blue-500" onClick={() => setCreating(true)}>＋ New map</button>;
+  const newMap = creating ? <div className="mb-3"><NewMap taken={names.map((x) => x.name)} onCreated={created} onCancel={() => setCreating(false)} /></div> : <button type="button" className="mb-3 rounded-lg border border-dashed border-slate-300 px-2 py-1 text-left text-sm text-slate-600 hover:border-blue-500" onClick={() => setCreating(true)}>＋ New map</button>;
   if (state.status === 'needs-import') return <div className="flex h-full"><nav className="w-60 shrink-0 border-r border-slate-200 bg-white p-3"><div className="mb-2 px-2 font-semibold">Sheets map</div>{picker}{newMap}</nav><main className="flex-1 overflow-auto"><ImportPanel name={file} /></main></div>;
 
   const open = tickets.filter((t) => t.status !== 'done'), blocked = open.filter((t) => t.status === 'blocked').length;
   const groups = [
-    ['Map', [['overview', 'Overview', 'canvas + layers'], ['journey', 'Journey', 'how data travels'], ['structure', 'Edit map', 'add, move, link']]],
+    ['Map', [['overview', 'Overview', 'see and edit'], ['journey', 'Journey', 'how data travels']]],
     ['Docs', [['catalog', 'Catalog', allNodes().length], ['detail', 'Detail', '']]],
     ['Work', [['work', 'Tickets & projects', open.length + (blocked ? ' · ' + blocked + '!' : '')]]],
     ['Workflows', [['flows', 'Business flows', flows.length]]],
@@ -69,6 +69,7 @@ export default function App() {
   ];
   const toDetail = () => setWs('detail');
   return (
+    <ModalProvider>
     <div className="flex h-full">
       <nav className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-3">
         <div className="mb-1 px-2 text-base font-semibold tracking-tight">{model.title}</div>
@@ -88,8 +89,7 @@ export default function App() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Toolbar />
         <main className="min-h-0 flex-1">
-          {ws === 'overview' && <Overview key={file} sel={sel} setSel={setSel} />}
-          {ws === 'structure' && <Structure key={file} sel={sel} setSel={setSel} />}
+          {(ws === 'overview' || ws === 'structure') && <Overview key={file} setSel={setSel} />}
           {ws === 'journey' && <Journey key={file} sel={sel} setSel={setSel} onDetail={toDetail} />}
           {ws === 'catalog' && <Catalog key={file} sel={sel} setSel={setSel} onDetail={toDetail} />}
           {ws === 'detail' && <Detail key={file} sel={sel} setSel={setSel} />}
@@ -99,5 +99,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </ModalProvider>
   );
 }

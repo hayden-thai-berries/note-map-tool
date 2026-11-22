@@ -1,45 +1,48 @@
 import { MarkerType } from '@xyflow/react';
-import { model, tickets, low, openFor } from './data.js';
+import { low } from './data.js';
+import { openTicketsForSheet } from './lib/rollup.js';
 
 const W = 230, H = 62, GAP = 10, PAD = 14;
 const arrow = (color) => ({ type: MarkerType.ArrowClosed, color });
 
-/* sheets map: departments are parent nodes, sheets/sections are children, apps sit in a band below */
-export function buildMap({ flow, showTix } = {}) {
-  const nodes = [], edges = [], keys = new Set();
-  let maxH = 0;
-  const flowSheets = flow ? new Set(flow.steps.filter((s) => s.sheet).map((s) => low(s.sheet))) : null;
-  const sheetNode = (n, parentId, x, y) => ({
-    id: n.key, type: 'sheet', parentId, extent: 'parent', position: { x, y }, draggable: false,
-    data: { n, open: openFor(n.key), showTix, dim: !!flowSheets && !flowSheets.has(n.key) },
+/* sheets map, drawn straight from the Data file so every node knows its real id:
+ * departments are parent nodes, a header per function, then its files; apps sit in a band below. */
+export function buildMap(d, { flow, showTix } = {}) {
+  const nodes = [], edges = [], onMap = new Set(), idOf = new Map();
+  d.sheets.forEach((s) => { const k = low(s.name); if (!idOf.has(k)) idOf.set(k, s.id); });
+  const flowSheets = flow ? new Set(flow.steps.filter((s) => s.sheet).map((s) => idOf.get(low(s.sheet))).filter(Boolean)) : null;
+  const sheetNode = (s, parentId, x, y) => ({
+    id: s.id, type: 'sheet', parentId, extent: 'parent', position: { x, y }, draggable: false,
+    data: { sheetId: s.id, n: { key: low(s.name), name: s.name, kind: s.kind, crit: s.crit, details: [s.owner, ...(s.details || [])].filter(Boolean).join(' · ') }, open: openTicketsForSheet(d, s.id), showTix, dim: !!flowSheets && !flowSheets.has(s.id) },
   });
-  model.depts.forEach((d, di) => {
-    const id = 'dept:' + d.name, box = { id, type: 'dept', position: { x: di * (W + PAD * 2 + 50), y: 0 }, data: { name: d.name }, draggable: false, selectable: true, style: { width: W + PAD * 2 } };
+  let maxH = 0;
+  d.departments.forEach((dep, di) => {
+    const id = 'dept:' + dep.id, box = { id, type: 'dept', position: { x: di * (W + PAD * 2 + 50), y: 0 }, data: { name: dep.name, depId: dep.id }, draggable: false, selectable: true, style: { width: W + PAD * 2 } };
     nodes.push(box);
     let y = 44;
-    d.sections.forEach((sc, si) => {
-      if (sc.title) { nodes.push({ id: `sec:${di}:${si}`, type: 'section', parentId: id, extent: 'parent', position: { x: PAD, y }, data: { title: sc.title, note: sc.note }, draggable: false, selectable: false }); y += 44; }
-      sc.nodes.forEach((n) => { keys.add(n.key); nodes.push(sheetNode(n, id, PAD, y)); y += H + GAP; });
+    dep.sections.forEach((sc) => {
+      nodes.push({ id: 'sec:' + sc.id, type: 'section', parentId: id, extent: 'parent', position: { x: PAD, y }, data: { title: sc.title, note: sc.note, secId: sc.id, depId: dep.id }, draggable: false, selectable: true });
+      y += 44;
+      d.sheets.filter((s) => s.sectionId === sc.id).forEach((s) => { onMap.add(s.id); nodes.push(sheetNode(s, id, PAD, y)); y += H + GAP; });
       y += 6;
     });
     box.style.height = y + 8; maxH = Math.max(maxH, y + 8);
   });
-  const appsY = maxH + 90;
-  nodes.push({ id: 'apps', type: 'dept', position: { x: 0, y: appsY }, data: { name: 'Connected apps' }, draggable: false, selectable: false, style: { width: model.apps.length * (W + PAD) + PAD, height: 44 + H + 16 } });
-  model.apps.forEach((n, i) => { keys.add(n.key); nodes.push(sheetNode(n, 'apps', PAD + i * (W + PAD), 44)); });
+  const apps = d.sheets.filter((s) => s.kind === 'app'), appsY = maxH + 90;
+  nodes.push({ id: 'apps', type: 'dept', position: { x: 0, y: appsY }, data: { name: 'Connected apps' }, draggable: false, selectable: false, style: { width: Math.max(1, apps.length) * (W + PAD) + PAD, height: 44 + H + 16 } });
+  apps.forEach((s, i) => { onMap.add(s.id); nodes.push(sheetNode(s, 'apps', PAD + i * (W + PAD), 44)); });
 
-  model.links.forEach((l, i) => {
-    const s = low(l.from), t = low(l.to);
-    if (!keys.has(s) || !keys.has(t)) return;
-    const manual = /manual/i.test(l.label);
-    edges.push({ id: 'l' + i, source: s, target: t, label: l.label, type: 'default', markerEnd: arrow('#7a8798'), style: { stroke: '#7a8798', strokeDasharray: manual ? '6 4' : undefined }, labelStyle: { fontSize: 10 }, animated: !manual });
+  d.links.forEach((l) => {
+    if (!onMap.has(l.fromId) || !onMap.has(l.toId)) return;
+    const manual = /manual/i.test(l.label || '');
+    edges.push({ id: 'l:' + l.id, source: l.fromId, target: l.toId, label: l.label, data: { linkId: l.id }, type: 'default', markerEnd: arrow('#7a8798'), style: { stroke: '#7a8798', strokeDasharray: manual ? '6 4' : undefined, cursor: 'pointer' }, labelStyle: { fontSize: 10 }, animated: !manual, interactionWidth: 24 });
   });
-  /* flow overlay: the chosen business flow drawn on top of the sheets it touches */
+  /* flow overlay: the chosen business flow drawn on top of the files it touches */
   if (flow) {
     flow.edges.forEach((e, i) => {
-      const a = flow.steps[e.from], b = flow.steps[e.to];
-      if (!a.sheet || !b.sheet || low(a.sheet) === low(b.sheet) || !keys.has(low(a.sheet)) || !keys.has(low(b.sheet))) return;
-      edges.push({ id: 'f' + i, source: low(a.sheet), target: low(b.sheet), label: `${a.team} → ${b.team}: ${b.title}`, markerEnd: arrow('#0b6bcb'), style: { stroke: '#0b6bcb', strokeWidth: 3 }, labelStyle: { fontSize: 11, fontWeight: 600 }, zIndex: 10 });
+      const a = flow.steps[e.from], b = flow.steps[e.to], from = a.sheet && idOf.get(low(a.sheet)), to = b.sheet && idOf.get(low(b.sheet));
+      if (!from || !to || from === to || !onMap.has(from) || !onMap.has(to)) return;
+      edges.push({ id: 'f' + i, source: from, target: to, label: `${a.team} → ${b.team}: ${b.title}`, markerEnd: arrow('#0b6bcb'), style: { stroke: '#0b6bcb', strokeWidth: 3 }, labelStyle: { fontSize: 11, fontWeight: 600 }, zIndex: 10 });
     });
   }
   return { nodes, edges };

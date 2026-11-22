@@ -4,7 +4,7 @@ import { updateSheet, removeSheet, addDoc, updateDoc, removeDoc } from '../lib/o
 import { membersOf, ownerStatus } from '../lib/rollup.js';
 import { CommitInput, Btn } from './ui.jsx';
 
-export const FILE_TYPE_LABEL = { sheet: 'Google Sheet', doc: 'Doc', excel: 'Excel', pdf: 'PDF', other: 'Other' };
+import { FILE_TYPE_LABEL } from '../lib/schema.js';
 
 const Field = ({ label, children }) => <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">{label}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
 const input = 'w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-blue-500';

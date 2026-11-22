@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRecords, apply } from '../lib/records.js';
 import * as o from '../lib/ops.js';
 import { Btn } from './ui.jsx';
+import { useCommit } from './modals/Modal.jsx';
 import { memberNamesFor } from '../lib/rollup.js';
 
 const L = ({ t, children }) => <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">{t}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
@@ -29,7 +30,8 @@ export default function TicketForm({ id, onClose, preset = {} }) {
       targetId: v.targetId || undefined, targetRaw: v.targetId ? undefined : v.targetRaw,
     };
   };
-  const submit = () => { if (apply((d) => (id ? o.updateTicket(d, id, clean()) : o.addTicket(d, clean())))) onClose(); };
+  const c = useCommit(onClose);
+  const submit = () => c.run((d) => (id ? o.updateTicket(d, id, clean()) : o.addTicket(d, clean())));
   const total = (live?.log || []).reduce((a, e) => a + (+e.hours || 0), 0);
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/30" onClick={onClose}>
@@ -68,8 +70,10 @@ export default function TicketForm({ id, onClose, preset = {} }) {
             <div className="flex gap-1.5"><input aria-label="Hours worked" type="number" min="0.25" max="24" step="0.25" placeholder="Hours" className={`${f} !w-20`} value={hours} onChange={(e) => setHours(e.target.value)} /><input aria-label="What did you do" className={f} placeholder="What did you do? (optional)" value={logNote} onChange={(e) => setLogNote(e.target.value)} /><Btn disabled={!(+hours > 0)} onClick={() => { if (apply((d) => o.addLog(d, id, { hours, note: logNote }))) { setHours(''); setLogNote(''); } }}>Log</Btn></div>
           </div>
         )}
+        {c.error && <p role="alert" className="mb-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-sm text-red-800">{c.error}</p>}
+        {c.conflict && <div role="alert" className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm"><b>This map changed on disk</b> since you opened it.<div className="mt-1 flex gap-2"><Btn onClick={() => c.resolve('reload')}>Reload (discard my edits)</Btn><Btn onClick={() => c.resolve('overwrite')}>Overwrite (keep my edits)</Btn></div></div>}
         <div className="flex items-center gap-2"><Btn primary type="submit">{id ? 'Save' : 'Create'}</Btn><Btn onClick={onClose}>Cancel</Btn>
-          {id && (!sure ? <Btn danger className="ml-auto" onClick={() => setSure(true)}>Delete…</Btn> : <Btn danger className="ml-auto" onClick={() => { apply((d) => o.removeTicket(d, id)); onClose(); }}>Move to Removed</Btn>)}</div>
+          {id && (!sure ? <Btn danger className="ml-auto" onClick={() => setSure(true)}>Delete…</Btn> : <Btn danger className="ml-auto" onClick={() => c.run((d) => o.removeTicket(d, id))}>Move to Removed</Btn>)}</div>
       </form>
     </div>
   );
