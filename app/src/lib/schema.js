@@ -2,8 +2,9 @@
  *
  * {
  *   schemaVersion: 1, title,
- *   departments: [{ id, name, text: [], sections: [{ id, title|null, note }] }],
- *   sheets:      [{ id, kind: 'sheet'|'app', name, departmentId|null, sectionId|null, owner, details: [], crit|null, url|null, note }],
+ *   departments: [{ id, name, text: [] (the description), members?: [{ id, name, role, email? }], sections: [{ id, title|null, note }] }],   (a section is shown as a "Function"; its note is the description)
+ *   sheets:      [{ id, kind: 'sheet'|'app', name, departmentId|null, sectionId|null, owner, details: [], crit|null, url|null, note,
+ *                   type?: 'doc'|'excel'|'pdf'|'other' (absent = Google Sheet), docs?: [{ label, url }] }],
  *   links:       [{ id, fromId|fromName, toId|toName, label }],
  *   flows:       [{ id, title, every, teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?,
  *                   triggers: [{ stepId, msg } | { team, msg }], backs: [{ stepId, msg }] }] }],
@@ -13,7 +14,8 @@
  * }
  * Sheets, links, tickets, flows and flow steps carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
-export const STEP = 1024; /* gap between neighbouring `sort` numbers */
+export const STEP = 1024;
+export const FILE_TYPES = ['sheet', 'doc', 'excel', 'pdf', 'other']; /* a missing `type` means 'sheet' */ /* gap between neighbouring `sort` numbers */
 
 function cyrb53(str) {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
@@ -55,12 +57,14 @@ export function validate(d) {
   if (bad.length) return bad;
   const ids = new Set(), dup = (id, what) => { if (!id) bad.push(`${what} has no id`); else if (ids.has(id)) bad.push(`duplicate id ${id}`); else ids.add(id); };
   const secs = new Map();
-  d.departments.forEach((x) => { dup(x.id, 'department'); (x.sections || []).forEach((s) => { dup(s.id, 'section'); secs.set(s.id, x.id); }); });
+  d.departments.forEach((x) => { dup(x.id, 'department'); (x.members || []).forEach((m) => { dup(m.id, 'member'); if (!String(m.name || '').trim()) bad.push(`member ${m.id} has no name`); }); (x.sections || []).forEach((s) => { dup(s.id, 'section'); secs.set(s.id, x.id); }); });
   const deptIds = new Set(d.departments.map((x) => x.id)), sheetIds = new Set(d.sheets.map((x) => x.id));
   /* a sheet in Removed can still be pointed at by tickets and flow steps */
   const known = new Set([...sheetIds, ...d.removed.filter((r) => r.entry && r.kind !== 'ticket').map((r) => r.entry.id)]);
   d.sheets.forEach((s) => {
     dup(s.id, 'sheet');
+    if (s.type !== undefined && !FILE_TYPES.includes(s.type)) bad.push(`sheet ${s.id} has an unknown type`);
+    (s.docs || []).forEach((x) => { if (!String(x.url || '').trim()) bad.push(`sheet ${s.id} has a documentation link with no address`); });
     if (s.departmentId && !deptIds.has(s.departmentId)) bad.push(`sheet ${s.id} points at a missing department`);
     if (s.sectionId && secs.get(s.sectionId) !== s.departmentId) bad.push(`sheet ${s.id} points at a section that is not in its department`);
   });

@@ -2,13 +2,18 @@
 import { stringify } from './serialize.js';
 import { stringifyFlows } from './flows-parser.js';
 
-export function exportLegacy(data) {
+const TYPE_LABEL = { doc: 'Doc', excel: 'Excel', pdf: 'PDF', other: 'Other' };
+/* The old file format has no place for members, file types or documentation links. With { withNewFields: true } (the "Export as legacy files" button)
+ * they are written as plain lines the old parser reads as text, so a person still sees them. The app itself never uses that form: the Data file holds them. */
+export function exportLegacy(data, { withNewFields = false } = {}) {
   /* a sheet in Removed keeps its name for anything still pointing at it */
   const nameOf = (id) => data.sheets.find((s) => s.id === id)?.name ?? data.removed.find((r) => r.kind !== 'ticket' && r.entry.id === id)?.entry.name;
-  const node = (s) => ({ name: s.name, parts: [s.owner, ...(s.details || [])].filter((p) => p), crit: s.crit, url: s.url, note: s.note });
+  const extra = (s) => (withNewFields ? [s.type && `Type: ${TYPE_LABEL[s.type]}`, ...(s.docs || []).map((x) => `Docs: ${x.label ? x.label + ' ' : ''}${x.url}`)].filter(Boolean) : []);
+  const node = (s) => ({ name: s.name, parts: [s.owner, ...(s.details || [])].filter((p) => p), crit: s.crit, url: s.url, note: [s.note, ...extra(s)].filter(Boolean).join('\n') });
+  const members = (d) => (withNewFields && (d.members || []).length ? [`Members: ${d.members.map((m) => `${m.name}${m.role ? ' (' + m.role + ')' : ''}${m.email ? ' <' + m.email + '>' : ''}`).join('; ')}`] : []);
   const model = {
     title: data.title,
-    depts: data.departments.map((d) => ({ name: d.name, text: d.text.slice(), sections: d.sections.map((sc) => ({ title: sc.title, note: sc.note, nodes: data.sheets.filter((s) => s.sectionId === sc.id).map(node) })) })),
+    depts: data.departments.map((d) => ({ name: d.name, text: [...d.text, ...members(d)], sections: d.sections.map((sc) => ({ title: sc.title, note: sc.note, nodes: data.sheets.filter((s) => s.sectionId === sc.id).map(node) })) })),
     apps: data.sheets.filter((s) => s.kind === 'app').map(node),
     links: data.links.map((l) => ({ from: l.fromId ? nameOf(l.fromId) : l.fromName, to: l.toId ? nameOf(l.toId) : l.toName, label: l.label || '' })),
   };

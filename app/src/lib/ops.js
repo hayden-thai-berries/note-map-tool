@@ -7,7 +7,7 @@
  * restored later goes back exactly where it was. Tickets and flow steps keep pointing at a removed sheet's id, and arrows keep pointing at a removed step's id
  * (the file stays valid while it is in Removed), so restoring needs no re-linking. Departments and sections can only be deleted when empty,
  * so nothing is lost with them. */
-import { newId, STEP } from './schema.js';
+import { newId, STEP, FILE_TYPES } from './schema.js';
 
 export { STEP };
 const now = () => new Date().toISOString();
@@ -46,7 +46,23 @@ export function removeDepartment(d, id) {
   const dep = pick(d.departments, id, 'department');
   need(!d.sheets.some((s) => s.departmentId === id), `"${dep.name}" still has sheets. Move or delete them first.`);
   need(!d.tickets.items.some((t) => t.targetId === id), `"${dep.name}" still has tickets about it.`);
+  need(!(dep.members || []).length, `"${dep.name}" still has members. Remove them first.`);
   d.departments = d.departments.filter((x) => x.id !== id);
+}
+/* members of a department: who is in it and what they do. Sheet owners stay plain names; members are what the owner pick-list offers. */
+const findMember = (d, depId, id) => pick(pick(d.departments, depId, 'department').members || [], id, 'member');
+export function addMember(d, depId, { name, role = '', email = '' }) {
+  need(String(name || '').trim(), 'A member needs a name.');
+  const m = { id: newId('m'), name: name.trim(), role: role.trim() }; if (email.trim()) m.email = email.trim();
+  (pick(d.departments, depId, 'department').members ||= []).push(m); return m.id;
+}
+export function updateMember(d, depId, id, patch) {
+  if ('name' in patch) need(String(patch.name).trim(), 'A member needs a name.');
+  const m = findMember(d, depId, id); Object.assign(m, patch); if (!m.email) delete m.email;
+}
+export function removeMember(d, depId, id) {
+  const dep = pick(d.departments, depId, 'department'); findMember(d, depId, id);
+  dep.members = dep.members.filter((m) => m.id !== id); if (!dep.members.length) delete dep.members;
 }
 export function shiftDepartment(d, id, dir) { const i = d.departments.findIndex((x) => x.id === id), j = i + dir; if (d.departments[j]) [d.departments[i], d.departments[j]] = [d.departments[j], d.departments[i]]; }
 export function addSection(d, departmentId, title) { const sec = { id: newId('c'), title: title.trim() || null, note: '' }; pick(d.departments, departmentId, 'department').sections.push(sec); return sec.id; }
@@ -66,7 +82,26 @@ export function addSheet(d, { kind = 'sheet', name, departmentId = null, section
   const s = { id: newId('s'), kind, name: name.trim(), departmentId: kind === 'app' ? null : departmentId, sectionId: kind === 'app' ? null : sectionId, owner: '', details: [], crit: null, url: null, note: '', sort: sortAfter(d, 'sheets', d.sheets) };
   d.sheets.push(s); return s.id;
 }
-export function updateSheet(d, id, patch) { Object.assign(pick(d.sheets, id, 'sheet'), patch); }
+export function updateSheet(d, id, patch) {
+  const s = pick(d.sheets, id, 'sheet');
+  if ('type' in patch) need(!patch.type || FILE_TYPES.includes(patch.type), 'Unknown file type.');
+  Object.assign(s, patch);
+  if (!s.type || s.type === 'sheet') delete s.type; /* a Google Sheet is the default, so it is not written */
+}
+/* documentation links of a file */
+export function addDoc(d, sheetId, { label = '', url }) {
+  need(String(url || '').trim(), 'A documentation link needs an address.');
+  (pick(d.sheets, sheetId, 'sheet').docs ||= []).push({ label: label.trim(), url: url.trim() });
+}
+export function updateDoc(d, sheetId, index, patch) {
+  const doc = (pick(d.sheets, sheetId, 'sheet').docs || [])[index]; need(doc, 'That documentation link no longer exists.');
+  if ('url' in patch) need(String(patch.url).trim(), 'A documentation link needs an address.');
+  Object.assign(doc, patch);
+}
+export function removeDoc(d, sheetId, index) {
+  const s = pick(d.sheets, sheetId, 'sheet'); need((s.docs || [])[index], 'That documentation link no longer exists.');
+  s.docs.splice(index, 1); if (!s.docs.length) delete s.docs;
+}
 export function moveSheet(d, id, sectionId) {
   const s = pick(d.sheets, id, 'sheet'); need(s.kind === 'sheet', 'Apps do not belong to a department.');
   const { dep } = findSection(d, sectionId);
