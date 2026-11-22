@@ -343,6 +343,7 @@
   "flows": [
     {
       "id": "f_26xfi9g8",
+      "sort": 1024,
       "title": "Weekly payroll",
       "every": "Friday, then Monday",
       "teams": [
@@ -354,6 +355,7 @@
       "steps": [
         {
           "id": "p_1bp0bax6",
+          "sort": 1024,
           "team": "Harvest",
           "title": "Top up",
           "day": "Fri",
@@ -369,6 +371,7 @@
         },
         {
           "id": "p_qcf7rnxi",
+          "sort": 2048,
           "team": "IT",
           "title": "Check piece work",
           "day": "Fri",
@@ -379,6 +382,7 @@
         },
         {
           "id": "p_17zj82zc",
+          "sort": 3072,
           "team": "Finance",
           "title": "Review shortage hours",
           "day": "Mon",
@@ -395,6 +399,7 @@
         },
         {
           "id": "p_28ck3bxv",
+          "sort": 4096,
           "team": "Finance",
           "title": "Review OT",
           "day": "Mon",
@@ -408,6 +413,7 @@
     },
     {
       "id": "f_m9isdv7v",
+      "sort": 2048,
       "title": "Quote approval",
       "every": "per quote",
       "teams": [
@@ -418,6 +424,7 @@
       "steps": [
         {
           "id": "p_22vsbeys",
+          "sort": 1024,
           "team": "Sales",
           "title": "Draft quote",
           "day": null,
@@ -429,6 +436,7 @@
         },
         {
           "id": "p_19et4x5c",
+          "sort": 2048,
           "team": "Finance",
           "title": "Sign off quotes over $10k",
           "day": null,
@@ -450,6 +458,7 @@
         },
         {
           "id": "p_gqqyj437",
+          "sort": 3072,
           "team": "Sales",
           "title": "Send quote to customer",
           "day": null,

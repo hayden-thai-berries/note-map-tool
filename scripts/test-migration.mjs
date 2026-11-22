@@ -80,7 +80,7 @@ test('an empty map imports and exports cleanly', () => {
 test('new ids are unique enough', () => { const s = new Set(Array.from({ length: 500 }, () => newId('s'))); assert.equal(s.size, 500); });
 
 /* ---- edits: delete / restore / purge ---- */
-const { removeSheet, removeTicket, restore, purge, updateSheet, updateTicket } = await lib('ops.js');
+const ops = await lib('ops.js'), { removeSheet, removeTicket, restore, purge, updateSheet, updateTicket } = ops;
 const canon = (v) => (Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
 const same = (a, b) => assert.equal(JSON.stringify(canon(a)), JSON.stringify(canon(b)));
 const fresh = () => importLegacy({ mapMd: MAP.replace('Orders -> Ghost | manual copy', 'CRM -> Orders | back'), flowsMd: FLOWS.replace('Nowhere', 'CRM'), ticketsJson: { nextId: 9, tickets: [{ id: 'P1', title: 'proj', type: 'project', target: 'orders' }, { id: 'T1', title: 'a', type: 'ticket', target: 'orders', project: 'P1' }, { id: 'T2', title: 'b', target: 'crm' }] } }).data;
@@ -125,17 +125,68 @@ test('edits change only what they are told to, and a removed-then-edited file st
   assert.equal(d.tickets.items.find((t) => t.id === 'T2').status, 'doing'); assert.deepEqual(validate(d), []);
   assert.match(exportLegacy(d).mapMd, /Orders v2/); removeSheet(d, d.sheets[0].id); assert.ok(exportLegacy(d).mapMd.length > 0);
 });
-test('2000 random remove/restore sequences always end exactly where they started', () => {
+test('2000 random remove/restore sequences, over every kind of entry, always end exactly where they started', () => {
   let seed = 12345; const rnd = (n) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+  const kinds = [(d) => d.sheets, (d) => d.tickets.items, (d) => d.links, (d) => d.flows, (d) => d.flows.flatMap((f) => f.steps.map((s) => ({ ...s, flowId: f.id })))];
+  const remove = [(d, id) => ops.removeSheet(d, id), (d, id) => ops.removeTicket(d, id), (d, id) => ops.removeLink(d, id), (d, id) => ops.removeFlow(d, id), (d, id) => ops.removeStep(d, d.flows.find((f) => f.steps.some((s) => s.id === id)).id, id)];
+  const rich = () => { const d = fresh(); ops.addFlow(d, { title: 'G' }); ops.addStep(d, d.flows[1].id, { team: 'A', title: 'one' }); ops.addStep(d, d.flows[1].id, { team: 'B', title: 'two' }); d.flows[1].steps[1].triggers.push({ stepId: d.flows[1].steps[0].id, msg: 'x' }); d.flows[1].steps[0].backs.push({ stepId: d.flows[1].steps[1].id, msg: 'y' }); return d; };
   for (let run = 0; run < 2000; run++) {
-    const d = fresh(), before = structuredClone(d), steps = 2 + rnd(6);
+    const d = rich(), before = structuredClone(d), steps = 2 + rnd(8);
     for (let k = 0; k < steps; k++) {
-      const pickTicket = rnd(3) === 0 && d.tickets.items.length, pool = pickTicket ? d.tickets.items : d.sheets;
-      if (pool.length) (pickTicket ? removeTicket : removeSheet)(d, pool[rnd(pool.length)].id);
-      if (d.removed.length && rnd(3) === 0) restore(d, d.removed[rnd(d.removed.length)].id);
+      const kind = rnd(kinds.length), pool = kinds[kind](d);
+      if (pool.length) { try { remove[kind](d, pool[rnd(pool.length)].id); } catch (e) { /* a step whose flow is removed cannot be picked again */ } }
+      if (d.removed.length && rnd(3) === 0) { try { restore(d, d.removed[rnd(d.removed.length)].id); } catch (e) { assert.match(e.message, /first/); } }
       assert.deepEqual(validate(d), []);
     }
-    while (d.removed.length) restore(d, d.removed[rnd(d.removed.length)].id);
+    while (d.removed.length) { /* restore in a random order, skipping any that still wait on a flow or sheets */
+      const order = d.removed.map((r, i) => i).sort(() => rnd(3) - 1); let done = false;
+      for (const i of order) { try { restore(d, d.removed[i].id); done = true; break; } catch (e) { assert.match(e.message, /first/); } }
+      assert.ok(done, 'something in Removed can never come back');
+    }
     same(d, before);
   }
+});
+
+/* ---- add / edit / structure ---- */
+const blank = () => { const d = emptyData('New'); return d; };
+test('a map can be built from nothing and exports to the old formats', () => {
+  const d = blank(), dep = ops.addDepartment(d, 'Ops'), sec = ops.addSection(d, dep, 'Weekly count'), a = ops.addSheet(d, { name: 'Orders', departmentId: dep, sectionId: sec }), b = ops.addSheet(d, { kind: 'app', name: 'CRM' });
+  ops.updateSheet(d, a, { owner: 'Kim', crit: 'high' }); ops.addLink(d, { fromId: a, toId: b, label: 'IMPORTRANGE' });
+  const f = ops.addFlow(d, { title: 'Count' }), s1 = ops.addStep(d, f, { team: 'Ops', title: 'Count', sheetId: a }), s2 = ops.addStep(d, f, { team: 'Sales', title: 'Use it' }); ops.updateStep(d, f, s2, { triggers: [{ stepId: s1, msg: 'done' }] });
+  const t = ops.addTicket(d, { title: 'Fix', targetId: a, type: 'project' }); ops.addLog(d, t, { hours: 2, note: 'a' });
+  assert.deepEqual(validate(d), []); const x = exportLegacy(d);
+  assert.match(x.mapMd, /- Orders \| Kim \| high/); assert.match(x.mapMd, /Orders -> CRM \| IMPORTRANGE/); assert.match(x.flowsMd, /2\. Sales \| Use it \| <- 1: done/);
+  assert.equal(x.ticketsJson.tickets[0].target, 'orders'); assert.match(x.ticketsJson.tickets[0].id, /^P\d{8}\.001$/);
+  assert.deepEqual(roundTrip(x, importLegacy({ mapMd: x.mapMd, flowsMd: x.flowsMd, ticketsJson: x.ticketsJson }).data), []);
+});
+test('ticket ids count up per day and per type, even past removed ones', () => {
+  const d = blank(), a = ops.addTicket(d, { title: 'a' }), b = ops.addTicket(d, { title: 'b' }); ops.removeTicket(d, b); const c = ops.addTicket(d, { title: 'c' });
+  assert.deepEqual([a, b, c].map((x) => x.slice(-3)), ['001', '002', '003']); assert.match(ops.addTicket(d, { title: 'p', type: 'project' }), /^P/);
+});
+test('things that cannot be done say why and change nothing', () => {
+  const d = importLegacy({ mapMd: MAP }).data, snap = structuredClone(d);
+  assert.throws(() => ops.removeDepartment(d, d.departments[0].id), /still has sheets/); assert.throws(() => ops.removeSection(d, d.departments[0].sections[1].id), /still has sheets/);
+  assert.throws(() => ops.addSheet(d, { name: ' ', departmentId: 'x', sectionId: 'y' }), /needs a name/); assert.throws(() => ops.addLink(d, { fromId: d.sheets[0].id, toId: d.sheets[0].id }), /two different/);
+  assert.throws(() => ops.addTicket(d, { title: '' }), /needs a title/); assert.throws(() => ops.addLog(d, 'nope', { hours: 1 }), /no longer exists/);
+  same(d, snap);
+});
+test('empty departments and sections can be deleted, and sheets can be moved and reordered', () => {
+  const d = importLegacy({ mapMd: MAP }).data, dep = d.departments[0], [s0, s1] = dep.sections, orders = d.sheets.filter((s) => s.name === 'Orders')[0];
+  const dep2 = ops.addDepartment(d, 'Empty'), sec2 = ops.addSection(d, dep2, 'S'); ops.moveSheet(d, orders.id, sec2);
+  assert.equal(d.sheets.find((s) => s.id === orders.id).departmentId, dep2); assert.deepEqual(validate(d), []);
+  ops.moveSheet(d, orders.id, s1.id); ops.removeSection(d, sec2); ops.removeDepartment(d, dep2); assert.equal(d.departments.length, 1);
+  const names = () => d.sheets.filter((s) => s.sectionId === s1.id).map((s) => s.owner); const before = names(); ops.shiftSheet(d, d.sheets.find((s) => s.sectionId === s1.id).id, 1);
+  assert.notDeepEqual(names(), before); assert.deepEqual(validate(d), []);
+});
+test('removing a flow step keeps the arrows pointing at it, the export skips them, and restore is exact', () => {
+  const d = importLegacy({ mapMd: MAP, flowsMd: FLOWS }).data, before = structuredClone(d), f = d.flows[0], gone = f.steps[0].id;
+  ops.removeStep(d, f.id, gone); assert.equal(f.steps.length, 2); assert.equal(f.steps.some((s) => s.triggers.concat(s.backs).some((x) => x.stepId === gone)), true);
+  assert.deepEqual(validate(d), []); assert.doesNotMatch(exportLegacy(d).flowsMd, /Start/); assert.doesNotThrow(() => exportLegacy(d).flowsMd);
+  restore(d, d.removed[0].id); same(d, before);
+});
+test('a step cannot come back before its flow, and a link not before its sheets', () => {
+  const d = importLegacy({ mapMd: MAP, flowsMd: FLOWS }).data, f = d.flows[0]; ops.removeStep(d, f.id, f.steps[0].id); ops.removeFlow(d, f.id);
+  assert.throws(() => restore(d, d.removed[0].id), /flow first/); restore(d, d.removed[1].id); restore(d, d.removed[0].id);
+  const e = importLegacy({ mapMd: MAP }).data, link = e.links[0], from = link.fromId; ops.removeLink(e, link.id); ops.removeSheet(e, from);
+  assert.throws(() => restore(e, e.removed[0].id), /sheets this link connects first/); restore(e, e.removed[1].id); restore(e, e.removed[0].id);
 });

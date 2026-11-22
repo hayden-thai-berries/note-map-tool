@@ -11,7 +11,7 @@
  *   removed:     [{ id, kind, label, removedAt, entry, ... where it sat, so it can be put back }],
  *   meta:        { importedFrom?, legacy?: { mapMd?, flowsMd? } }
  * }
- * Sheets, links and tickets carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
+ * Sheets, links, tickets, flows and flow steps carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
 
 function cyrb53(str) {
@@ -70,7 +70,8 @@ export function validate(d) {
   });
   d.flows.forEach((f) => {
     dup(f.id, 'flow');
-    const steps = new Set((f.steps || []).map((s) => s.id));
+    /* an arrow may point at a step that is in Removed */
+    const steps = new Set([...(f.steps || []).map((s) => s.id), ...d.removed.filter((r) => r.kind === 'step' && r.flowId === f.id).map((r) => r.entry.id)]);
     (f.steps || []).forEach((s) => {
       dup(s.id, 'step');
       if (s.sheetId && !known.has(s.sheetId)) bad.push(`step ${s.id} points at a missing sheet`);
@@ -79,6 +80,6 @@ export function validate(d) {
   });
   d.tickets.items.forEach((t) => { if (t.targetId && !known.has(t.targetId) && !deptIds.has(t.targetId)) bad.push(`ticket ${t.id} points at a missing target`); });
   const sorted = (list, what) => list.forEach((x, i) => { if (typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort)) bad.push(`${what} ${x.id ?? i} is out of order or has no sort number`); });
-  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket');
+  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket'); sorted(d.flows, 'flow'); d.flows.forEach((f) => sorted(f.steps || [], 'step'));
   return bad;
 }

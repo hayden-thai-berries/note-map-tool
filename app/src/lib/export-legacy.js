@@ -15,9 +15,10 @@ export function exportLegacy(data) {
   const flows = data.flows.map((f) => {
     const steps = f.steps.map((s) => ({ team: s.team, title: s.title, day: s.day, sheet: s.sheetId ? nameOf(s.sheetId) : s.sheetName || null, ticket: s.ticket, note: s.note, standalone: !!s.standalone, triggers: [], backs: [] }));
     const at = (stepId) => steps[f.steps.findIndex((x) => x.id === stepId)];
+    /* an arrow to a step in Removed is not drawn or written until that step is restored */
     f.steps.forEach((s, i) => {
-      steps[i].triggers = s.triggers.map((t) => (t.stepId ? { ref: at(t.stepId), msg: t.msg } : { team: t.team, msg: t.msg }));
-      steps[i].backs = s.backs.map((b) => ({ ref: at(b.stepId), msg: b.msg }));
+      steps[i].triggers = s.triggers.filter((t) => !t.stepId || at(t.stepId)).map((t) => (t.stepId ? { ref: at(t.stepId), msg: t.msg } : { team: t.team, msg: t.msg }));
+      steps[i].backs = s.backs.filter((b) => at(b.stepId)).map((b) => ({ ref: at(b.stepId), msg: b.msg }));
     });
     return { title: f.title, every: f.every, teams: f.teams, steps };
   });

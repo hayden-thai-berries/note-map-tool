@@ -39,10 +39,10 @@ export function importLegacy({ mapMd, flowsMd = '', ticketsJson = null, source =
 
   flows.forEach((fl, fi) => {
     const stepIds = fl.steps.map((_, si) => id('p', `flow${fi}.step${si}`));
-    const f = { id: id('f', 'flow' + fi), title: fl.title, every: fl.every, teams: fl.teams.slice(), unreadable: fl.dropped.slice(), steps: [] };
+    const f = { id: id('f', 'flow' + fi), sort: (fi + 1) * STEP, title: fl.title, every: fl.every, teams: fl.teams.slice(), unreadable: fl.dropped.slice(), steps: [] };
     if (fl.dropped.length) report.flowsDropped.push(...fl.dropped.map((x) => `${fl.title}: ${x}`));
     fl.steps.forEach((st, si) => {
-      const s = { id: stepIds[si], team: st.team, title: st.title, day: st.day, ticket: st.ticket, note: st.note || '' };
+      const s = { id: stepIds[si], sort: (si + 1) * STEP, team: st.team, title: st.title, day: st.day, ticket: st.ticket, note: st.note || '' };
       const sheetId = st.sheet && byKey.get(st.sheet.toLowerCase());
       if (st.sheet) { if (sheetId) s.sheetId = sheetId; else { s.sheetName = st.sheet; report.unresolved.push(`flow "${fl.title}" step ${si + 1} uses "${st.sheet}", which is not a sheet or app`); } }
       if (st.standalone) s.standalone = true;

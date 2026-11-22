@@ -1,64 +1,184 @@
 /* Edits on a Data file. Each function changes the draft it is given and nothing else (no DOM, no saving),
- * so they are easy to test and the app can undo them by keeping the previous copy.
- * Deleting never destroys: the Entry goes to data.removed with everything needed to put it back exactly.
- * Tickets and flow steps keep pointing at a removed sheet's id (the file stays valid while it is in Removed), so restoring needs no re-linking. */
+ * so they are easy to test and the app can undo them by keeping the previous copy. A function that cannot do what was
+ * asked throws an Error with a plain-words reason; the app shows it and changes nothing.
+ *
+ * Deleting never destroys: a sheet, app, ticket, link, flow or flow step goes to data.removed with everything needed to put it
+ * back exactly. Every one of those carries a permanent `sort` number that never changes when something is removed, so an Entry
+ * restored later goes back exactly where it was. Tickets and flow steps keep pointing at a removed sheet's id, and arrows keep pointing at a removed step's id
+ * (the file stays valid while it is in Removed), so restoring needs no re-linking. Departments and sections can only be deleted when empty,
+ * so nothing is lost with them. */
 import { newId } from './schema.js';
 
+export const STEP = 1024;
 const now = () => new Date().toISOString();
 const today = () => now().slice(0, 10);
+const need = (cond, why) => { if (!cond) throw new Error(why); };
+const pick = (list, id, what) => { const x = list.find((y) => y.id === id); need(x, `That ${what} no longer exists.`); return x; };
 
-/* Every sheet, link and ticket carries a permanent `sort` number. It never changes when something is removed, so an Entry
- * restored later goes back exactly where it was, whatever else happened in between. The lists are kept in `sort` order. */
-export const STEP = 1024;
 function place(list, item) {
   const i = list.findIndex((x) => x.sort > item.sort);
   list.splice(i < 0 ? list.length : i, 0, item);
 }
-/* the next free `sort` for a new Entry: after everything, including what is in Removed */
-export function nextSort(d, list) {
-  const mine = list === d.sheets ? 'sheet' : list === d.links ? 'link' : 'ticket';
-  const gone = d.removed.flatMap((r) => (mine === 'link' ? r.links?.map((x) => x.link) ?? [] : mine === 'ticket' ? (r.kind === 'ticket' ? [r.entry] : []) : r.kind === 'ticket' ? [] : [r.entry]));
+/* the sort number for a new Entry after everything in `list`, counting what is in Removed too so a restore can never collide */
+function sortAfter(d, what, list, flowId) {
+  const gone = d.removed.flatMap((r) => {
+    if (what === 'sheets') return r.kind === 'sheet' || r.kind === 'app' ? [r.entry] : [];
+    if (what === 'links') return [...(r.links || []).map((x) => x.link), ...(r.kind === 'link' ? [r.entry] : [])];
+    if (what === 'tickets') return r.kind === 'ticket' ? [r.entry] : [];
+    if (what === 'flows') return r.kind === 'flow' ? [r.entry] : [];
+    return r.kind === 'step' && r.flowId === flowId ? [r.entry] : [];
+  });
   return Math.max(0, ...list.map((x) => x.sort || 0), ...gone.map((x) => x.sort || 0)) + STEP;
 }
-
-export function updateSheet(d, id, patch) { Object.assign(d.sheets.find((s) => s.id === id), patch); }
-
-export function updateTicket(d, id, patch) {
-  const t = d.tickets.items.find((x) => x.id === id);
-  Object.assign(t, patch, { updated: today() });
-  for (const [k, v] of Object.entries(t)) if (v === undefined) delete t[k];
+/* swap two neighbours' places: both their sort numbers and their positions */
+function shift(list, id, dir, same = () => true) {
+  const mine = list.findIndex((x) => x.id === id);
+  let j = mine + dir; while (list[j] && !same(list[j])) j += dir;
+  if (!list[j]) return;
+  [list[mine].sort, list[j].sort] = [list[j].sort, list[mine].sort];
+  [list[mine], list[j]] = [list[j], list[mine]];
 }
 
+/* ---- departments and sections ---- */
+export function addDepartment(d, name) { need(name.trim(), 'A department needs a name.'); const dep = { id: newId('d'), name: name.trim(), text: [], sections: [] }; d.departments.push(dep); return dep.id; }
+export function updateDepartment(d, id, patch) { Object.assign(pick(d.departments, id, 'department'), patch); }
+export function removeDepartment(d, id) {
+  const dep = pick(d.departments, id, 'department');
+  need(!d.sheets.some((s) => s.departmentId === id), `"${dep.name}" still has sheets. Move or delete them first.`);
+  need(!d.tickets.items.some((t) => t.targetId === id), `"${dep.name}" still has tickets about it.`);
+  d.departments = d.departments.filter((x) => x.id !== id);
+}
+export function shiftDepartment(d, id, dir) { const i = d.departments.findIndex((x) => x.id === id), j = i + dir; if (d.departments[j]) [d.departments[i], d.departments[j]] = [d.departments[j], d.departments[i]]; }
+export function addSection(d, departmentId, title) { const sec = { id: newId('c'), title: title.trim() || null, note: '' }; pick(d.departments, departmentId, 'department').sections.push(sec); return sec.id; }
+const findSection = (d, id) => { for (const dep of d.departments) { const s = dep.sections.find((x) => x.id === id); if (s) return { dep, s }; } throw new Error('That section no longer exists.'); };
+export function updateSection(d, id, patch) { Object.assign(findSection(d, id).s, patch); }
+export function removeSection(d, id) {
+  const { dep, s } = findSection(d, id);
+  need(!d.sheets.some((x) => x.sectionId === id), `"${s.title || 'This section'}" still has sheets. Move or delete them first.`);
+  dep.sections = dep.sections.filter((x) => x.id !== id);
+}
+export function shiftSection(d, id, dir) { const { dep } = findSection(d, id), i = dep.sections.findIndex((x) => x.id === id), j = i + dir; if (dep.sections[j]) [dep.sections[i], dep.sections[j]] = [dep.sections[j], dep.sections[i]]; }
+
+/* ---- sheets and apps ---- */
+export function addSheet(d, { kind = 'sheet', name, departmentId = null, sectionId = null }) {
+  need(name.trim(), 'A sheet needs a name.');
+  if (kind === 'sheet') { need(departmentId && sectionId, 'A sheet belongs to a department and a section.'); need(findSection(d, sectionId).dep.id === departmentId, 'That section is not in that department.'); }
+  const s = { id: newId('s'), kind, name: name.trim(), departmentId: kind === 'app' ? null : departmentId, sectionId: kind === 'app' ? null : sectionId, owner: '', details: [], crit: null, url: null, note: '', sort: sortAfter(d, 'sheets', d.sheets) };
+  d.sheets.push(s); return s.id;
+}
+export function updateSheet(d, id, patch) { Object.assign(pick(d.sheets, id, 'sheet'), patch); }
+export function moveSheet(d, id, sectionId) {
+  const s = pick(d.sheets, id, 'sheet'); need(s.kind === 'sheet', 'Apps do not belong to a department.');
+  const { dep } = findSection(d, sectionId);
+  d.sheets = d.sheets.filter((x) => x !== s); s.departmentId = dep.id; s.sectionId = sectionId; s.sort = sortAfter(d, 'sheets', d.sheets); d.sheets.push(s);
+}
+export function shiftSheet(d, id, dir) { const s = pick(d.sheets, id, 'sheet'); shift(d.sheets, id, dir, (x) => x.sectionId === s.sectionId && x.kind === s.kind); }
 export function removeSheet(d, id) {
   const i = d.sheets.findIndex((s) => s.id === id), sheet = d.sheets[i];
-  const links = [];
-  d.links.forEach((l) => { if (l.fromId === id || l.toId === id) links.push({ link: l }); });
+  need(sheet, 'That sheet no longer exists.');
+  const links = d.links.filter((l) => l.fromId === id || l.toId === id).map((link) => ({ link }));
   d.links = d.links.filter((l) => l.fromId !== id && l.toId !== id);
   d.sheets.splice(i, 1);
   d.removed.push({ id: newId('x'), kind: sheet.kind, label: sheet.name, removedAt: now(), entry: sheet, links });
 }
 
+/* ---- links ---- */
+export function addLink(d, { fromId, toId, label = '' }) {
+  pick(d.sheets, fromId, 'sheet'); pick(d.sheets, toId, 'sheet'); need(fromId !== toId, 'A link needs two different sheets.');
+  const l = { id: newId('l'), fromId, toId, label, sort: sortAfter(d, 'links', d.links) }; d.links.push(l); return l.id;
+}
+export function updateLink(d, id, patch) { Object.assign(pick(d.links, id, 'link'), patch); }
+export function removeLink(d, id) {
+  const i = d.links.findIndex((l) => l.id === id), l = d.links[i]; need(l, 'That link no longer exists.');
+  const name = (x) => d.sheets.find((s) => s.id === x)?.name ?? '?';
+  d.links.splice(i, 1);
+  d.removed.push({ id: newId('x'), kind: 'link', label: `${l.fromId ? name(l.fromId) : l.fromName} → ${l.toId ? name(l.toId) : l.toName}`, removedAt: now(), entry: l });
+}
+
+/* ---- tickets ---- */
+const PREFIX = { ticket: 'T', project: 'P', change: 'C', feature: 'F' };
+export function newTicketId(d, type) {
+  const base = (PREFIX[type] || 'T') + today().replace(/-/g, '') + '.';
+  const all = [...d.tickets.items, ...d.removed.filter((r) => r.kind === 'ticket').map((r) => r.entry)];
+  return base + String(1 + Math.max(0, ...all.filter((t) => String(t.id).startsWith(base)).map((t) => parseInt(String(t.id).slice(base.length), 10) || 0))).padStart(3, '0');
+}
+export function addTicket(d, fields) {
+  const type = fields.type || 'ticket'; need((fields.title || '').trim(), 'A ticket needs a title.');
+  const t = { id: newTicketId(d, type), title: fields.title.trim(), type, status: 'todo', owner: '', ...fields, updated: today(), sort: sortAfter(d, 'tickets', d.tickets.items) };
+  t.title = t.title.trim(); d.tickets.items.push(t); return t.id;
+}
+export function updateTicket(d, id, patch) {
+  const t = pick(d.tickets.items, id, 'ticket');
+  if ('title' in patch) need(String(patch.title).trim(), 'A ticket needs a title.');
+  Object.assign(t, patch, { updated: today() });
+  for (const [k, v] of Object.entries(t)) if (v === undefined) delete t[k];
+}
+export function addLog(d, id, { date, hours, note = '' }) {
+  need(+hours > 0 && +hours <= 24, 'Hours must be between 0 and 24.');
+  const t = pick(d.tickets.items, id, 'ticket'); (t.log ||= []).push({ date: date || today(), hours: +hours, note }); t.updated = today();
+}
+export function removeLog(d, id, index) { const t = pick(d.tickets.items, id, 'ticket'); t.log.splice(index, 1); if (!t.log.length) delete t.log; t.updated = today(); }
 export function removeTicket(d, id) {
-  const i = d.tickets.items.findIndex((t) => t.id === id), t = d.tickets.items[i];
+  const i = d.tickets.items.findIndex((t) => t.id === id), t = d.tickets.items[i]; need(t, 'That ticket no longer exists.');
   d.tickets.items.splice(i, 1);
   d.removed.push({ id: newId('x'), kind: 'ticket', label: t.title || t.id, removedAt: now(), entry: t });
 }
 
+/* ---- flows and their steps ---- */
+export function addFlow(d, { title, every = '', teams = [] }) {
+  need(title.trim(), 'A flow needs a title.');
+  const f = { id: newId('f'), sort: sortAfter(d, 'flows', d.flows), title: title.trim(), every, teams, unreadable: [], steps: [] }; d.flows.push(f); return f.id;
+}
+export function updateFlow(d, id, patch) { Object.assign(pick(d.flows, id, 'flow'), patch); }
+export function removeFlow(d, id) {
+  const i = d.flows.findIndex((f) => f.id === id), f = d.flows[i]; need(f, 'That flow no longer exists.');
+  d.flows.splice(i, 1);
+  d.removed.push({ id: newId('x'), kind: 'flow', label: f.title, removedAt: now(), entry: f });
+}
+export function addStep(d, flowId, { team, title, afterStepId = null, ...rest }) {
+  const f = pick(d.flows, flowId, 'flow'); need(team.trim() && title.trim(), 'A step needs a team and a title.');
+  let sort = sortAfter(d, 'steps', f.steps, flowId), at = f.steps.length;
+  if (afterStepId) { const i = f.steps.findIndex((x) => x.id === afterStepId); need(i >= 0, 'That step no longer exists.'); const next = f.steps[i + 1]; at = i + 1; if (next) sort = (f.steps[i].sort + next.sort) / 2; else sort = f.steps[i].sort + STEP; }
+  const st = { id: newId('p'), sort, team: team.trim(), title: title.trim(), day: null, ticket: null, note: '', triggers: [], backs: [], ...rest };
+  f.steps.splice(at, 0, st);
+  if (!f.teams.some((t) => t.toLowerCase() === st.team.toLowerCase())) f.teams.push(st.team);
+  return st.id;
+}
+const findStep = (d, flowId, stepId) => { const f = pick(d.flows, flowId, 'flow'); return { f, s: pick(f.steps, stepId, 'step') }; };
+export function updateStep(d, flowId, stepId, patch) {
+  const { f, s } = findStep(d, flowId, stepId);
+  if ('title' in patch) need(String(patch.title).trim(), 'A step needs a title.');
+  Object.assign(s, patch); for (const [k, v] of Object.entries(s)) if (v === undefined) delete s[k];
+  if (s.team && !f.teams.some((t) => t.toLowerCase() === s.team.toLowerCase())) f.teams.push(s.team);
+}
+export function shiftStep(d, flowId, stepId, dir) { findStep(d, flowId, stepId); shift(pick(d.flows, flowId, 'flow').steps, stepId, dir); }
+export function removeStep(d, flowId, stepId) {
+  const { f, s } = findStep(d, flowId, stepId);
+  f.steps = f.steps.filter((x) => x !== s);
+  d.removed.push({ id: newId('x'), kind: 'step', label: `${f.title}: ${s.title}`, removedAt: now(), flowId, entry: s });
+}
+
+/* ---- Removed ---- */
 export function restore(d, removedId) {
   const i = d.removed.findIndex((r) => r.id === removedId), r = d.removed[i];
-  if (r.kind === 'ticket') {
-    place(d.tickets.items, r.entry);
+  if (r.kind === 'ticket') place(d.tickets.items, r.entry);
+  else if (r.kind === 'flow') place(d.flows, r.entry);
+  else if (r.kind === 'step') {
+    const f = d.flows.find((x) => x.id === r.flowId); need(f, 'Restore the flow first: this step belongs to it.');
+    place(f.steps, r.entry);
+  } else if (r.kind === 'link') {
+    need([r.entry.fromId, r.entry.toId].every((x) => !x || d.sheets.some((s) => s.id === x)), 'Restore the sheets this link connects first.');
+    place(d.links, r.entry);
   } else {
     place(d.sheets, r.entry);
     const known = new Set(d.sheets.map((s) => s.id));
     r.links.forEach(({ link }) => {
       /* the other end may itself be in Removed: hand the link to that bundle so it comes back with it, never dropped */
-      const gone = [link.fromId, link.toId].find((x) => x && !known.has(x)), wait = gone && d.removed.find((o) => o !== r && o.kind !== 'ticket' && o.entry.id === gone);
+      const gone = [link.fromId, link.toId].find((x) => x && !known.has(x)), wait = gone && d.removed.find((o) => o !== r && o.kind !== 'ticket' && o.entry?.id === gone);
       if (wait) wait.links.push({ link });
       else if (!gone) place(d.links, link);
     });
   }
   d.removed.splice(i, 1);
 }
-
 export function purge(d, removedId) { d.removed = d.removed.filter((r) => r.id !== removedId); }
