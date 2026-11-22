@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRecords, apply } from '../lib/records.js';
 import * as o from '../lib/ops.js';
 import { Btn } from './ui.jsx';
+import { memberNamesFor } from '../lib/rollup.js';
 
 const L = ({ t, children }) => <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">{t}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
 const f = 'w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-blue-500';
@@ -40,7 +41,7 @@ export default function TicketForm({ id, onClose, preset = {} }) {
           <L t="Type"><select className={f} value={v.type} onChange={set('type')}>{TYPES.map(([a, b]) => <option key={a} value={a}>{b}</option>)}</select></L>
           <L t="Priority"><select className={f} value={v.priority} onChange={set('priority')}>{PRIORITY.map(([a, b]) => <option key={a} value={a}>{b}</option>)}</select></L>
           <L t="Status"><select className={f} value={v.status} onChange={set('status')}>{STATUS.map(([a, b]) => <option key={a} value={a}>{b}</option>)}</select></L>
-          <L t="Owner"><input className={f} value={v.owner || ''} onChange={set('owner')} /></L>
+          <L t="Owner"><input className={f} list="ticket-owners" value={v.owner || ''} onChange={set('owner')} /><datalist id="ticket-owners">{memberNamesFor(data, v.targetId).map((n) => <option key={n} value={n} />)}</datalist></L>
         </div>
         {v.status === 'blocked' && <L t="Blocked because"><input className={f} placeholder="What is it waiting on?" value={v.blocked || ''} onChange={set('blocked')} /></L>}
         {v.type !== 'project' && <L t="Part of project"><select className={f} value={v.project || ''} onChange={set('project')}><option value="">None</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select></L>}

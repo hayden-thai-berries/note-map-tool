@@ -14,7 +14,7 @@ export function buildMap({ flow, showTix } = {}) {
     data: { n, open: openFor(n.key), showTix, dim: !!flowSheets && !flowSheets.has(n.key) },
   });
   model.depts.forEach((d, di) => {
-    const id = 'dept:' + d.name, box = { id, type: 'dept', position: { x: di * (W + PAD * 2 + 50), y: 0 }, data: { name: d.name }, draggable: false, selectable: false, style: { width: W + PAD * 2 } };
+    const id = 'dept:' + d.name, box = { id, type: 'dept', position: { x: di * (W + PAD * 2 + 50), y: 0 }, data: { name: d.name }, draggable: false, selectable: true, style: { width: W + PAD * 2 } };
     nodes.push(box);
     let y = 44;
     d.sections.forEach((sc, si) => {

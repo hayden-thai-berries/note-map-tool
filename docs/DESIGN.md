@@ -33,6 +33,18 @@ sequenceDiagram
   end
 ```
 
+## Departments, functions and files
+
+Department → Function → Sheet, all optional additions to the Data file (an older file loads unchanged and `upgrade()` adds nothing):
+
+| Level | Fields |
+|---|---|
+| Department | `text` (description), `members: [{ id, name, role, email? }]` |
+| Function (stored as `sections`) | `title`, `note` (description) |
+| Sheet | `type` (absent = Google Sheet; `doc`, `excel`, `pdf`, `other`), `docs: [{ label, url }]` |
+
+Owners stay plain text; the pick-list offers the department's members. A department with members cannot be deleted. "Current tickets" are derived (Tickets whose Target is the file and whose status is not done), see `lib/rollup.js`. "Export as legacy files" can write the new fields as readable lines with `exportLegacy(data, { withNewFields: true })`; the app's own copy never does.
+
 ## The gate: nothing is lost
 
 `npm run verify` (read-only) must pass before any migration step:

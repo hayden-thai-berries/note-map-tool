@@ -17,3 +17,9 @@ export function ownerStatus(d, sheet) {
   if (!low(sheet.owner)) return 'none';
   return membersOf(d, sheet.departmentId).some((m) => low(m.name) === low(sheet.owner)) ? 'member' : 'other';
 }
+/* names the Owner pick-list offers: the members of the department a Target belongs to (a file's or the department itself), or everyone if it has none */
+export function memberNamesFor(d, targetId) {
+  const sheet = d.sheets.find((x) => x.id === targetId), depId = sheet ? sheet.departmentId : d.departments.some((x) => x.id === targetId) ? targetId : null;
+  const list = depId ? membersOf(d, depId) : d.departments.flatMap((x) => x.members || []);
+  return [...new Set(list.map((m) => m.name))];
+}

@@ -66,11 +66,11 @@ export function removeMember(d, depId, id) {
 }
 export function shiftDepartment(d, id, dir) { const i = d.departments.findIndex((x) => x.id === id), j = i + dir; if (d.departments[j]) [d.departments[i], d.departments[j]] = [d.departments[j], d.departments[i]]; }
 export function addSection(d, departmentId, title) { const sec = { id: newId('c'), title: title.trim() || null, note: '' }; pick(d.departments, departmentId, 'department').sections.push(sec); return sec.id; }
-const findSection = (d, id) => { for (const dep of d.departments) { const s = dep.sections.find((x) => x.id === id); if (s) return { dep, s }; } throw new Error('That section no longer exists.'); };
+const findSection = (d, id) => { for (const dep of d.departments) { const s = dep.sections.find((x) => x.id === id); if (s) return { dep, s }; } throw new Error('That function no longer exists.'); };
 export function updateSection(d, id, patch) { Object.assign(findSection(d, id).s, patch); }
 export function removeSection(d, id) {
   const { dep, s } = findSection(d, id);
-  need(!d.sheets.some((x) => x.sectionId === id), `"${s.title || 'This section'}" still has sheets. Move or delete them first.`);
+  need(!d.sheets.some((x) => x.sectionId === id), `"${s.title || 'This function'}" still has sheets. Move or delete them first.`);
   dep.sections = dep.sections.filter((x) => x.id !== id);
 }
 export function shiftSection(d, id, dir) { const { dep } = findSection(d, id), i = dep.sections.findIndex((x) => x.id === id), j = i + dir; if (dep.sections[j]) [dep.sections[i], dep.sections[j]] = [dep.sections[j], dep.sections[i]]; }
@@ -78,7 +78,7 @@ export function shiftSection(d, id, dir) { const { dep } = findSection(d, id), i
 /* ---- sheets and apps ---- */
 export function addSheet(d, { kind = 'sheet', name, departmentId = null, sectionId = null }) {
   need(name.trim(), 'A sheet needs a name.');
-  if (kind === 'sheet') { need(departmentId && sectionId, 'A sheet belongs to a department and a section.'); need(findSection(d, sectionId).dep.id === departmentId, 'That section is not in that department.'); }
+  if (kind === 'sheet') { need(departmentId && sectionId, 'A sheet belongs to a department and a function.'); need(findSection(d, sectionId).dep.id === departmentId, 'That function is not in that department.'); }
   const s = { id: newId('s'), kind, name: name.trim(), departmentId: kind === 'app' ? null : departmentId, sectionId: kind === 'app' ? null : sectionId, owner: '', details: [], crit: null, url: null, note: '', sort: sortAfter(d, 'sheets', d.sheets) };
   d.sheets.push(s); return s.id;
 }
