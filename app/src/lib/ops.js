@@ -149,6 +149,12 @@ export function updateTicket(d, id, patch) {
   Object.assign(t, patch, { updated: today() });
   for (const [k, v] of Object.entries(t)) if (v === undefined) delete t[k];
 }
+/* drag and drop / quick status change: Blocked may carry a reason, any other status clears it */
+export const STATUSES = ['todo', 'doing', 'blocked', 'done'];
+export function moveTicket(d, id, status, reason = '') {
+  need(STATUSES.includes(status), 'Unknown status.');
+  updateTicket(d, id, { status, blocked: status === 'blocked' ? String(reason).trim() : undefined });
+}
 export function addLog(d, id, { date, hours, note = '' }) {
   need(+hours > 0 && +hours <= 24, 'Hours must be between 0 and 24.');
   const t = pick(d.tickets.items, id, 'ticket'); (t.log ||= []).push({ date: date || today(), hours: +hours, note }); t.updated = today();
