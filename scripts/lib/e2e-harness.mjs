@@ -31,6 +31,16 @@ export async function harness({ files = [], data = {} } = {}) {
     /* via about:blank so a URL that differs only by #hash is still a real reload */
     goto: async (u) => { await send('Page.navigate', { url: 'about:blank' }); await sleep(200); await send('Page.navigate', { url: u }); await sleep(900); },
     shot: async (name) => fs.writeFileSync(path.join(sandbox, name + '.png'), Buffer.from((await send('Page.captureScreenshot')).result.data, 'base64')),
+    /* click a button inside the open modal (exact text, so "Save" never matches "Save as...") */
+    dlg: (text) => js(`(() => { const d = document.querySelector('[role=dialog]'); if (!d) throw new Error('no modal open'); const b = [...d.querySelectorAll('button')].find((x) => x.textContent.trim() === ${q(text)}); if (!b) throw new Error('no modal button: ' + ${q(text)}); b.click(); return true; })()`),
+    /* in the open modal, type into a type-to-filter box (found by aria-label) and pick the choice whose text contains `text` */
+    pick: async (label, query, text) => {
+      await js(`(() => { const i = document.querySelector('[role=dialog] [aria-label=${q(label)}][role=combobox]'); if (!i) throw new Error('no combobox: ' + ${q(label)}); i.focus(); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${q(query)}); i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
+      await until(`[...document.querySelectorAll('[role=listbox] [role=option] button')].some((b) => b.textContent.includes(${q(text)}))`, 'choice ' + text);
+      return js(`(() => { const b = [...document.querySelectorAll('[role=listbox] [role=option] button')].find((x) => x.textContent.includes(${q(text)})); b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); return true; })()`);
+    },
+    /* a real mouse drag over the page, in steps, so React Flow sees pointer events */
+    drag: async (from, to) => { const m = (type, p) => send('Input.dispatchMouseEvent', { type, x: p.x, y: p.y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1 }); await m('mouseMoved', from); await m('mousePressed', from); for (let i = 1; i <= 12; i++) { await m('mouseMoved', { x: from.x + (to.x - from.x) * i / 12, y: from.y + (to.y - from.y) * i / 12 }); await sleep(20); } await m('mouseReleased', to); },
     /* click the first button (or summary / role=button) whose text starts with `text` */
     click: (text) => js(`(() => { const b = [...document.querySelectorAll('button,[role=button],summary')].find((x) => x.textContent.trim().startsWith(${q(text)})); if (!b) throw new Error('no button: ' + ${q(text)}); b.click(); return true; })()`),
     /* set a text field found by its visible label (a <label> wrapping it) */

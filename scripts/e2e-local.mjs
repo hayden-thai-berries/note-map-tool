@@ -18,12 +18,12 @@ try {
   r.check('import created data/demo.json', d0.schemaVersion === 1 && d0.sheets.length === 16, `${d0.sheets.length} sheets`);
   r.check('the old files were not touched', fs.readFileSync(path.join(H.sandbox, 'maps/demo.md'), 'utf8') === fs.readFileSync(path.join(root, 'maps/demo.md'), 'utf8'));
 
-  // 2. edit a sheet, see "unsaved", save
-  await canvasHas('Orders'); await clickNode('Orders'); await until(`document.body.textContent.includes('Edit this sheet')`, 'edit panel');
-  await typeLabel('Owner', 'Zed'); await until(`document.querySelector('[role=status]').textContent.includes('Unsaved')`, 'unsaved marker');
-  r.check('an edit shows the unsaved marker', true);
-  await click('Save'); await saved();
-  r.check('Save writes the edit to the data file', readJson('data/demo.json').sheets.find((s) => s.name === 'Orders').owner === 'Zed');
+  // 2. click a file on the map, edit it in the modal, Save writes the file at once
+  await canvasHas('Orders'); await clickNode('Orders'); await until(`!!document.querySelector('[role=dialog][aria-label^="File · Orders"]')`, 'file modal');
+  await typeLabel('Owner', 'Zed');
+  r.check('typing in the modal changes nothing until Save', readJson('data/demo.json').sheets.find((s) => s.name === 'Orders').owner !== 'Zed');
+  await H.dlg('Save'); await saved(); await until(`!document.querySelector('[role=dialog]')`, 'modal closed');
+  r.check('the modal Save writes the edit to the data file', readJson('data/demo.json').sheets.find((s) => s.name === 'Orders').owner === 'Zed');
   await H.shot('1-edited');
 
   // 3. undo and redo
@@ -33,8 +33,7 @@ try {
 
   // 4. delete -> Removed -> restore, the same data
   const before = JSON.stringify(readJson('data/demo.json').sheets);
-  await click('Delete…'); await click('Move to Removed'); await until(`document.body.textContent.includes('Unsaved')`, 'unsaved after delete');
-  await click('Save'); await saved();
+  await clickNode('Orders'); await until(`!!document.querySelector('[role=dialog]')`, 'file modal to delete'); await H.dlg('Move to Removed'); await saved(); await until(`!document.querySelector('[role=dialog]')`, 'modal closed after delete');
   const gone = readJson('data/demo.json');
   r.check('delete moves the sheet to Removed (and takes its links)', gone.removed.length === 1 && !gone.sheets.some((s) => s.name === 'Orders') && gone.removed[0].links.length >= 1, `${gone.removed[0].links.length} link(s) went with it`);
   await click('Removed'); await until(`document.body.textContent.includes('removed ')`, 'removed list'); await H.shot('2-removed');
@@ -49,11 +48,12 @@ try {
 
   // 6. conflict: the file changes on disk behind the app's back
   const disk = readJson('data/demo.json'); disk.title = 'Edited elsewhere'; fs.writeFileSync(path.join(H.sandbox, 'data/demo.json'), JSON.stringify(disk, null, 2) + '\n');
-  await click('Overview'); await canvasHas('Orders'); await clickNode('Orders'); await until(`document.body.textContent.includes('Edit this sheet')`, 'edit panel 2');
-  await typeLabel('Owner', 'Mine'); await click('Save'); await until(`document.querySelector('[role=alert]')?.textContent.includes('changed on disk')`, 'conflict banner');
+  await click('Overview'); await canvasHas('Orders'); await clickNode('Orders'); await until(`!!document.querySelector('[role=dialog]')`, 'file modal 2');
+  await typeLabel('Owner', 'Mine'); await H.dlg('Save'); await until(`document.querySelector('[role=dialog] [role=alert]')?.textContent.includes('changed on disk')`, 'conflict in the modal');
+  r.check('the conflict is shown inside the modal, which stays open', await js(`!!document.querySelector('[role=dialog]')`));
   r.check('a save after an outside change is refused and nothing is overwritten', readJson('data/demo.json').title === 'Edited elsewhere' && readJson('data/demo.json').sheets.find((s) => s.name === 'Orders').owner !== 'Mine');
   await H.shot('3-conflict');
-  await click('Overwrite'); await saved();
+  await H.dlg('Overwrite (keep my edits)'); await saved(); await until(`!document.querySelector('[role=dialog]')`, 'modal closed after overwrite');
   const hist = fs.readdirSync(path.join(H.sandbox, 'data/.history/demo.json'));
   r.check('Overwrite keeps my edit and snapshots the other version first', readJson('data/demo.json').sheets.find((s) => s.name === 'Orders').owner === 'Mine' && hist.some((h) => JSON.parse(fs.readFileSync(path.join(H.sandbox, 'data/.history/demo.json', h), 'utf8')).title === 'Edited elsewhere'), `${hist.length} snapshots`);
   r.check('no JavaScript errors in the page', H.errors.length === 0, H.errors[0] || '');

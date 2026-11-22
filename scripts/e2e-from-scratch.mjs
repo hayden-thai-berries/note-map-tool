@@ -11,30 +11,38 @@ try {
   await H.goto(`${H.url}/#structure`);
   await until(`document.body.textContent.includes('Start your first map')`, 'first-map screen');
   r.check('an empty install offers to start a map (no legacy needed)', true);
-  await typeLabel('Title', 'Test Organisation'); await click('Create map'); await until(`document.body.textContent.includes('Nothing to save')`, 'map opened');
-  r.check('creating a map writes a valid empty data file', H.readJson('data/test-organisation.json').schemaVersion === 1 && validate(H.readJson('data/test-organisation.json')).length === 0);
+  await typeLabel('Title', 'Test Organisation'); await click('Create map'); await until(`document.body.textContent.includes('This map is empty')`, 'map opened on an empty canvas');
+  r.check('a new map asks only for a title and opens on an empty canvas with one big button', true);
+  r.check('creating a map writes a valid empty data file named after the title', H.readJson('data/test-organisation.json').schemaVersion === 1 && validate(H.readJson('data/test-organisation.json')).length === 0);
+  const dlgOpen = (name) => until(`!!document.querySelector('[role=dialog][aria-label^=${JSON.stringify(name)}]')`, 'modal ' + name), gone = () => until(`!document.querySelector('[role=dialog]')`, 'modal closed');
+  const onMap = (text) => until(`[...document.querySelectorAll('.react-flow__node')].some((n) => n.textContent.startsWith(${JSON.stringify(text)}))`, text + ' on the map');
+  const clickMap = (text, button) => js(`(() => { const n = [...document.querySelectorAll('.react-flow__node')].find((x) => x.textContent.startsWith(${JSON.stringify(text)})); const b = ${button ? `[...n.querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(button)})` : 'n'}; b.click(); return true; })()`);
 
-  await click('Edit map'); await until(`document.body.textContent.includes('Add department')`, 'structure view');
-  await type('Add department', 'Operations'); await click('Add department');
-  await until(`!!document.querySelector('[aria-label="Add sheet"]') || !!document.querySelector('[aria-label="Add function"]')`, 'department added');
-  await type('New member name', 'Kim Tran'); await type('New member role', 'Lead'); await click('Add member');
-  await until(`!!document.querySelector('[aria-label="Member name"]')`, 'member added');
-  await type('Add function', 'Weekly stock count'); await click('Add function');
-  await until(`!!document.querySelector('[aria-label="Add sheet"]')`, 'function added');
-  await type('Add sheet', 'Orders'); await click('Add sheet'); await until(`document.body.textContent.includes('Edit this sheet')`, 'sheet edit panel');
-  await typeLabel('Owner', 'Kim'); await typeLabel('Criticality', 'high');
+  // a department with a member, straight from the empty map
+  await click('+ Add department'); await dlgOpen('New department'); await typeLabel('Name', 'Operations'); await click('+ Add member'); await type('Member name', 'Kim Tran'); await type('Member role', 'Lead');
+  await H.dlg('Save'); await gone(); await onMap('Operations'); await saved();
+  r.check('a department and its member were saved by the modal alone', H.readJson('data/test-organisation.json').departments[0]?.members?.[0]?.name === 'Kim Tran');
+  // a function from the + on its department, a file from the + on its function
+  await clickMap('Operations', '+ Function'); await dlgOpen('New function in Operations'); await typeLabel('Title', 'Weekly stock count'); await H.dlg('Save'); await gone(); await onMap('Weekly stock count');
+  await clickMap('Weekly stock count', '+ File'); await dlgOpen('New file');
+  r.check('the + on a function pre-fills the function', await js(`document.querySelector('[role=dialog] [role=combobox][aria-label=Function]').value === 'Operations › Weekly stock count'`));
+  await typeLabel('Name', 'Orders'); await typeLabel('Owner', 'Kim'); await typeLabel('Criticality', 'high'); await typeLabel('File type', 'pdf');
   r.check('the Owner field offers the department members', await js(`[...document.querySelectorAll('datalist option')].some((o) => o.value === 'Kim Tran')`));
-  await typeLabel('File type', 'pdf'); await type('New documentation label', 'How-to'); await type('New documentation address', 'https://doc.test/how'); await js(`[...document.querySelectorAll('[aria-label="Documentation links"] button')].find((b) => b.textContent.trim() === 'Add').click(), true`);
-  await until(`!!document.querySelector('[aria-label="Documentation address"]')`, 'doc link added');
-  await H.blur(); await type('Add app', 'CRM'); await click('Add app'); await until(`document.querySelectorAll('[aria-label="From"]').length === 0`, 'settled');
-  await choose('New link from', 'Orders'); await choose('New link to', 'CRM'); await type('New link method', 'IMPORTRANGE'); await click('Add link');
-  await until(`document.querySelectorAll('[aria-label="From"]').length === 1`, 'link added');
-  r.check('structure built in the UI', true);
+  await click('+ Add link'); await type('Documentation label', 'How-to'); await type('Documentation address', 'https://doc.test/how');
+  await H.dlg('Save'); await gone(); await onMap('Orders');
+  // a second file from the top bar, finding its function by typing, not by scrolling a list
+  await click('+ File'); await dlgOpen('New file'); await typeLabel('Name', 'Vendors'); await H.pick('Function', 'oper stock', 'Operations › Weekly stock count'); await H.dlg('Save'); await gone(); await onMap('Vendors');
+  await click('+ App'); await dlgOpen('New app'); await typeLabel('Name', 'CRM'); await H.dlg('Save'); await gone(); await onMap('CRM');
+  // a link from the top bar
+  await click('+ Link'); await dlgOpen('New link'); await H.pick('From', 'ord', 'Orders'); await H.pick('To', 'crm', 'CRM'); await click('IMPORTRANGE'); await H.dlg('Save'); await gone();
+  await until(`document.querySelectorAll('.react-flow__edge').length >= 1`, 'link drawn');
+  r.check('structure built entirely from the map', true);
+  await saved();
 
   await click('Tickets & projects'); await until(`document.body.textContent.includes('New ticket')`, 'work'); await click('New ticket');
   await until(`!!document.querySelector('form[aria-label=Ticket]')`, 'ticket form');
   await typeLabel('Title', 'Rebuild Orders import'); await typeLabel('Type', 'project'); await typeLabel('About', await js(`[...document.querySelectorAll('select option')].find((o) => o.text === 'Orders').value`));
-  await click('Create'); await until(`document.body.textContent.includes('Rebuild Orders import')`, 'ticket on board');
+  await click('Create'); await until(`document.body.textContent.includes('Rebuild Orders import') && !document.querySelector('form[aria-label=Ticket]')`, 'ticket on board, form closed');
   r.check('ticket created from the form', true);
   await js(`document.querySelector('[aria-label^="Open P"]').click(), true`); await until(`!!document.querySelector('[aria-label="Hours worked"]')`, 'ticket opened again');
   await type('Hours worked', '2.5'); await type('What did you do', 'First test'); await click('Log'); await until(`document.body.textContent.includes('2.5 h')`, 'time logged');
@@ -53,7 +61,7 @@ try {
 
   const f = H.readJson('data/test-organisation.json');
   r.check('data file is valid', validate(f).length === 0, validate(f).join('; '));
-  r.check('everything was saved', f.departments.length === 1 && f.departments[0].sections.length === 1 && f.sheets.length === 2 && f.sheets.some((s) => s.kind === 'app') && f.links.length === 1 && f.tickets.items.length === 1 && f.flows[0].steps.length === 2 && f.flows[0].steps[1].triggers.length === 1 && !!f.flows[0].steps[0].sheetId, JSON.stringify({ d: f.departments.length, s: f.sheets.length, l: f.links.length, t: f.tickets.items.length, steps: f.flows[0]?.steps.length }));
+  r.check('everything was saved', f.departments.length === 1 && f.departments[0].sections.length === 1 && f.sheets.length === 3 && f.sheets.some((s) => s.kind === 'app') && f.links.length === 1 && f.tickets.items.length === 1 && f.flows[0].steps.length === 2 && f.flows[0].steps[1].triggers.length === 1 && !!f.flows[0].steps[0].sheetId, JSON.stringify({ d: f.departments.length, s: f.sheets.length, l: f.links.length, t: f.tickets.items.length, steps: f.flows[0]?.steps.length }));
   r.check('the ticket keeps its time log and link to the sheet', f.tickets.items[0].type === 'project' && f.tickets.items[0].log?.[0].hours === 2.5 && f.tickets.items[0].targetId === f.sheets.find((s) => s.name === 'Orders').id && /^P\d{8}\.001$/.test(f.tickets.items[0].id));
   const org = f.departments[0], orders = f.sheets.find((s) => s.name === 'Orders');
   r.check('members, file type and documentation link were saved', org.members?.length === 1 && org.members[0].name === 'Kim Tran' && org.members[0].role === 'Lead' && orders.type === 'pdf' && orders.docs?.[0].url === 'https://doc.test/how' && orders.docs[0].label === 'How-to', JSON.stringify({ m: org.members, t: orders.type, d: orders.docs }));
@@ -62,9 +70,11 @@ try {
 
   await H.goto(`${H.url}/?map=test-organisation#overview`); await until(`document.body.textContent.includes('Test Organisation') && [...document.querySelectorAll('.react-flow__node')].some((n) => n.textContent.startsWith('Orders'))`, 'reloaded');
   r.check('after a reload the map is still there', true);
-  await js(`[...document.querySelectorAll('.react-flow__node')].find((n) => n.textContent.startsWith('Operations')).click(), true`);
-  await until(`!!document.querySelector('[aria-label="Department Operations"]')`, 'department panel');
-  r.check('clicking a department on the map shows its members, functions and open tickets', await js(`(() => { const t = document.querySelector('[aria-label="Department Operations"]').textContent; return t.includes('Kim Tran') && t.includes('Weekly stock count') && t.includes('1 open ticket'); })()`));
+  await clickMap('Operations'); await dlgOpen('Department · Operations');
+  r.check('clicking a department on the map opens it with its members, functions and open tickets', await js(`(() => { const t = document.querySelector('[role=dialog]').textContent; return t.includes('Weekly stock count') && t.includes('1 open ticket') && [...document.querySelectorAll('[role=dialog] input[aria-label="Member name"]')].some((i) => i.value === 'Kim Tran'); })()`));
+  await H.dlg('Cancel'); await gone();
+  await clickMap('Orders'); await dlgOpen('File · Orders');
+  r.check('clicking a file opens it with its type, docs, connections and open tickets', await js(`(() => { const t = document.querySelector('[role=dialog]').textContent; return t.includes('Open tickets (1)') && t.includes('Rebuild Orders import') && t.includes('this → CRM') && [...document.querySelectorAll('[role=dialog] input[aria-label="Documentation address"]')].some((i) => i.value === 'https://doc.test/how'); })()`));
   r.check('no JavaScript errors in the page', H.errors.length === 0, H.errors[0] || '');
   console.log('\nsandbox (screenshot 4-from-scratch):', H.sandbox);
 } catch (e) { console.log('FAIL ' + e.message); r.fail(); }
