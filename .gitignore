@@ -11,3 +11,5 @@ maps/*.flows.md
 maps/*.tickets.json
 !maps/demo.tickets.json
 node_modules
+maps/.history/
+__pycache__/
