@@ -73,18 +73,25 @@ function QuickAdd({ label, onAdd }) {
 }
 
 /* four columns; drop a card on a column to change its status */
+const DONE_LIMIT = 5;
+const newestFirst = (a, b) => String(b.updated || '').localeCompare(String(a.updated || ''));
+const linkBtn = 'text-xs text-blue-700 underline underline-offset-2 hover:text-blue-900';
+
 export function Board({ d, list, quick, onMove, onOpen, onAdd }) {
-  const [over, setOver] = useState(null);
+  const [over, setOver] = useState(null), [allDone, setAllDone] = useState(false);
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-4 items-start gap-4">
       {STATUS_LIST.map(([k, label]) => {
-        const col = list.filter((t) => t.status === k);
+        /* Done piles up: newest first, only the latest few until "Show all" (collapses again when the view is left) */
+        const full = list.filter((t) => t.status === k), col = k === 'done' ? [...full].sort(newestFirst) : full;
+        const shown = k === 'done' && !allDone ? col.slice(0, DONE_LIMIT) : col;
         return (
           <section key={k} aria-label={label} data-status={k} onDragOver={(e) => { e.preventDefault(); setOver(k); }} onDragLeave={() => setOver(null)}
             onDrop={(e) => { e.preventDefault(); setOver(null); const id = e.dataTransfer.getData('text/plain'), t = d.tickets.items.find((x) => x.id === id); if (t && t.status !== k) onMove(t, k); }}
             className={`rounded-xl border p-3 ${over === k ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}`}>
             <h3 className="mb-2 flex justify-between text-xs font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><i className={`h-2 w-2 rounded-full ${DOT[k]}`} />{label}</span><span>{col.length}</span></h3>
-            <div className="space-y-2">{col.length ? col.map((t) => <Card key={t.id} d={d} t={t} quick={quick} onMove={onMove} onOpen={onOpen} />) : <p className="py-3 text-center text-xs text-slate-400">Nothing here</p>}</div>
+            <div className="space-y-2">{col.length ? shown.map((t) => <Card key={t.id} d={d} t={t} quick={quick} onMove={onMove} onOpen={onOpen} />) : <p className="py-3 text-center text-xs text-slate-400">Nothing here</p>}</div>
+            {k === 'done' && col.length > DONE_LIMIT && <button type="button" className={`${linkBtn} mt-2`} onClick={() => setAllDone(!allDone)}>{allDone ? 'Show fewer' : `Show all ${col.length}`}</button>}
             <QuickAdd label={label} onAdd={(title) => onAdd(title, k)} />
           </section>
         );
@@ -98,13 +105,20 @@ export function Table({ d, list, quick, onMove, onOpen }) {
   const groups = groupByDepartment(d, list);
   if (!groups.length) return <p className="text-sm text-slate-400">No tickets match.</p>;
   return (
-    <div className="space-y-4">
-      {groups.map((g) => (
-        <section key={g.id} aria-label={g.name} className="rounded-xl border border-slate-200 bg-white">
-          <h3 className="border-b border-slate-200 px-3 py-2 text-sm font-semibold">{g.name} <span className="font-normal text-slate-500">· {g.items.filter((t) => t.status !== 'done').length} open, {g.items.filter((t) => t.status === 'done').length} done</span></h3>
+    <div className="space-y-4">{groups.map((g) => <Group key={g.id} g={g} d={d} quick={quick} onMove={onMove} onOpen={onOpen} />)}</div>
+  );
+}
+
+/* one department's rows; done rows stay hidden until "Show N done" */
+function Group({ g, d, quick, onMove, onOpen }) {
+  const [showDone, setShowDone] = useState(false);
+  const nDone = g.items.filter((t) => t.status === 'done').length, rows = showDone ? g.items : g.items.filter((t) => t.status !== 'done');
+  return (
+    <section aria-label={g.name} className="rounded-xl border border-slate-200 bg-white">
+          <h3 className="border-b border-slate-200 px-3 py-2 text-sm font-semibold">{g.name} <span className="font-normal text-slate-500">· {g.items.length - nDone} open, {nDone} done</span>{nDone > 0 && <button type="button" className={`${linkBtn} ml-2 font-normal`} onClick={() => setShowDone(!showDone)}>{showDone ? 'Hide done' : `Show ${nDone} done`}</button>}</h3>
           <table className="w-full text-sm">
             <thead className="text-left text-[11px] uppercase tracking-wider text-slate-500"><tr><th className="px-3 py-1">ID</th><th>Title</th><th>Type</th><th>Status</th><th>Priority</th><th>Owner</th><th>About</th><th>Hours</th><th className="pr-3">Updated</th></tr></thead>
-            <tbody>{g.items.map((t) => (
+            <tbody>{rows.map((t) => (
               <tr key={t.id} className="border-t border-slate-100 align-middle">
                 <td className="px-3 py-1"><button type="button" aria-label={`Open ${t.id}`} className="font-mono text-xs text-slate-500 hover:text-blue-700" onClick={() => onOpen(t.id)}>{t.id}</button></td>
                 <td className="min-w-48"><Title t={t} quick={quick} /></td>
@@ -116,9 +130,7 @@ export function Table({ d, list, quick, onMove, onOpen }) {
                 <td className="pr-3 text-xs text-slate-500">{prettyDate(t.updated)}</td>
               </tr>))}</tbody>
           </table>
-        </section>
-      ))}
-    </div>
+    </section>
   );
 }
 
