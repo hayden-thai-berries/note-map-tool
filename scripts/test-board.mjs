@@ -34,3 +34,7 @@ test('targets and table groups: department order, then apps, then not linked; de
   assert.deepEqual([kind(t1), kind(t2), kind(t3), kind(t4), kind(t5)], ['sheet', 'dept', 'app', undefined, 'orphan']);
   assert.deepEqual(B.groupByDepartment(d, items).map((g) => [g.name, g.items.length]), [['Ops', 2], ['Connected apps', 1], ['Not linked', 2]]);
 });
+test('new ticket ids and updated dates use the local date, not UTC', () => {
+  const { d } = build(), id = ops.addTicket(d, { title: 'x' }), local = new Date().toLocaleDateString('en-CA');
+  assert.equal(id, 'T' + local.replace(/-/g, '') + '.001'); assert.equal(d.tickets.items[0].updated, local);
+});

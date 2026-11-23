@@ -22,7 +22,7 @@ try {
 
   await drag(A, 'done'); await until(`!!document.querySelector('section[data-status="done"] [data-ticket="${A}"]')`, 'moved to Done');
   await click('Save'); await saved();
-  r.check('dragging a card to Done changes its status and saves it', get(A).status === 'done' && get(A).updated === new Date().toISOString().slice(0, 10));
+  r.check('dragging a card to Done changes its status and saves it', get(A).status === 'done' && get(A).updated === new Date().toLocaleDateString('en-CA'));
 
   await drag(B, 'blocked'); await until(`!!document.querySelector('[role=dialog][aria-label="Why is it blocked?"]')`, 'blocked question');
   r.check('dropping on Blocked asks why, and nothing moves yet', get(B).status !== 'blocked' && await js(`!document.querySelector('section[data-status="blocked"] [data-ticket="${B}"]')`));

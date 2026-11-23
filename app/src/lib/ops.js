@@ -11,7 +11,8 @@ import { newId, STEP, FILE_TYPES } from './schema.js';
 
 export { STEP };
 const now = () => new Date().toISOString();
-const today = () => now().slice(0, 10);
+/* today's date where the user is (not UTC: before 11am in Tasmania, UTC is still yesterday) */
+const today = () => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
 const need = (cond, why) => { if (!cond) throw new Error(why); };
 const pick = (list, id, what) => { const x = list.find((y) => y.id === id); need(x, `That ${what} no longer exists.`); return x; };
 
