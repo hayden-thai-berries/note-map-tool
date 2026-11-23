@@ -23,8 +23,14 @@ const types = { jnode: JNode, colhead: ColHead };
 function build(sel) {
   const nodes = allNodes(), keys = new Set(nodes.map((n) => n.key));
   const links = model.links.filter((l) => keys.has(low(l.from)) && keys.has(low(l.to)));
-  const rank = Object.fromEntries(nodes.map((n) => [n.key, 0]));
-  for (let i = 0; i < nodes.length; i++) links.forEach((l) => { rank[low(l.to)] = Math.max(rank[low(l.to)], rank[low(l.from)] + 1); });
+  /* Columns = longest path from an input. A loop (A -> B -> A) would push its sheets right forever, so the
+   * link that closes a loop is left out of the ranking (still drawn, as an arrow back to an earlier column). */
+  const next = {}, back = new Set(), seen = {};
+  links.forEach((l, i) => (next[low(l.from)] ||= []).push([low(l.to), i]));
+  const walk = (k) => { seen[k] = 1; (next[k] || []).forEach(([to, i]) => { if (seen[to] === 1) back.add(i); else if (!seen[to]) walk(to); }); seen[k] = 2; };
+  nodes.forEach((n) => { if (!seen[n.key]) walk(n.key); });
+  const rank = Object.fromEntries(nodes.map((n) => [n.key, 0])), fwd = links.filter((_, i) => !back.has(i));
+  for (let i = 0; i < nodes.length; i++) fwd.forEach((l) => { rank[low(l.to)] = Math.max(rank[low(l.to)], rank[low(l.from)] + 1); });
   const linked = new Set(links.flatMap((l) => [low(l.from), low(l.to)])), max = Math.max(...Object.values(rank));
   const nb = new Set(sel ? [sel] : []);
   if (sel) links.forEach((l) => { if (low(l.from) === sel) nb.add(low(l.to)); if (low(l.to) === sel) nb.add(low(l.from)); });
