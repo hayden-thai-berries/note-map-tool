@@ -215,6 +215,26 @@ export function removeStep(d, flowId, stepId) {
   d.removed.push({ id: newId('x'), kind: 'step', label: `${f.title}: ${s.title}`, removedAt: now(), flowId, entry: s });
 }
 
+/* ---- lanes: a flow's teams, in the order they are drawn ---- */
+const sameTeam = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+export function addTeam(d, flowId, name) {
+  const f = pick(d.flows, flowId, 'flow'), t = String(name).trim(); need(t, 'A lane needs a name.'); need(!f.teams.some((x) => sameTeam(x, t)), 'That lane already exists.'); f.teams.push(t);
+}
+export function renameTeam(d, flowId, from, to) {
+  const f = pick(d.flows, flowId, 'flow'), t = String(to).trim(); need(t, 'A lane needs a name.');
+  need(!f.teams.some((x) => sameTeam(x, t) && !sameTeam(x, from)), 'Another lane already has that name.');
+  f.teams = f.teams.map((x) => (sameTeam(x, from) ? t : x));
+  f.steps.forEach((s) => { if (sameTeam(s.team, from)) s.team = t; s.triggers.forEach((x) => { if (x.team && sameTeam(x.team, from)) x.team = t; }); });
+}
+export function moveTeam(d, flowId, team, dir) {
+  const f = pick(d.flows, flowId, 'flow'), i = f.teams.findIndex((x) => sameTeam(x, team)), j = i + dir;
+  if (i >= 0 && f.teams[j]) [f.teams[i], f.teams[j]] = [f.teams[j], f.teams[i]];
+}
+export function removeTeam(d, flowId, team) {
+  const f = pick(d.flows, flowId, 'flow'); need(!f.steps.some((s) => sameTeam(s.team, team)), 'Move or delete the steps in this lane first.');
+  f.teams = f.teams.filter((x) => !sameTeam(x, team));
+}
+
 /* ---- Removed ---- */
 export function restore(d, removedId) {
   const i = d.removed.findIndex((r) => r.id === removedId), r = d.removed[i];

@@ -8,7 +8,7 @@ const sel = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm';
 const L = ({ t, children }) => <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
 
 /* Edit one flow: its name and rhythm, and its steps (team, title, day, sheet, who it waits on, where it sends work back). */
-export default function FlowEdit({ flowId, onDeleted }) {
+export default function FlowEdit({ flowId, stepId = null, onDeleted }) {
   const { data } = useRecords(), flow = data.flows.find((x) => x.id === flowId), [team, setTeam] = useState(''), [title, setTitle] = useState('');
   if (!flow) return null;
   const ed = (fn, key) => apply(fn, key ? { key } : {});
@@ -17,8 +17,10 @@ export default function FlowEdit({ flowId, onDeleted }) {
     <div>
       <L t="Flow name"><CommitInput aria-label="Flow name" value={flow.title} onCommit={(v) => v.trim() && ed((d) => o.updateFlow(d, flow.id, { title: v.trim() }))} /></L>
       <L t="Runs (free text)"><CommitInput aria-label="Runs" placeholder="e.g. every Friday" value={flow.every} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { every: v }))} /></L>
-      <div className="mb-3 text-xs text-slate-500">Teams (lanes): {flow.teams.join(', ') || 'none yet'}</div>
+      <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
+      {!stepId && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a step on the diagram to edit its details here. Double-click a step to retype it, drag it into another lane to hand it to that team, and drag from its right edge to another step to draw an arrow.</p>}
       {flow.steps.map((st, i) => {
+        if (st.id !== stepId) return null;
         const others = flow.steps.filter((x) => x.id !== st.id), earlier = flow.steps.slice(0, i), label = (x) => `${flow.steps.indexOf(x) + 1}. ${x.team}: ${x.title}`;
         const setSt = (patch, key) => ed((d) => o.updateStep(d, flow.id, st.id, patch), key && `step:${st.id}:${key}`);
         return (

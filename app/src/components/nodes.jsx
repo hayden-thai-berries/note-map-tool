@@ -1,4 +1,5 @@
-import { Handle, Position } from '@xyflow/react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Handle, Position, useConnection } from '@xyflow/react';
 import { useModals } from './modals/ModalHost.jsx';
 
 const CRIT = { high: 'bg-red-100 text-red-800', medium: 'bg-amber-100 text-amber-800', low: 'bg-slate-200 text-slate-700' };
@@ -61,30 +62,81 @@ export function SheetNode({ data, selected }) {
   );
 }
 
-export function LaneNode({ data }) {
-  return (
-    <div className="flex h-full w-full rounded-lg border border-slate-300 bg-white/70">
-      <div className="grid w-[110px] shrink-0 place-items-center rounded-l-lg border-r border-slate-300 bg-slate-200 text-sm font-semibold">{data.team}</div>
-    </div>
-  );
+/* What the flow canvas can do, handed to its boxes without redrawing the diagram (so a drag is never interrupted). Set by views/Flows.jsx. */
+export const FlowUi = createContext({});
+/* A text box that takes focus as soon as its box is shown. A box is hidden until the canvas has measured it, and a hidden box cannot take focus, so keep trying for a moment. */
+function AutoInput(props) {
+  const ref = useRef(null);
+  useEffect(() => { let n = 0, raf; const tick = () => { ref.current?.focus(); if (ref.current && document.activeElement !== ref.current && n++ < 60) raf = requestAnimationFrame(tick); }; tick(); return () => cancelAnimationFrame(raf); }, []);
+  return <input ref={ref} {...props} />;
 }
+const tb = 'rounded-full px-1.5 hover:bg-blue-50 hover:text-blue-700';
+const mini2 = 'nodrag nopan grid h-4 w-4 place-items-center rounded border border-slate-300 bg-white text-[10px] leading-none text-slate-600 hover:border-blue-500 disabled:opacity-30';
 
-export function StepNode({ data, selected }) {
-  const { st, idx } = data;
+export function LaneNode({ data }) {
+  const ui = useContext(FlowUi), [renaming, setRenaming] = useState(false), hot = ui.hot === data.i;
+  const done = (v) => { setRenaming(false); if (v.trim() && v.trim() !== data.team) ui.renameLane?.(data.team, v); };
   return (
-    <div className={`h-[74px] w-[180px] overflow-hidden rounded-lg border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-sm shadow-sm ${selected ? 'ring-2 ring-blue-600' : ''}`} title={st.note}>
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
-      <Handle id="bs" type="source" position={Position.Bottom} />
-      <Handle id="bt" type="target" position={Position.Bottom} />
-      <div className="flex items-start gap-1.5"><span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-600 text-[10px] text-white">{idx + 1}</span><b className="leading-tight">{st.title}</b></div>
-      <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
-        {st.day && <span className="rounded bg-slate-200 px-1">{st.day}</span>}
-        {st.sheet && <span className="rounded bg-emerald-200 px-1">{st.sheet}</span>}
-        {st.ticket && <span className="rounded bg-blue-200 px-1">{st.ticket}</span>}
+    <div className={`flex h-full w-full rounded-lg border ${hot ? 'border-dashed border-blue-500 bg-blue-50' : 'border-slate-300 bg-white/70'}`} title="Double-click an empty spot to add a step here">
+      <div className="nodrag nopan flex w-[110px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-l-lg border-r border-slate-300 bg-slate-200 px-1" onDoubleClick={(e) => { e.stopPropagation(); setRenaming(true); }}>
+        {renaming
+          ? <AutoInput aria-label="Lane name" className="nodrag w-full rounded border border-blue-500 bg-white px-1 text-center text-sm" defaultValue={data.team} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') done(e.currentTarget.value); else if (e.key === 'Escape') setRenaming(false); }} onBlur={(e) => done(e.currentTarget.value)} />
+          : <span className="text-center text-sm font-semibold" title="Double-click to rename">{data.team}</span>}
+        <span className="flex gap-1">
+          <button type="button" aria-label={`Move lane ${data.team} up`} disabled={data.i === 0} className={mini2} onClick={(e) => { e.stopPropagation(); ui.moveLane?.(data.team, -1); }}>↑</button>
+          <button type="button" aria-label={`Move lane ${data.team} down`} disabled={data.i === data.n - 1} className={mini2} onClick={(e) => { e.stopPropagation(); ui.moveLane?.(data.team, 1); }}>↓</button>
+          {data.empty && <button type="button" aria-label={`Remove lane ${data.team}`} className={mini2} onClick={(e) => { e.stopPropagation(); ui.removeLane?.(data.team); }}>×</button>}
+        </span>
       </div>
     </div>
   );
 }
 
-export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode };
+export function StepNode({ data, selected }) {
+  const { st, idx } = data, ui = useContext(FlowUi), editing = ui.editing === idx, connecting = useConnection().inProgress;
+  return (
+    <div className="relative">
+      {selected && !editing && (
+        <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Step actions">
+          <button type="button" className={tb} onClick={() => ui.edit?.(idx)}>Edit text</button>
+          <button type="button" className={tb} onClick={() => ui.next?.(idx)}>+ Next</button>
+          <button type="button" className={`${tb} text-red-700`} onClick={() => ui.del?.(idx)}>Delete</button>
+        </div>
+      )}
+      <div className={`h-[74px] w-[180px] overflow-hidden rounded-lg border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-sm shadow-sm ${selected ? 'ring-2 ring-blue-600' : ''}`} title={st.note}>
+        {/* while an arrow is being dragged, the whole step is where it can land */}
+        <Handle type="target" position={Position.Left} style={{ top: 0, left: 0, width: '100%', height: '100%', transform: 'none', borderRadius: 8, opacity: 0, pointerEvents: connecting ? 'all' : 'none' }} />
+        <Handle type="source" position={Position.Right} />
+        <Handle id="bs" type="source" position={Position.Bottom} />
+        <Handle id="bt" type="target" position={Position.Bottom} />
+        <div className="flex items-start gap-1.5"><span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-600 text-[10px] text-white">{idx + 1}</span>
+          {editing
+            ? <AutoInput aria-label="Step text" className="nodrag nopan min-w-0 flex-1 rounded border border-blue-500 bg-white px-1 text-sm font-semibold" defaultValue={st.title} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') ui.commitTitle?.(idx, e.currentTarget.value); else if (e.key === 'Escape') ui.stopEdit?.(); }} onBlur={(e) => ui.commitTitle?.(idx, e.currentTarget.value)} />
+            : <b className="leading-tight">{st.title}</b>}
+        </div>
+        <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+          {st.day && <span className="rounded bg-slate-200 px-1">{st.day}</span>}
+          {st.sheet && <span className="rounded bg-emerald-200 px-1">{st.sheet}</span>}
+          {st.ticket && <span className="rounded bg-blue-200 px-1">{st.ticket}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* A step that is still being typed. Enter adds it and opens the next one after it; Esc drops it; pasting several lines adds one step per line. */
+export function DraftNode() {
+  const ui = useContext(FlowUi), finished = useRef(false);
+  const end = (fn) => { if (finished.current) return; finished.current = true; fn(); };
+  return (
+    <div className="h-[74px] w-[180px] rounded-lg border-2 border-dashed border-blue-500 bg-blue-50/60 px-2.5 py-2 text-sm">
+      <AutoInput aria-label="New step text" placeholder="Type a step, Enter for the next" className="nodrag nopan w-full rounded border border-blue-500 bg-white px-1 py-1 text-sm"
+        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); const v = e.currentTarget.value; end(() => ui.draftCommit?.(v, true)); } else if (e.key === 'Escape') end(() => ui.draftCancel?.()); }}
+        onPaste={(e) => { const t = e.clipboardData.getData('text'); if (/\r?\n/.test(t.trim())) { e.preventDefault(); end(() => ui.draftCommit?.(t, false)); } }}
+        onBlur={(e) => { const v = e.currentTarget.value; end(() => (v.trim() ? ui.draftCommit?.(v, false) : ui.draftCancel?.())); }} />
+      <div className="mt-1 text-[10px] text-slate-500">Enter: next step · Esc: stop</div>
+    </div>
+  );
+}
+
+export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, draft: DraftNode };

@@ -51,10 +51,14 @@ try {
   await click('Business flows'); await until(`!!document.querySelector('[aria-label="New flow name"]')`, 'flows view');
   await type('New flow name', 'Weekly stock'); await click('New flow'); await until(`!!document.querySelector('[aria-label="New step team"]')`, 'flow editor');
   await type('New step team', 'Operations'); await type('New step title', 'Count the stock'); await click('Add step');
-  await until(`!!document.querySelector('[role=group][aria-label="Step 1"]')`, 'step 1');
+  const stepNodes = (n) => until(`document.querySelectorAll('.react-flow__node-step').length >= ${n}`, 'step ' + n + ' on the diagram');
+  /* a step's details open when it is selected on the diagram */
+  const selectStep = (text, group) => js(`(() => { const n = [...document.querySelectorAll('.react-flow__node-step')].find((x) => x.textContent.includes(${JSON.stringify(text)})); n.click(); return true; })()`).then(() => until(`!!document.querySelector('[role=group][aria-label="${group}"]')`, group));
+  await stepNodes(1);
   await type('New step team', 'Sales'); await type('New step title', 'Use the numbers'); await click('Add step');
-  await until(`!!document.querySelector('[role=group][aria-label="Step 2"]')`, 'step 2');
-  await choose('Add waits on', '1.', 'Step 2'); await choose('Step sheet', 'Orders', 'Step 1');
+  await stepNodes(2);
+  await selectStep('Use the numbers', 'Step 2'); await choose('Add waits on', '1.', 'Step 2');
+  await selectStep('Count the stock', 'Step 1'); await choose('Step sheet', 'Orders', 'Step 1');
   await until(`document.querySelectorAll('.react-flow__node').length >= 4`, 'flow drawn', 8000);
   r.check('flow with two steps, an arrow and a sheet built in the UI', true);
   await click('Save'); await saved(); await H.shot('4-from-scratch');
