@@ -14,12 +14,15 @@ const DECISION = [['proposed', 'Proposed'], ['approved', 'Approved'], ['rejected
 
 /* New or existing ticket, project, change request or feature. Fields are applied together with Save (or Create);
  * the time log is applied as you add and remove entries. */
-export default function TicketForm({ id, onClose, preset = {} }) {
+export default function TicketForm({ id, onClose, onOpen, preset = {} }) {
   const { data } = useRecords(), t = id ? data.tickets.items.find((x) => x.id === id) : null;
   const [v, setV] = useState(() => t ? { ...t, priority: t.priority || 'normal' } : { type: 'ticket', status: 'todo', priority: 'normal', title: '', ...preset });
   const [hours, setHours] = useState(''), [logNote, setLogNote] = useState(''), [sure, setSure] = useState(false);
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value });
   const projects = data.tickets.items.filter((x) => x.type === 'project' && x.id !== id), live = t || null;
+  /* a saved project lists what belongs to it; anything that is not a project and not yet in one can be linked */
+  const kids = live?.type === 'project' ? data.tickets.items.filter((x) => x.project === id) : null, loose = kids ? data.tickets.items.filter((x) => x.type !== 'project' && !x.project) : [];
+  const link = (tid, project) => apply((d) => o.updateTicket(d, tid, { project }));
   const clean = () => {
     const change = v.type === 'change';
     return {
@@ -45,6 +48,22 @@ export default function TicketForm({ id, onClose, preset = {} }) {
           <L t="Status"><select className={f} value={v.status} onChange={set('status')}>{STATUS.map(([a, b]) => <option key={a} value={a}>{b}</option>)}</select></L>
           <L t="Owner"><input className={f} list="ticket-owners" value={v.owner || ''} onChange={set('owner')} /><datalist id="ticket-owners">{memberNamesFor(data, v.targetId).map((n) => <option key={n} value={n} />)}</datalist></L>
         </div>
+        {kids && onOpen && (
+          <section aria-label="Items in this project" className="mb-3 rounded-lg border border-slate-200 p-2.5">
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Items in this project ({kids.length})</h3>
+            {kids.length ? <ul className="mb-2 space-y-1 text-sm">{kids.map((x) => (
+              <li key={x.id} className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate"><span className="mr-1 text-[10px] font-semibold uppercase text-slate-500">{x.type}</span><button type="button" className="text-left text-blue-700 hover:underline" onClick={() => onOpen(x.id)}>{x.title}</button></span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-500">{STATUS.find((s) => s[0] === x.status)?.[1]}<button type="button" aria-label={`Take ${x.id} out of this project`} className="text-red-700" onClick={() => link(x.id, undefined)}>×</button></span>
+              </li>))}</ul> : <p className="mb-2 text-sm text-slate-400">Nothing yet.</p>}
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="rounded-lg border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-100" onClick={() => onOpen(null, { type: 'feature', project: id })}>+ Feature</button>
+              <button type="button" className="rounded-lg border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-100" onClick={() => onOpen(null, { type: 'change', project: id })}>+ Change request</button>
+              <select aria-label="Link an existing item" className={`${f} !w-auto max-w-56 !py-0.5 text-xs`} value="" onChange={(e) => e.target.value && link(e.target.value, id)}><option value="">Link existing…</option>{loose.map((x) => <option key={x.id} value={x.id}>{x.type} · {x.title}</option>)}</select>
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">Opening an item closes this form, so save any changes to the project first.</p>
+          </section>
+        )}
         {v.status === 'blocked' && <L t="Blocked because"><input className={f} placeholder="What is it waiting on?" value={v.blocked || ''} onChange={set('blocked')} /></L>}
         {v.type !== 'project' && <L t="Part of project"><select className={f} value={v.project || ''} onChange={set('project')}><option value="">None</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select></L>}
         {v.type === 'change' && (
