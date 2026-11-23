@@ -51,7 +51,8 @@ export function buildMap(d, { flow, showTix } = {}) {
 /* swimlane flow: lanes are parent nodes, steps are children placed by dependency depth.
  * `draft` ({ team, from }) adds a box for a step that is still being typed, after step number `from` (an index) if there is one. */
 export const LANE = { H: 130, GAP: 14, STEP_H: 74 };
-export function buildFlow(flow, { draft = null } = {}) {
+export const NOTE = { W: 180, H: 96 };
+export function buildFlow(flow, { draft = null, notes = [], noteDraft = null } = {}) {
   const { H: LH, GAP } = LANE, LX = 126, CW = 220;
   const lane = Object.fromEntries(flow.teams.map((t, i) => [low(t), i]));
   const col = flow.steps.map(() => 0), used = new Set(), inc = flow.steps.map(() => []);
@@ -77,5 +78,13 @@ export function buildFlow(flow, { draft = null } = {}) {
     const j = flow.steps.indexOf(b.ref);
     if (j >= 0) edges.push({ id: `b${i}_${k}`, source: 's' + i, sourceHandle: 'bs', target: 's' + j, targetHandle: 'bt', type: 'smoothstep', label: b.msg || 'sent back', data: { kind: 'back', from: i, to: j, k }, markerEnd: arrow('#b3261e'), style: { stroke: '#b3261e', strokeDasharray: '6 4' }, labelStyle: { fontSize: 10, fill: '#b3261e' } });
   }));
+  /* where step i sits on the canvas (its lane's place plus its own) */
+  const where = (i) => ({ x: LX + col[i] * CW, y: lane[low(flow.steps[i].team)] * (LH + GAP) + 28 });
+  const spot = (n) => { const w = n.at != null && n.at >= 0 ? where(n.at) : { x: 0, y: 0 }; return { x: w.x + n.x, y: w.y + n.y }; };
+  notes.forEach((n) => {
+    nodes.push({ id: 'note' + n.id, type: 'note', position: spot(n), width: NOTE.W, height: NOTE.H, zIndex: 10, data: { id: n.id, text: n.text, orphan: !!n.pinned && n.at < 0 } });
+    if (n.pinned && n.at >= 0) edges.push({ id: 'nl' + n.id, source: 's' + n.at, sourceHandle: 'bs', target: 'note' + n.id, type: 'straight', selectable: false, focusable: false, deletable: false, style: { stroke: '#a8a29e', strokeDasharray: '3 3' } });
+  });
+  if (noteDraft) nodes.push({ id: 'notedraft' + noteDraft.key, type: 'notedraft', position: spot(noteDraft), width: NOTE.W, height: NOTE.H, zIndex: 10, selectable: false, deletable: false, draggable: false, data: {} });
   return { nodes, edges };
 }

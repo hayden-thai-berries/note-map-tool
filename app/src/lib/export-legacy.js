@@ -25,7 +25,10 @@ export function exportLegacy(data, { withNewFields = false } = {}) {
       steps[i].triggers = s.triggers.filter((t) => !t.stepId || at(t.stepId)).map((t) => (t.stepId ? { ref: at(t.stepId), msg: t.msg } : { team: t.team, msg: t.msg }));
       steps[i].backs = s.backs.filter((b) => at(b.stepId)).map((b) => ({ ref: at(b.stepId), msg: b.msg }));
     });
-    return { title: f.title, every: f.every, teams: f.teams, steps };
+    /* the old format has no place for notes: with the new fields on they are written as comment lines, which the old parser skips */
+    const one = (t) => String(t).trim().replace(/\s*\n\s*/g, ' / ').replace(/--+>/g, '->');
+    const comments = withNewFields ? [f.note && `Flow note: ${one(f.note)}`, ...(f.notes || []).filter((n) => n.text.trim()).map((n) => `Note: ${one(n.text)}`)].filter(Boolean) : [];
+    return { title: f.title, every: f.every, teams: f.teams, steps, comments };
   });
   const target = (t) => {
     const name = nameOf(t), dept = data.departments.find((d) => d.id === t);

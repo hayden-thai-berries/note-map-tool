@@ -113,6 +113,7 @@
         var k = t.toLowerCase();
         if (!seen[k]) { seen[k] = true; teams.push(t); }
       });
+      (f.comments || []).forEach(function(c){ out.push('<!-- ' + c + ' -->'); });
       if (f.every) out.push('Every: ' + f.every);
       if (teams.length) out.push('Teams: ' + teams.join(', '));
       f.steps.forEach(function(st, i){

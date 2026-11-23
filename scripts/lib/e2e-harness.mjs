@@ -15,7 +15,7 @@ export async function harness({ files = [], data = {} } = {}) {
   if (!dev) { fs.mkdirSync(path.join(sandbox, 'app')); fs.symlinkSync(path.join(root, 'app/dist'), path.join(sandbox, 'app/dist')); }
   run('python3', ['server.py'], { cwd: root, env: { ...process.env, SHEETS_MAP_ROOT: sandbox, PORT: String(SERVER) } });
   if (dev) run('node', [path.join(root, 'app/node_modules/vite/bin/vite.js'), '--port', String(VITE), '--strictPort'], { cwd: path.join(root, 'app'), env: { ...process.env, SHEETS_MAP_SERVER: `http://127.0.0.1:${SERVER}` } });
-  run(CHROME, ['--headless=new', '--disable-gpu', `--remote-debugging-port=${CDP}`, `--user-data-dir=${path.join(sandbox, 'chrome')}`, '--window-size=1440,900', 'about:blank']);
+  run(CHROME, ['--headless=new', '--use-mock-keychain', '--disable-gpu', `--remote-debugging-port=${CDP}`, `--user-data-dir=${path.join(sandbox, 'chrome')}`, '--window-size=1440,900', 'about:blank']);
   for (let i = 0; i < 80; i++) { try { await fetch(`http://localhost:${dev ? VITE : SERVER}/`); await fetch(`http://127.0.0.1:${CDP}/json/version`); await fetch(`http://127.0.0.1:${SERVER}/api/data`); break; } catch { await sleep(250); } }
   const tab = await (await fetch(`http://127.0.0.1:${CDP}/json/new?about:blank`, { method: 'PUT' })).json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl); await new Promise((r) => (ws.onopen = r));
@@ -29,7 +29,7 @@ export async function harness({ files = [], data = {} } = {}) {
   const H = {
     sandbox, errors, js, until, sleep, url: `http://localhost:${dev ? VITE : SERVER}`,
     /* via about:blank so a URL that differs only by #hash is still a real reload */
-    goto: async (u) => { await send('Page.navigate', { url: 'about:blank' }); await sleep(200); await send('Page.navigate', { url: u }); await sleep(900); },
+    goto: async (u) => { await send('Page.navigate', { url: 'about:blank' }); await sleep(200); await send('Page.navigate', { url: u }); await send('Page.bringToFront'); await sleep(900); },
     shot: async (name) => fs.writeFileSync(path.join(sandbox, name + '.png'), Buffer.from((await send('Page.captureScreenshot')).result.data, 'base64')),
     /* click a button inside the open modal (exact text, so "Save" never matches "Save as...") */
     dlg: (text) => js(`(() => { const d = document.querySelector('[role=dialog]'); if (!d) throw new Error('no modal open'); const b = [...d.querySelectorAll('button')].find((x) => x.textContent.trim() === ${q(text)}); if (!b) throw new Error('no modal button: ' + ${q(text)}); b.click(); return true; })()`),

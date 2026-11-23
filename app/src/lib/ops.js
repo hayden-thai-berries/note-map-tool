@@ -26,6 +26,7 @@ function sortAfter(d, what, list, flowId) {
     if (what === 'links') return [...(r.links || []).map((x) => x.link), ...(r.kind === 'link' ? [r.entry] : [])];
     if (what === 'tickets') return r.kind === 'ticket' ? [r.entry] : [];
     if (what === 'flows') return r.kind === 'flow' ? [r.entry] : [];
+    if (what === 'notes') return r.kind === 'note' && r.flowId === flowId ? [r.entry] : [];
     return r.kind === 'step' && r.flowId === flowId ? [r.entry] : [];
   });
   return Math.max(0, ...list.map((x) => x.sort || 0), ...gone.map((x) => x.sort || 0)) + STEP;
@@ -215,6 +216,23 @@ export function removeStep(d, flowId, stepId) {
   d.removed.push({ id: newId('x'), kind: 'step', label: `${f.title}: ${s.title}`, removedAt: now(), flowId, entry: s });
 }
 
+/* ---- sticky notes on a flow: free text on the diagram, free-floating or pinned to a step ---- */
+export function addNote(d, flowId, { text = '', x = 0, y = 0, stepId = null }) {
+  const f = pick(d.flows, flowId, 'flow'); if (stepId) pick(f.steps, stepId, 'step');
+  f.notes ||= [];
+  const n = { id: newId('n'), sort: sortAfter(d, 'notes', f.notes, flowId), text, x: Math.round(x), y: Math.round(y), ...(stepId ? { stepId } : {}) };
+  f.notes.push(n); return n.id;
+}
+export function updateNote(d, flowId, id, patch) {
+  const n = pick(pick(d.flows, flowId, 'flow').notes || [], id, 'note'); Object.assign(n, patch);
+  for (const [k, v] of Object.entries(n)) if (v === undefined) delete n[k];
+}
+export function removeNote(d, flowId, id) {
+  const f = pick(d.flows, flowId, 'flow'), i = (f.notes || []).findIndex((x) => x.id === id); need(i >= 0, 'That note no longer exists.');
+  const [n] = f.notes.splice(i, 1);
+  d.removed.push({ id: newId('x'), kind: 'note', label: `${f.title}: ${n.text.trim().slice(0, 40) || '(empty note)'}`, removedAt: now(), flowId, entry: n });
+}
+
 /* ---- lanes: a flow's teams, in the order they are drawn ---- */
 const sameTeam = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
 export function addTeam(d, flowId, name) {
@@ -243,6 +261,9 @@ export function restore(d, removedId) {
   else if (r.kind === 'step') {
     const f = d.flows.find((x) => x.id === r.flowId); need(f, 'Restore the flow first: this step belongs to it.');
     place(f.steps, r.entry);
+  } else if (r.kind === 'note') {
+    const f = d.flows.find((x) => x.id === r.flowId); need(f, 'Restore the flow first: this note belongs to it.');
+    f.notes ||= []; place(f.notes, r.entry);
   } else if (r.kind === 'link') {
     need([r.entry.fromId, r.entry.toId].every((x) => !x || d.sheets.some((s) => s.id === x)), 'Restore the sheets this link connects first.');
     place(d.links, r.entry);

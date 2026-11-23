@@ -6,7 +6,8 @@
  *   sheets:      [{ id, kind: 'sheet'|'app', name, departmentId|null, sectionId|null, owner, details: [], crit|null, url|null, note,
  *                   type?: 'doc'|'excel'|'pdf'|'other' (absent = Google Sheet), docs?: [{ label, url }] }],
  *   links:       [{ id, fromId|fromName, toId|toName, label }],
- *   flows:       [{ id, title, every, teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?,
+ *   flows:       [{ id, title, every, note?: text about the whole flow, notes?: [{ id, sort, text, x, y, stepId? }] (sticky notes: x,y are canvas coordinates, or an offset from the step when stepId is set),
+ *                   teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?,
  *                   triggers: [{ stepId, msg } | { team, msg }], backs: [{ stepId, msg }] }] }],
  *   tickets:     { nextId, extra: {}, items: [ticket as before, with target replaced by targetId (or targetRaw if it points at nothing)] },
  *   removed:     [{ id, kind, label, removedAt, entry, ... where it sat, so it can be put back }],
@@ -78,6 +79,11 @@ export function validate(d) {
     dup(f.id, 'flow');
     /* an arrow may point at a step that is in Removed */
     const steps = new Set([...(f.steps || []).map((s) => s.id), ...d.removed.filter((r) => r.kind === 'step' && r.flowId === f.id).map((r) => r.entry.id)]);
+    (f.notes || []).forEach((n) => {
+      dup(n.id, 'note');
+      if (n.stepId && !steps.has(n.stepId)) bad.push(`note ${n.id} points at a missing step`);
+      if (!Number.isFinite(n.x) || !Number.isFinite(n.y) || typeof n.text !== 'string') bad.push(`note ${n.id} has no position or text`);
+    });
     (f.steps || []).forEach((s) => {
       dup(s.id, 'step');
       if (s.sheetId && !known.has(s.sheetId)) bad.push(`step ${s.id} points at a missing sheet`);
@@ -86,7 +92,7 @@ export function validate(d) {
   });
   d.tickets.items.forEach((t) => { if (t.targetId && !known.has(t.targetId) && !deptIds.has(t.targetId)) bad.push(`ticket ${t.id} points at a missing target`); });
   const sorted = (list, what) => list.forEach((x, i) => { if (typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort)) bad.push(`${what} ${x.id ?? i} is out of order or has no sort number`); });
-  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket'); sorted(d.flows, 'flow'); d.flows.forEach((f) => sorted(f.steps || [], 'step'));
+  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket'); sorted(d.flows, 'flow'); d.flows.forEach((f) => { sorted(f.steps || [], 'step'); sorted(f.notes || [], 'note'); });
   return bad;
 }
 
@@ -101,6 +107,6 @@ export function upgrade(d) {
     list.forEach((x, i) => { x.sort = (i + 1) * STEP; }); changes.push(`numbered the ${what}`);
   };
   fill(out.sheets, 'sheets'); fill(out.links, 'links'); fill(out.tickets?.items, 'tickets'); fill(out.flows, 'flows');
-  (out.flows || []).forEach((f) => fill(f.steps, `steps of "${f.title}"`));
+  (out.flows || []).forEach((f) => { fill(f.steps, `steps of "${f.title}"`); if (f.notes) fill(f.notes, `notes of "${f.title}"`); });
   return { data: out, changes };
 }

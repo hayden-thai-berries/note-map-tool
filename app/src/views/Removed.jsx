@@ -1,7 +1,7 @@
 import { useRecords, apply } from '../lib/records.js';
 import { restore, purge } from '../lib/ops.js';
 
-const KIND = { sheet: 'Sheet', app: 'App', ticket: 'Ticket' };
+const KIND = { sheet: 'Sheet', app: 'App', ticket: 'Ticket', note: 'Note' };
 
 /* Everything that was deleted, newest first. Restore puts it back exactly; Purge is the only real delete. */
 export default function Removed() {

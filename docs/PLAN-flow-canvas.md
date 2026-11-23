@@ -1,6 +1,6 @@
 # Plan: Business flow canvas and AI flows
 
-Status: Phase 1 built on branch `feat/flow-canvas-editing` (see its notes below); phases 2 to 5 not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
+Status: Phases 1 and 2 built on branch `feat/flow-canvas-editing` (see their notes below); phases 3 to 5 not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
 
 ## Goal
 
@@ -59,6 +59,8 @@ flowchart LR
 - New **Note** Entry: `{ id, sort, text, x, y, attachedStepId? }` stored on the flow (`flow.notes`). Free-floating or attached to a step with a thin line. Double-click to edit. Delete goes to Removed.
 - Notes are drawn on the diagram and exported to Markdown/Mermaid as comments.
 - Done when: notes survive Save, reload, undo, Removed/restore, and legacy round-trip.
+- **Built (phase 2):** `flow.note` (shown above the diagram, edited in the details panel) and `flow.notes[{ id, sort, text, x, y, stepId? }]`. A pinned note's x,y are an offset from its step, so it follows the step; a free note's are canvas coordinates. Add from a step's "+ Note", the header "+ Note" button, or by double-clicking empty canvas. Double-click edits (Ctrl/Cmd+Enter or leaving the box saves, Esc drops the change), drag moves, Delete sends it to Removed, and a note typed but left empty is never created. If a pinned note's step is deleted the note stays (drawn dashed) and re-pins when the step is restored. The Markdown legacy export is unchanged; the "new fields" export writes notes as `<!-- Note: ... -->` comments the old parser skips. Tests: `scripts/test-flow-notes.mjs`, `scripts/e2e-flow-notes.mjs`.
+- **Not done:** Mermaid export of notes, because the Mermaid flow export does not exist yet (Phase 4). Un-pinning or re-pinning an existing note is not possible; delete and re-add.
 
 ## Phase 3: Start, end and decisions
 

@@ -65,10 +65,10 @@ export function SheetNode({ data, selected }) {
 /* What the flow canvas can do, handed to its boxes without redrawing the diagram (so a drag is never interrupted). Set by views/Flows.jsx. */
 export const FlowUi = createContext({});
 /* A text box that takes focus as soon as its box is shown. A box is hidden until the canvas has measured it, and a hidden box cannot take focus, so keep trying for a moment. */
-function AutoInput(props) {
+function AutoInput({ multiline, ...props }) {
   const ref = useRef(null);
   useEffect(() => { let n = 0, raf; const tick = () => { ref.current?.focus(); if (ref.current && document.activeElement !== ref.current && n++ < 60) raf = requestAnimationFrame(tick); }; tick(); return () => cancelAnimationFrame(raf); }, []);
-  return <input ref={ref} {...props} />;
+  return multiline ? <textarea ref={ref} {...props} /> : <input ref={ref} {...props} />;
 }
 const tb = 'rounded-full px-1.5 hover:bg-blue-50 hover:text-blue-700';
 const mini2 = 'nodrag nopan grid h-4 w-4 place-items-center rounded border border-slate-300 bg-white text-[10px] leading-none text-slate-600 hover:border-blue-500 disabled:opacity-30';
@@ -100,6 +100,7 @@ export function StepNode({ data, selected }) {
         <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Step actions">
           <button type="button" className={tb} onClick={() => ui.edit?.(idx)}>Edit text</button>
           <button type="button" className={tb} onClick={() => ui.next?.(idx)}>+ Next</button>
+          <button type="button" className={tb} onClick={() => ui.noteOn?.(idx)}>+ Note</button>
           <button type="button" className={`${tb} text-red-700`} onClick={() => ui.del?.(idx)}>Delete</button>
         </div>
       )}
@@ -139,4 +140,37 @@ export function DraftNode() {
   );
 }
 
-export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, draft: DraftNode };
+/* A sticky note: free text on the diagram. Double-click to edit; Ctrl/Cmd+Enter or leaving the box saves, Esc drops the change. */
+const sticky = 'h-full w-full overflow-auto rounded-sm border border-yellow-400 bg-yellow-200 px-2.5 py-2 text-sm text-slate-800 shadow-md';
+export function NoteNode({ data, selected }) {
+  const ui = useContext(FlowUi), editing = ui.editingNote === data.id;
+  return (
+    <div className="relative h-full w-full">
+      {selected && !editing && (
+        <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Note actions">
+          <button type="button" className={tb} onClick={() => ui.noteEdit?.(data.id)}>Edit text</button>
+          <button type="button" className={`${tb} text-red-700`} onClick={() => ui.noteDel?.(data.id)}>Delete</button>
+        </div>
+      )}
+      <Handle type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0 }} />
+      {editing
+        ? <AutoInput multiline aria-label="Note text" className={`${sticky} nodrag nopan resize-none outline-none ring-2 ring-blue-600`} defaultValue={data.text} onFocus={(e) => e.target.select()}
+            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') ui.noteStop?.(); else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ui.noteCommit?.(data.id, e.currentTarget.value); }}
+            onBlur={(e) => ui.noteCommit?.(data.id, e.currentTarget.value)} />
+        : <div className={`${sticky} whitespace-pre-wrap break-words ${selected ? 'ring-2 ring-blue-600' : ''} ${data.orphan ? 'border-dashed opacity-70' : ''}`} title={data.orphan ? 'The step this note was pinned to is in Removed' : undefined}>{data.text}</div>}
+    </div>
+  );
+}
+
+/* A note that is still being typed: it exists once it has text. */
+export function NoteDraftNode() {
+  const ui = useContext(FlowUi), finished = useRef(false);
+  const end = (fn) => { if (finished.current) return; finished.current = true; fn(); };
+  return (
+    <AutoInput multiline aria-label="New note text" placeholder="Type a note. Ctrl/Cmd+Enter to save, Esc to drop it." className={`${sticky} nodrag nopan resize-none outline-none ring-2 ring-blue-600`}
+      onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') end(() => ui.noteDraftCancel?.()); else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { const v = e.currentTarget.value; end(() => ui.noteDraftCommit?.(v)); } }}
+      onBlur={(e) => { const v = e.currentTarget.value; end(() => (v.trim() ? ui.noteDraftCommit?.(v) : ui.noteDraftCancel?.())); }} />
+  );
+}
+
+export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, draft: DraftNode, note: NoteNode, notedraft: NoteDraftNode };

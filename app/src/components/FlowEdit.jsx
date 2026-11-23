@@ -17,6 +17,7 @@ export default function FlowEdit({ flowId, stepId = null, onDeleted }) {
     <div>
       <L t="Flow name"><CommitInput aria-label="Flow name" value={flow.title} onCommit={(v) => v.trim() && ed((d) => o.updateFlow(d, flow.id, { title: v.trim() }))} /></L>
       <L t="Runs (free text)"><CommitInput aria-label="Runs" placeholder="e.g. every Friday" value={flow.every} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { every: v }))} /></L>
+      <L t="Flow note"><CommitInput multiline aria-label="Flow note" placeholder="Anything about the whole flow" value={flow.note || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { note: v.trim() ? v : undefined }))} /></L>
       <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
       {!stepId && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a step on the diagram to edit its details here. Double-click a step to retype it, drag it into another lane to hand it to that team, and drag from its right edge to another step to draw an arrow.</p>}
       {flow.steps.map((st, i) => {
