@@ -8,6 +8,39 @@ const h = (v) => (v ? fmtH(v) : '–');
 const Tile = ({ label, value, tone }) => <div className="rounded-xl border border-slate-200 bg-white px-4 py-3"><div className={`text-2xl font-semibold ${tone || ''}`}>{value}</div><div className="text-xs uppercase tracking-wider text-slate-500">{label}</div></div>;
 const Block = ({ title, note, children }) => <section className="mt-5 break-inside-avoid"><h3 className="mb-1.5 text-sm font-semibold">{title}{note && <span className="ml-2 font-normal text-slate-500">{note}</span>}</h3>{children}</section>;
 const Empty = ({ children }) => <p className="text-sm text-slate-400">{children}</p>;
+/* charts are plain SVG (rects), so they print without "background graphics" and need no library */
+const fmtDay = (iso) => new Date(iso + 'T00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+function WeeklyChart({ weeks }) {
+  const W = 640, H = 170, L = 30, B = 24, T = 8, max = Math.max(1, ...weeks.flatMap((w) => [w.opened, w.finished])), bw = (W - L) / weeks.length, bar = Math.min(22, bw * 0.38), every = Math.ceil(weeks.length / 9);
+  const y = (v) => T + (H - T - B) * (1 - v / max), summary = `Opened and finished tickets per week: ${weeks.map((w) => `week of ${fmtDay(w.start)} ${w.opened} opened, ${w.finished} finished`).join('; ')}`;
+  return (
+    <figure>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} className="w-full">
+        <line x1={L} x2={W} y1={y(0)} y2={y(0)} stroke="#cbd5e1" /><line x1={L} x2={W} y1={y(max)} y2={y(max)} stroke="#e2e8f0" strokeDasharray="3 3" />
+        <text x={L - 4} y={y(max) + 3} textAnchor="end" fontSize="10" fill="#64748b">{max}</text><text x={L - 4} y={y(0) + 3} textAnchor="end" fontSize="10" fill="#64748b">0</text>
+        {weeks.map((w, i) => { const cx = L + bw * i + bw / 2; return (
+          <g key={w.start}>
+            <rect x={cx - bar - 1} y={y(w.opened)} width={bar} height={y(0) - y(w.opened)} fill="#94a3b8"><title>{`Week of ${fmtDay(w.start)}: ${w.opened} opened`}</title></rect>
+            <rect x={cx + 1} y={y(w.finished)} width={bar} height={y(0) - y(w.finished)} fill="#059669"><title>{`Week of ${fmtDay(w.start)}: ${w.finished} finished`}</title></rect>
+            {i % every === 0 && <text x={cx} y={H - 8} textAnchor="middle" fontSize="10" fill="#64748b">{fmtDay(w.start)}</text>}
+          </g>); })}
+      </svg>
+      <figcaption className="mt-1 flex gap-4 text-xs text-slate-500"><span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-slate-400" />Opened</span><span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-600" />Finished</span><span>per week, starting Monday</span></figcaption>
+    </figure>
+  );
+}
+function HoursChart({ rows }) {
+  const max = Math.max(...rows.map((g) => g.hours)), RH = 22, W = 640, L = 130, H = rows.length * RH + 4;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Hours by department: ${rows.map((g) => `${g.name} ${fmtH(g.hours)}`).join('; ')}`} className="w-full">
+      {rows.map((g, i) => { const w = Math.max(2, (W - L - 60) * g.hours / max); return (
+        <g key={g.id}><text x={L - 6} y={i * RH + 14} textAnchor="end" fontSize="11" fill="#334155">{g.name}</text>
+          <rect x={L} y={i * RH + 3} width={w} height={RH - 8} rx="3" fill="#2563eb"><title>{`${g.name}: ${fmtH(g.hours)}`}</title></rect>
+          <text x={L + w + 6} y={i * RH + 14} fontSize="11" fill="#64748b">{fmtH(g.hours)}</text></g>); })}
+    </svg>
+  );
+}
+const Progress = ({ done, total }) => total ? <svg viewBox="0 0 100 8" className="inline-block h-2 w-20 align-middle" role="img" aria-label={`${done} of ${total} done`}><rect width="100" height="8" rx="4" fill="#e2e8f0" /><rect width={100 * done / total} height="8" rx="4" fill="#059669" /></svg> : null;
 const Id = ({ t, onOpen }) => <button type="button" aria-label={`Open ${t.id}`} className="font-mono text-xs text-slate-500 hover:text-blue-700" onClick={() => onOpen(t.id)}>{t.id}</button>;
 
 /* Report over the tickets the tab's filters leave in scope, for a chosen period. Print or save as PDF from the browser. */
@@ -32,6 +65,10 @@ export default function Report({ d, list, onOpen }) {
             <Tile label="Blocked now" value={r.totals.blocked} tone={r.totals.blocked ? 'text-red-700' : ''} /><Tile label="Hours logged" value={h(r.totals.hours)} />
           </div>
 
+          <Block title="Opened and finished each week">
+            {r.totals.opened || r.totals.finished ? <WeeklyChart weeks={r.weeks} /> : <Empty>Nothing opened or finished in this period.</Empty>}
+          </Block>
+
           <Block title="Finished" note={`${r.finished.length}`}>
             {r.finished.length ? <table className="w-full text-sm"><tbody>{r.finished.map((t) => <tr key={t.id} className="border-t border-slate-100"><td className="py-1 pr-2"><Id t={t} onOpen={onOpen} /></td><td>{t.title}</td><td className="text-xs text-slate-500">{r.about(t)}</td><td className="pl-2 text-right text-xs text-slate-500">{t.updated}</td></tr>)}</tbody></table> : <Empty>Nothing finished in this period.</Empty>}
           </Block>
@@ -41,11 +78,15 @@ export default function Report({ d, list, onOpen }) {
           </Block>
 
           <Block title="Projects">
-            {r.projects.length ? <table className="w-full text-sm"><thead className="text-left text-[11px] uppercase tracking-wider text-slate-500"><tr><th>Project</th><th>Status</th><th>Items done</th><th>Hours in period</th><th>Hours total</th></tr></thead><tbody>{r.projects.map(({ p, total, done, hoursTotal, hoursPeriod }) => <tr key={p.id} className="border-t border-slate-100"><td className="py-1"><Id t={p} onOpen={onOpen} /> {p.title}</td><td>{STATUS[p.status]}</td><td>{total ? `${done} of ${total}` : '–'}</td><td>{h(hoursPeriod)}</td><td>{h(hoursTotal)}</td></tr>)}</tbody></table> : <Empty>No projects in scope.</Empty>}
+            {r.projects.length ? <table className="w-full text-sm"><thead className="text-left text-[11px] uppercase tracking-wider text-slate-500"><tr><th>Project</th><th>Status</th><th>Items done</th><th>Hours in period</th><th>Hours total</th></tr></thead><tbody>{r.projects.map(({ p, total, done, hoursTotal, hoursPeriod }) => <tr key={p.id} className="border-t border-slate-100"><td className="py-1"><Id t={p} onOpen={onOpen} /> {p.title}</td><td>{STATUS[p.status]}</td><td>{total ? <>{`${done} of ${total} `}<Progress done={done} total={total} /></> : '–'}</td><td>{h(hoursPeriod)}</td><td>{h(hoursTotal)}</td></tr>)}</tbody></table> : <Empty>No projects in scope.</Empty>}
           </Block>
 
           <Block title="Hours logged" note={h(r.totals.hours)}>
             {r.perTicket.length ? <table className="w-full text-sm"><tbody>{r.perTicket.map(({ t, h: x }) => <tr key={t.id} className="border-t border-slate-100"><td className="py-1 pr-2"><Id t={t} onOpen={onOpen} /></td><td>{t.title}</td><td className="text-right text-xs text-slate-500">{fmtH(x)}</td></tr>)}</tbody></table> : <Empty>No hours logged in this period.</Empty>}
+          </Block>
+
+          <Block title="Hours by department">
+            {r.departments.some((g) => g.hours > 0) ? <HoursChart rows={r.departments.filter((g) => g.hours > 0).sort((a, b) => b.hours - a.hours)} /> : <Empty>No hours logged in this period.</Empty>}
           </Block>
 
           <Block title="By department">

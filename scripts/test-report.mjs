@@ -34,3 +34,10 @@ test('a one-day period and an empty scope do not break', () => {
   const d = { departments: [], sheets: [], tickets: { items: [] } }, r = R.buildReport(d, [], '2026-11-23', '2026-11-23');
   assert.deepEqual(r.totals, { opened: 0, finished: 0, open: 0, blocked: 0, hours: 0 }); assert.equal(R.periodLabel('2026-11-23', '2026-11-23'), '2026-11-23');
 });
+test('weekly buckets start on Monday, cover the whole period and count only dates inside it', () => {
+  const items = [{ id: 'T20261111.001', status: 'done', updated: '2026-11-18' }, { id: 'T20261112.001', status: 'doing' }, { id: 'T20261030.001', status: 'done', updated: '2026-11-02' }, { id: 'T20260901.001', status: 'done', updated: '2026-09-02' }];
+  const w = R.weekly(items, '2026-11-04', '2026-11-22');
+  assert.deepEqual(w.map((x) => x.start), ['2026-11-02', '2026-11-09', '2026-11-16'], 'Mondays, from the week of the first day');
+  assert.deepEqual(w.map((x) => [x.opened, x.finished]), [[0, 0], [2, 0], [0, 1]], 'T20261030 and the 2 Nov finish are before the period; 2 Sep is outside');
+  assert.deepEqual(R.weekly([], '2026-11-23', '2026-11-23').map((x) => x.start), ['2026-11-23']);
+});

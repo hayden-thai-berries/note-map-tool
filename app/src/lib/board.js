@@ -31,8 +31,13 @@ export function targetOf(d, t) {
 export function groupByDepartment(d, items) {
   const groups = d.departments.map((x) => ({ id: x.id, name: x.name, items: [] })), apps = { id: 'apps', name: 'Connected apps', items: [] }, none = { id: 'none', name: 'Not linked', items: [] };
   items.forEach((t) => {
-    const tg = targetOf(d, t), g = tg?.departmentId ? groups.find((x) => x.id === tg.departmentId) : tg?.kind === 'app' ? apps : none;
+    const id = groupIdOf(d, t), g = id === 'apps' ? apps : id === 'none' ? none : groups.find((x) => x.id === id);
     (g || none).items.push(t);
   });
   return [...groups, apps, none].filter((g) => g.items.length);
+}
+/* which table group a ticket falls in: a department id, 'apps', or 'none' (also the filter value for "Department") */
+export function groupIdOf(d, t) {
+  const tg = targetOf(d, t);
+  return tg?.departmentId && d.departments.some((x) => x.id === tg.departmentId) ? tg.departmentId : tg?.kind === 'app' ? 'apps' : 'none';
 }

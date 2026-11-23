@@ -24,6 +24,21 @@ export function openedOn(t) {
 const within = (date, from, to) => !!date && date >= from && date <= to;
 const hoursIn = (t, from, to) => (t.log || []).reduce((a, e) => a + (within(e.date, from, to) ? +e.hours || 0 : 0), 0);
 
+const parse = (str) => { const [y, m, dd] = str.split('-').map(Number); return new Date(y, m - 1, dd); };
+const mondayOf = (str) => { const x = parse(str); return addDays(x, -((x.getDay() + 6) % 7)); };
+
+/* one bucket per week (Monday to Sunday) from the week containing `from` to the week containing `to`;
+ * only dates inside [from, to] are counted, so the first and last weeks can be partial */
+export function weekly(items, from, to) {
+  const out = [], idx = new Map();
+  for (let w = mondayOf(from); iso(w) <= to; w = addDays(w, 7)) { const b = { start: iso(w), opened: 0, finished: 0 }; idx.set(b.start, b); out.push(b); }
+  items.forEach((t) => {
+    const o = openedOn(t); if (within(o, from, to)) idx.get(iso(mondayOf(o))).opened++;
+    if (t.status === 'done' && within(t.updated, from, to)) idx.get(iso(mondayOf(t.updated))).finished++;
+  });
+  return out;
+}
+
 /* d: the whole data file; items: the tickets in scope (the tab's filters); [from, to]: inclusive period */
 export function buildReport(d, items, from, to) {
   const all = d.tickets.items, byId = new Map(all.map((t) => [t.id, t]));
@@ -50,7 +65,7 @@ export function buildReport(d, items, from, to) {
   return {
     from, to, scope: items.length,
     totals: { opened: opened.length, finished: finished.length, open: open.length, blocked: blocked.length, hours: perTicket.reduce((a, x) => a + x.h, 0) },
-    finished, blocked, projects, perTicket, departments,
+    finished, blocked, projects, perTicket, departments, weeks: weekly(items, from, to),
     about: (t) => targetOf(d, t)?.name || '',
   };
 }
