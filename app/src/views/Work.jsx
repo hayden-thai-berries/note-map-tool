@@ -5,9 +5,10 @@ import { byPriority, priorityOf, targetOf } from '../lib/board.js';
 import { Btn } from '../components/ui.jsx';
 import TicketForm from '../components/TicketForm.jsx';
 import { Summary, Board, Table, BlockedAsk } from '../components/TicketBoard.jsx';
+import Report from '../components/Report.jsx';
 
 const sel = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm';
-const remembered = () => { try { return localStorage.getItem('tview') === 'table' ? 'table' : 'board'; } catch { return 'board'; } };
+const remembered = () => { try { const v = localStorage.getItem('tview'); return v === 'table' || v === 'report' ? v : 'board'; } catch { return 'board'; } };
 
 /* Tickets, projects, change requests and features: a board you can drag across, or a table, both editable in place, plus the full form. */
 export default function Work() {
@@ -26,7 +27,7 @@ export default function Work() {
     <div className="p-5">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Btn primary onClick={() => setForm({ id: null })}>New ticket</Btn>
-        <div className="flex overflow-hidden rounded-lg border border-slate-300" role="group" aria-label="View">{tab('board', 'Board')}{tab('table', 'Table')}</div>
+        <div className="flex overflow-hidden rounded-lg border border-slate-300" role="group" aria-label="View">{tab('board', 'Board')}{tab('table', 'Table')}{tab('report', 'Report')}</div>
         <select aria-label="Type" className={sel} value={f.type} onChange={set('type')}><option value="">All types</option><option value="ticket">Tickets</option><option value="project">Projects</option><option value="change">Change requests</option><option value="feature">Features</option></select>
         <select aria-label="Owner filter" className={sel} value={f.owner} onChange={set('owner')}><option value="">Everyone</option>{owners.map((x) => <option key={x}>{x}</option>)}</select>
         <select aria-label="Priority filter" className={sel} value={f.priority} onChange={set('priority')}><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select>
@@ -34,8 +35,8 @@ export default function Work() {
         <input aria-label="Search tickets" type="search" className={`${sel} w-56`} placeholder="Search tickets" value={f.q} onChange={set('q')} />
         <span className="ml-auto text-sm text-slate-500">{list.length} of {items.length}</span>
       </div>
-      <Summary items={items} onOpen={(id) => setForm({ id })} />
-      {view === 'board' ? <Board d={d} list={list} quick={quick} onMove={onMove} onOpen={(id) => setForm({ id })} onAdd={onAdd} /> : <Table d={d} list={list} quick={quick} onMove={onMove} onOpen={(id) => setForm({ id })} />}
+      {view !== 'report' && <Summary items={items} onOpen={(id) => setForm({ id })} />}
+      {view === 'report' ? <Report d={d} list={list} onOpen={(id) => setForm({ id })} /> : view === 'board' ? <Board d={d} list={list} quick={quick} onMove={onMove} onOpen={(id) => setForm({ id })} onAdd={onAdd} /> : <Table d={d} list={list} quick={quick} onMove={onMove} onOpen={(id) => setForm({ id })} />}
       {ask && <BlockedAsk ticket={ask} onDone={(reason) => { if (reason !== null) apply((x) => moveTicket(x, ask.id, 'blocked', reason)); setAsk(null); }} />}
       {form && <TicketForm key={form.id || 'new'} id={form.id} onClose={() => setForm(null)} />}
     </div>
