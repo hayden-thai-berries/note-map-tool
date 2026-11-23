@@ -33,6 +33,7 @@
 .detail .body{margin:10px 0 0;white-space:pre-wrap;font-size:14px}
 .detail .body.empty{color:var(--muted)}
 .detail .conns{margin:10px 0 0;padding:0;list-style:none;font-size:13px;display:grid;gap:4px}
+.detail .tickets-toggle{margin:6px 0 0;border:0;background:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:2px}
 .detail .conns button{border:0;background:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline;text-underline-offset:2px}
 .detail a{color:var(--accent)}
 .map.focus .node:not(.on){opacity:.35}

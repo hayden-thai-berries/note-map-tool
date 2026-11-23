@@ -184,15 +184,33 @@
     box.appendChild(body);
     var linked = S.tdata.tickets.filter(function(t){ return t.target === S.selected; });
     if (linked.length) {
-      var tu = el('ul', 'conns');
-      linked.forEach(function(t){
-        var li = el('li'), b = el('button', null, t.id + ' ' + t.title); b.type = 'button';
-        b.addEventListener('click', function(){ App.showTab('tickets'); App.openForm(t.id); });
-        li.appendChild(document.createTextNode(App.statusLabel(t.status) + ' · '));
-        li.appendChild(b); tu.appendChild(li);
-      });
+      /* Open tickets first, done last; only the first few show until "Show all". Resets on every selection. */
+      var LIMIT = 3, isDone = function(t){ return t.status === 'done'; };
+      linked = linked.filter(function(t){ return !isDone(t); }).concat(linked.filter(isDone));
+      var tu = el('ul', 'conns'), toggle = null;
+      var fillTickets = function(all){
+        tu.textContent = '';
+        var shown = all ? linked : linked.filter(function(t){ return !isDone(t); }).slice(0, LIMIT);
+        shown.forEach(function(t){
+          var li = el('li'), b = el('button', null, t.id + ' ' + t.title); b.type = 'button';
+          b.addEventListener('click', function(){ App.showTab('tickets'); App.openForm(t.id); });
+          li.appendChild(document.createTextNode(App.statusLabel(t.status) + ' · '));
+          li.appendChild(b); tu.appendChild(li);
+        });
+        if (toggle) {
+          var nDone = linked.filter(isDone).length;
+          toggle.textContent = all ? 'Show fewer' : 'Show all ' + linked.length + (nDone ? ' (' + nDone + ' done)' : '');
+        }
+      };
       box.appendChild(el('p', 'meta2', 'Tickets and projects'));
       box.appendChild(tu);
+      if (linked.length > LIMIT || linked.some(isDone)) {
+        var expanded = false;
+        toggle = el('button', 'tickets-toggle'); toggle.type = 'button';
+        toggle.addEventListener('click', function(){ expanded = !expanded; fillTickets(expanded); });
+        box.appendChild(toggle);
+      }
+      fillTickets(false);
     }
     if (S.nodeEls[S.selected]) {
       var qa = App.quickAdd(S.selected, it, prevVal);
