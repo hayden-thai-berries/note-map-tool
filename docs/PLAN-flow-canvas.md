@@ -1,6 +1,6 @@
 # Plan: Business flow canvas and AI flows
 
-Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); ticket 05 (AI provider setup) is built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
+Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); tickets 04, 05 and 06 (brief, AI provider setup, Generate) are built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
 
 ## Goal
 
@@ -126,6 +126,8 @@ Recommended by the assistant and confirmed by the user ("yes"):
 **Built (ticket 05):** `ai.py` and `server.py` read `data/.ai.json` and answer `GET /api/ai/status` and `POST /api/ai/test`; dot-files in `data/` are never served, listed or written; the Business flows header has an **AI** button that opens a panel with the provider's name, the privacy notice and Test connection. Setup guide: `docs/AI.md`; decision: `docs/adr/0003-ai-calls-only-from-the-server.md`. Tests: `scripts/test_ai.py`, `scripts/e2e-ai-setup.mjs`, with a fake provider in `scripts/lib/ai_stub.py`. DeepSeek thinking mode is turned off for these calls and is untested against the live service.
 
 **Built (ticket 04):** optional `brief` and `draft` text on a Flow, typed in a "Describe your case" card at the top of the Flow details (8000 characters each), saved with Save, undoable, and written as `Brief:` and `Draft:` comment lines by the new-fields export. Tests: `scripts/test-flow-notes.mjs`, `scripts/e2e-flow-brief.mjs`. The "New flow" box still only asks for a name; the details panel opens straight after creating one, so the brief is the first thing to fill in.
+
+**Built (ticket 06):** a **Generate flow** button in the Describe your case card, for an empty flow only. `POST /api/ai/flow` (`ai_flow.py`) builds the request from the brief, the draft, Department and Function descriptions and sheet and app names, strips emails and ticket ids, and checks the answer (valid JSON, at most 40 steps and 12 teams, arrows only to earlier steps, sheets matched by name, unknown ones kept as text and flagged). The page draws a read-only preview with the chart type and reason, and Accept applies it in one `apply` (one Undo). The AI always answers `swimlane` for now; ticket 07 adds the other chart types. Tests: `scripts/test_ai_flow.py`, `scripts/test-ai-flow.mjs`, `scripts/e2e-ai-generate.mjs`. Screenshot: `docs/screenshots/ai-generate-preview.png`.
 
 Done when: a brief produces a valid Flow in a sensible chart type, an Ask AI edit previews and applies with undo, and a missing key or a bad response leaves the data untouched.
 

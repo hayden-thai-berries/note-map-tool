@@ -16,6 +16,20 @@ export async function aiTest() {
   } catch { return { ok: false, error: 'Could not reach the local server.' }; }
 }
 
+/* Ask the server to turn a brief into a flow. The server builds the rest of what is sent (descriptions, sheet names) from the Data file on disk,
+ * strips emails and ticket ids, and checks the answer. Resolves to { ok: true, flow, label } or { ok: false, error }. */
+export async function aiGenerate({ mapId, title, brief, draft }) {
+  try {
+    const r = await fetch('/api/ai/flow', { method: 'POST', headers: { 'X-Map-Save': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ mapId, title, brief, draft }) });
+    return await r.json();
+  } catch { return { ok: false, error: 'Could not reach the local server.' }; }
+}
+
+/* the notice is shown once per provider, then remembered in this browser (it works without storage too, it just asks every time) */
+const seenKey = (provider) => `ai-notice-seen:${provider}`;
+export const noticeSeen = (provider) => { try { return localStorage.getItem(seenKey(provider)) === '1'; } catch { return false; } };
+export const markNoticeSeen = (provider) => { try { localStorage.setItem(seenKey(provider), '1'); } catch { /* fine */ } };
+
 export const MAX_TEXT_CHARS = 8000; // the same limit the server enforces on the brief and the draft
 
 /* Said before anything is sent, and reused by Generate and Ask AI. */

@@ -82,11 +82,11 @@ export function LaneNode({ data }) {
         {renaming
           ? <AutoInput aria-label="Lane name" className="nodrag w-full rounded border border-blue-500 bg-white px-1 text-center text-sm" defaultValue={data.team} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') done(e.currentTarget.value); else if (e.key === 'Escape') setRenaming(false); }} onBlur={(e) => done(e.currentTarget.value)} />
           : <span className="text-center text-sm font-semibold" title="Double-click to rename">{data.team}</span>}
-        <span className="flex gap-1">
+        {!ui.readOnly && <span className="flex gap-1">
           <button type="button" aria-label={`Move lane ${data.team} up`} disabled={data.i === 0} className={mini2} onClick={(e) => { e.stopPropagation(); ui.moveLane?.(data.team, -1); }}>↑</button>
           <button type="button" aria-label={`Move lane ${data.team} down`} disabled={data.i === data.n - 1} className={mini2} onClick={(e) => { e.stopPropagation(); ui.moveLane?.(data.team, 1); }}>↓</button>
           {data.empty && <button type="button" aria-label={`Remove lane ${data.team}`} className={mini2} onClick={(e) => { e.stopPropagation(); ui.removeLane?.(data.team); }}>×</button>}
-        </span>
+        </span>}
       </div>
     </div>
   );

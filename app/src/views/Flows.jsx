@@ -13,7 +13,7 @@ import AiPanel from '../components/AiPanel.jsx';
  * double-click a step to retype it, drag it into another lane to hand it to that team, drag from its right edge to another step to draw an arrow,
  * double-click an empty lane to add a step (Enter adds the next), Delete removes what is selected. Every change goes through apply(), so it undoes. */
 export default function Flows({ idx, setIdx }) {
-  const { data, rev } = useRecords(), [editing, setEditing] = useState(true), [name, setName] = useState(''), [laneName, setLaneName] = useState('');
+  const { data, rev, name: name_ } = useRecords(), [editing, setEditing] = useState(true), [name, setName] = useState(''), [laneName, setLaneName] = useState('');
   const [typing, setTyping] = useState(null), [editingNote, setEditingNote] = useState(null), [noteDraft, setNoteDraft] = useState(null), [draft, setDraft] = useState(null), [hot, setHot] = useState(null), [tick, setTick] = useState(0), [selIdx, setSelIdx] = useState(null), [selArrow, setSelArrow] = useState(null), [aiOpen, setAiOpen] = useState(false);
   const inst = useRef(null), box = useRef(null);
   const f = flows[idx], meta = data.flows[idx];
@@ -123,7 +123,7 @@ export default function Flows({ idx, setIdx }) {
               : <p className="p-8 text-slate-500">This flow has no lanes yet. Add a lane above (a team, like Finance), then double-click it to add the first step.</p>}
             </div>
           </div>
-          {editing && meta && <aside className="w-[360px] shrink-0 overflow-auto border-l border-slate-200 bg-white p-4"><FlowEdit key={meta.id} flowId={meta.id} stepId={selIdx != null ? sid(selIdx) : null} arrow={selArrow} onArrowGone={() => setSelArrow(null)} onDeleted={() => setIdx(0)} /></aside>}
+          {editing && meta && <aside className="w-[360px] shrink-0 overflow-auto border-l border-slate-200 bg-white p-4"><FlowEdit key={meta.id} mapName={name_} flowId={meta.id} stepId={selIdx != null ? sid(selIdx) : null} arrow={selArrow} onArrowGone={() => setSelArrow(null)} onDeleted={() => setIdx(0)} /></aside>}
         </div>
       )}
     </div>

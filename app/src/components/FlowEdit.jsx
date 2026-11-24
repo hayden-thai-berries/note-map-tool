@@ -5,12 +5,13 @@ import { FLOW_DAYS } from '../lib/flows-parser.js';
 import { CommitInput, Btn } from './ui.jsx';
 import { MAX_TEXT_CHARS } from '../lib/ai.js';
 import { useState } from 'react';
+import GenerateFlow from './GenerateFlow.jsx';
 
 const sel = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm';
 const L = ({ t, children }) => <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
 
 /* Edit one flow: its name and rhythm, and its steps (team, title, day, sheet, who it waits on, where it sends work back). */
-export default function FlowEdit({ flowId, stepId = null, arrow = null, onArrowGone, onDeleted }) {
+export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null, onArrowGone, onDeleted }) {
   const { data } = useRecords(), flow = data.flows.find((x) => x.id === flowId), [team, setTeam] = useState(''), [title, setTitle] = useState('');
   if (!flow) return null;
   const ed = (fn, key) => apply(fn, key ? { key } : {});
@@ -25,6 +26,7 @@ export default function FlowEdit({ flowId, stepId = null, arrow = null, onArrowG
         <L t="Brief"><CommitInput multiline aria-label="Brief" maxLength={MAX_TEXT_CHARS} placeholder="What is this process for, who is involved, what goes wrong today?" value={flow.brief || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { brief: v.trim() ? v : undefined }))} /></L>
         <L t="Rough draft of the steps (optional)"><CommitInput multiline aria-label="Draft" maxLength={MAX_TEXT_CHARS} placeholder={'Bullets or sentences are fine, e.g.\n- Sales sends the quote\n- Finance checks the price'} value={flow.draft || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { draft: v.trim() ? v : undefined }))} /></L>
         <div className="text-[11px] text-slate-500">Saved with the flow. Up to {MAX_TEXT_CHARS} characters each.</div>
+        <GenerateFlow flow={flow} mapName={mapName} />
       </div>
       <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
       {arrow && !stepId && (() => {

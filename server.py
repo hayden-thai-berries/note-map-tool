@@ -7,7 +7,7 @@ from this same page, and the previous version is kept as a .bak next to it.
 The built React app (app/dist) is served at / and /assets/ (falls back to the old page if it is not built);
 the old vanilla page stays at /legacy/ (its relative maps/ and api/ calls are mapped back to /maps and /api).
 GET /api/ai/status says only whether AI is on and which provider (the key lives in data/.ai.json and never leaves the server);
-POST /api/ai/test makes one tiny call to that provider. Files in data/ whose name starts with a dot are never served, listed or written.
+POST /api/ai/test makes one tiny call to that provider; POST /api/ai/flow turns a brief into a checked flow (see ai_flow.py for what is sent). Files in data/ whose name starts with a dot are never served, listed or written.
 GET /api/maps lists the old maps (maps/*.md without the .flows.md files); GET /api/data lists data/*.json.
 PUT /data/<name>.json saves a Data file (must be a JSON object with an integer schemaVersion and the entry lists). A PUT with
 X-Map-Create: 1 only creates the file and answers 409 if the name is taken.
@@ -22,6 +22,7 @@ Storage rules (see docs/DESIGN.md):
 import hashlib, http.server, json, os, re, shutil, time
 import urllib.parse
 import ai
+import ai_flow
 
 ROOT = os.environ.get("SHEETS_MAP_ROOT") or os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
@@ -120,9 +121,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         self.route()
         path = self.path.split("?")[0]
-        if (path != "/api/ai/test" or self.headers.get("Origin", "") not in self.origins() or self.headers.get("X-Map-Save") != "1"):
+        if (path not in ("/api/ai/test", "/api/ai/flow") or self.headers.get("Origin", "") not in self.origins() or self.headers.get("X-Map-Save") != "1"):
             return self.send_error(403, "Not allowed")
-        self.send_json(200, ai.test_connection(ROOT))
+        if path == "/api/ai/test":
+            return self.send_json(200, ai.test_connection(ROOT))
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(length).decode("utf-8")) if 0 < length <= 100_000 else None
+        except (ValueError, UnicodeDecodeError):
+            body = None
+        if not isinstance(body, dict):
+            return self.send_error(400, "Bad request")
+        self.send_json(200, ai_flow.generate(ROOT, body.get("mapId"), body.get("title"), body.get("brief"), body.get("draft")))
 
     def do_PUT(self):
         self.route()
