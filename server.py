@@ -132,7 +132,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             body = None
         if not isinstance(body, dict):
             return self.send_error(400, "Bad request")
-        self.send_json(200, ai_flow.generate(ROOT, body.get("mapId"), body.get("title"), body.get("brief"), body.get("draft")))
+        self.send_json(200, ai_flow.generate(ROOT, body.get("mapId"), body.get("title"), body.get("brief"), body.get("draft"), body.get("instruction"), body.get("flow")))
 
     def do_PUT(self):
         self.route()
