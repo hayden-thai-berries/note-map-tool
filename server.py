@@ -6,6 +6,8 @@ and maps/<name>.json (tickets). Only PUT /maps/<name>.md or .json, or /data/<nam
 from this same page, and the previous version is kept as a .bak next to it.
 The built React app (app/dist) is served at / and /assets/ (falls back to the old page if it is not built);
 the old vanilla page stays at /legacy/ (its relative maps/ and api/ calls are mapped back to /maps and /api).
+GET /api/ai/status says only whether AI is on and which provider (the key lives in data/.ai.json and never leaves the server);
+POST /api/ai/test makes one tiny call to that provider. Files in data/ whose name starts with a dot are never served, listed or written.
 GET /api/maps lists the old maps (maps/*.md without the .flows.md files); GET /api/data lists data/*.json.
 PUT /data/<name>.json saves a Data file (must be a JSON object with an integer schemaVersion and the entry lists). A PUT with
 X-Map-Create: 1 only creates the file and answers 409 if the name is taken.
@@ -18,6 +20,8 @@ Storage rules (see docs/DESIGN.md):
   and to <name>.bak. Writes go to a temp file first, then replace, so a crash never leaves half a file.
 """
 import hashlib, http.server, json, os, re, shutil, time
+import urllib.parse
+import ai
 
 ROOT = os.environ.get("SHEETS_MAP_ROOT") or os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
@@ -84,11 +88,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if m and os.path.isfile(os.path.join(ROOT, m.group(1), m.group(2))):
             self.content_hash = file_hash(os.path.join(ROOT, m.group(1), m.group(2)))
         api = self.path.split("?")[0]
+        if self.hidden(api):
+            return self.send_error(404, "Not found")
+        if api == "/api/ai/status":
+            return self.send_json(200, ai.status(ROOT))
         if api not in ("/api/maps", "/api/data"):
             return super().do_GET()
         folder = os.path.join(ROOT, "maps" if api == "/api/maps" else "data")
         want = (lambda n: n.endswith(".md") and not n.endswith(".flows.md")) if api == "/api/maps" else (lambda n: n.endswith(".json"))
-        names = sorted(n for n in (os.listdir(folder) if os.path.isdir(folder) else []) if want(n) and re.match(r"^[\w.-]+$", n))
+        names = sorted(n for n in (os.listdir(folder) if os.path.isdir(folder) else []) if want(n) and not n.startswith(".") and re.match(r"^[\w.-]+$", n))
         body = json.dumps(names).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -96,10 +104,30 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def hidden(self, path):
+        """A dotfile inside data/ (such as data/.ai.json) is private: never served."""
+        parts = urllib.parse.unquote(path).replace("\\", "/").split("/")
+        return len(parts) > 2 and parts[1] == "data" and any(p.startswith(".") for p in parts[2:])
+
+    def send_json(self, code, obj):
+        body = json.dumps(obj).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        self.route()
+        path = self.path.split("?")[0]
+        if (path != "/api/ai/test" or self.headers.get("Origin", "") not in self.origins() or self.headers.get("X-Map-Save") != "1"):
+            return self.send_error(403, "Not allowed")
+        self.send_json(200, ai.test_connection(ROOT))
+
     def do_PUT(self):
         self.route()
         m = SAVE_PATH.match(self.path.split("?")[0])
-        if (not m or (m.group(1) == "data" and not m.group(2).endswith(".json"))
+        if (not m or m.group(2).startswith(".") or (m.group(1) == "data" and not m.group(2).endswith(".json"))
                 or self.headers.get("Origin", "") not in self.origins()
                 or self.headers.get("X-Map-Save") != "1"):
             return self.send_error(403, "Not allowed")

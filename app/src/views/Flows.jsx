@@ -7,13 +7,14 @@ import { useRecords, apply } from '../lib/records.js';
 import * as o from '../lib/ops.js';
 import { connect, removeArrow, branchLabel } from '../lib/flow-edit.js';
 import FlowEdit from '../components/FlowEdit.jsx';
+import AiPanel from '../components/AiPanel.jsx';
 
 /* Business flows as swimlanes (one lane per team; blue arrows are hand-offs, dashed red arrows send work back). The diagram is the editor:
  * double-click a step to retype it, drag it into another lane to hand it to that team, drag from its right edge to another step to draw an arrow,
  * double-click an empty lane to add a step (Enter adds the next), Delete removes what is selected. Every change goes through apply(), so it undoes. */
 export default function Flows({ idx, setIdx }) {
   const { data, rev } = useRecords(), [editing, setEditing] = useState(true), [name, setName] = useState(''), [laneName, setLaneName] = useState('');
-  const [typing, setTyping] = useState(null), [editingNote, setEditingNote] = useState(null), [noteDraft, setNoteDraft] = useState(null), [draft, setDraft] = useState(null), [hot, setHot] = useState(null), [tick, setTick] = useState(0), [selIdx, setSelIdx] = useState(null), [selArrow, setSelArrow] = useState(null);
+  const [typing, setTyping] = useState(null), [editingNote, setEditingNote] = useState(null), [noteDraft, setNoteDraft] = useState(null), [draft, setDraft] = useState(null), [hot, setHot] = useState(null), [tick, setTick] = useState(0), [selIdx, setSelIdx] = useState(null), [selArrow, setSelArrow] = useState(null), [aiOpen, setAiOpen] = useState(false);
   const inst = useRef(null), box = useRef(null);
   const f = flows[idx], meta = data.flows[idx];
   const stepAt = (id) => (id ? meta.steps.findIndex((x) => x.id === id) : null);
@@ -108,8 +109,9 @@ export default function Flows({ idx, setIdx }) {
         {f && <span className="text-sm text-slate-500">{[f.every && 'Runs: ' + f.every, f.teams.length + ' lanes', f.steps.length + ' steps'].filter(Boolean).join(' · ')}</span>}
         {f && <Btn onClick={() => newNote()} title="Add a sticky note">+ Note</Btn>}
         {f && <span className="flex items-center gap-1.5"><input aria-label="New lane name" className="w-32 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm" placeholder="New lane" value={laneName} onChange={(e) => setLaneName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addLane()} /><Btn onClick={addLane} disabled={!laneName.trim()}>Add lane</Btn></span>}
-        <span className="ml-auto flex items-center gap-2"><input aria-label="New flow name" className="w-44 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm" placeholder="New flow name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} /><Btn onClick={create} disabled={!name.trim()}>New flow</Btn>{f && <Btn onClick={() => setEditing(!editing)}>{editing ? 'Hide details' : 'Show details'}</Btn>}</span>
+        <span className="ml-auto flex items-center gap-2"><input aria-label="New flow name" className="w-44 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm" placeholder="New flow name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} /><Btn onClick={create} disabled={!name.trim()}>New flow</Btn>{f && <Btn onClick={() => setEditing(!editing)}>{editing ? 'Hide details' : 'Show details'}</Btn>}<Btn onClick={() => setAiOpen(true)} title="AI settings">AI</Btn></span>
       </div>
+      {aiOpen && <AiPanel onClose={() => setAiOpen(false)} />}
       {!f && <p className="p-8 text-slate-500">No business flows yet for this map. Name one above to start.</p>}
       {f && (
         <div className="flex min-h-0 flex-1">
