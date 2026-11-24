@@ -52,7 +52,7 @@ export function buildMap(d, { flow, showTix } = {}) {
  * `draft` ({ team, from }) adds a box for a step that is still being typed, after step number `from` (an index) if there is one. */
 export const LANE = { H: 130, GAP: 14, STEP_H: 74 };
 export const NOTE = { W: 180, H: 96 };
-export function buildFlow(flow, { draft = null, notes = [], noteDraft = null } = {}) {
+export function buildFlow(flow, { draft = null, notes = [], noteDraft = null, kinds = [] } = {}) {
   const { H: LH, GAP } = LANE, LX = 126, CW = 220;
   const lane = Object.fromEntries(flow.teams.map((t, i) => [low(t), i]));
   const col = flow.steps.map(() => 0), used = new Set(), inc = flow.steps.map(() => []);
@@ -65,14 +65,14 @@ export function buildFlow(flow, { draft = null, notes = [], noteDraft = null } =
   const last = flow.steps.length ? Math.max(...col) : -1, dcol = last + 1, width = LX + (last + 1 + (draft ? 1 : 0) || 1) * CW + 20, nodes = [], edges = [];
   const empty = (t) => !flow.steps.some((s) => low(s.team) === low(t));
   flow.teams.forEach((t, i) => nodes.push({ id: 'lane' + i, type: 'lane', position: { x: 0, y: i * (LH + GAP) }, data: { team: t, i, empty: empty(t), n: flow.teams.length }, draggable: false, selectable: false, deletable: false, zIndex: -1, width, height: LH }));
-  flow.steps.forEach((st, i) => nodes.push({ id: 's' + i, type: 'step', parentId: 'lane' + lane[low(st.team)], position: { x: LX + col[i] * CW, y: 28 }, width: 180, height: LANE.STEP_H, data: { st, idx: i } }));
+  flow.steps.forEach((st, i) => nodes.push({ id: 's' + i, type: 'step', parentId: 'lane' + lane[low(st.team)], position: { x: LX + col[i] * CW, y: 28 }, width: 180, height: LANE.STEP_H, data: { st, idx: i, kind: kinds[i] || null } }));
   if (draft && lane[low(draft.team)] != null) {
     nodes.push({ id: 'draft' + draft.key, type: 'draft', parentId: 'lane' + lane[low(draft.team)], position: { x: LX + dcol * CW, y: 28 }, data: { key: draft.key }, width: 180, height: 74, draggable: false, selectable: false, deletable: false });
     if (draft.from != null) edges.push({ id: 'draft-e', source: 's' + draft.from, target: 'draft' + draft.key, type: 'smoothstep', selectable: false, deletable: false, markerEnd: arrow('#0b6bcb'), style: { stroke: '#0b6bcb', strokeDasharray: '5 4' } });
   }
   flow.edges.forEach((e, k) => {
     const hand = low(flow.steps[e.from].team) !== low(flow.steps[e.to].team);
-    edges.push({ id: 'e' + k, source: 's' + e.from, target: 's' + e.to, type: 'smoothstep', label: e.msg, data: { kind: 'trigger', from: e.from, to: e.to, tIdx: e.tIdx }, markerEnd: arrow(hand ? '#0b6bcb' : '#7a8798'), style: { stroke: hand ? '#0b6bcb' : '#7a8798', strokeWidth: hand ? 2 : 1.5 }, labelStyle: { fontSize: 10 } });
+    edges.push({ id: 'e' + k, source: 's' + e.from, target: 's' + e.to, type: 'smoothstep', label: e.msg, data: { kind: 'trigger', from: e.from, to: e.to, tIdx: e.tIdx }, markerEnd: arrow(hand ? '#0b6bcb' : '#7a8798'), style: { stroke: hand ? '#0b6bcb' : '#7a8798', strokeWidth: hand ? 2 : 1.5 }, labelStyle: kinds[e.from] === 'decision' ? { fontSize: 11, fontWeight: 700 } : { fontSize: 10 } });
   });
   flow.steps.forEach((st, i) => st.backs.forEach((b, k) => {
     const j = flow.steps.indexOf(b.ref);

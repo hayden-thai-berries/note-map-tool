@@ -10,6 +10,12 @@ export function placeInFile(f, list, n) {
   return -1;
 }
 
+/* The first two arrows out of a decision are its Yes and No branches; any other arrow starts without a message. */
+export function branchLabel(f, from) {
+  if (from?.kind !== 'decision') return '';
+  return ['Yes', 'No'][f.steps.reduce((n, x) => n + x.triggers.filter((t) => t.stepId === from.id).length, 0)] || '';
+}
+
 /* A new arrow between two steps, by their place in the flow. Into a later step it is a "waits on" arrow; to an earlier step (or from
  * the bottom handle) it is a dashed "sent back" arrow. Returns false when there was nothing to add. */
 export function connect(d, flowId, a, b, back) {
@@ -20,7 +26,7 @@ export function connect(d, flowId, a, b, back) {
   /* a step with no arrow in follows the step before it; keep that arrow, so drawing a new one adds to it instead of replacing it */
   const before = f.steps[b - 1];
   if (!B.triggers.length && !B.standalone && before && before !== A) B.triggers.push({ stepId: before.id, msg: '' });
-  B.triggers.push({ stepId: A.id, msg: '' }); delete B.standalone; return true;
+  B.triggers.push({ stepId: A.id, msg: branchLabel(f, A) }); delete B.standalone; return true;
 }
 
 /* Take away one arrow the canvas drew. `e` is the data the canvas keeps on it: { kind: 'trigger', to, tIdx } or { kind: 'back', from, k }.
@@ -34,5 +40,24 @@ export function removeArrow(d, flowId, e) {
   } else {
     const s = f.steps[e.from]; if (!s) return;
     const k = placeInFile(f, s.backs, e.k); if (k >= 0) s.backs.splice(k, 1);
+  }
+}
+
+/* The message on one arrow the canvas drew ('' if none). Same address as removeArrow: { kind: 'trigger', to, tIdx } or { kind: 'back', from, k }. */
+export function arrowMessage(d, flowId, e) {
+  const f = d.flows.find((x) => x.id === flowId); if (!f) return '';
+  const s = f.steps[e.kind === 'trigger' ? e.to : e.from]; if (!s) return '';
+  const list = e.kind === 'trigger' ? s.triggers : s.backs, k = e.kind === 'trigger' ? (e.tIdx >= 0 ? placeInFile(f, list, e.tIdx) : -1) : placeInFile(f, list, e.k);
+  return k >= 0 ? list[k].msg || '' : '';
+}
+/* Change the message on one arrow. The automatic arrow from the step before has no message of its own, so it becomes a real "waits on" arrow first. */
+export function setArrowMessage(d, flowId, e, msg) {
+  const f = d.flows.find((x) => x.id === flowId); if (!f) return;
+  if (e.kind === 'trigger') {
+    const s = f.steps[e.to]; if (!s) return;
+    if (e.tIdx < 0) { const before = f.steps[e.to - 1]; if (!before) return; s.triggers.push({ stepId: before.id, msg }); return; }
+    const k = placeInFile(f, s.triggers, e.tIdx); if (k >= 0) s.triggers[k].msg = msg;
+  } else {
+    const s = f.steps[e.from]; if (!s) return; const k = placeInFile(f, s.backs, e.k); if (k >= 0) s.backs[k].msg = msg;
   }
 }

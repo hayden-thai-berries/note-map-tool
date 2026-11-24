@@ -1,6 +1,6 @@
 # Plan: Business flow canvas and AI flows
 
-Status: Phases 1 and 2 built on branch `feat/flow-canvas-editing` (see their notes below); phases 3 to 5 not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
+Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below); phases 4 and 5 not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
 
 ## Goal
 
@@ -68,6 +68,8 @@ flowchart LR
 - Start/end draw as pills. A flow with no start/end looks exactly as today.
 - Update `flows-parser.js` / export only where needed so the Markdown and Mermaid exports show the new kinds, and the legacy import still works.
 - Done when: the Quote approval demo can be redrawn with a start, a decision and an end, and old flows are unchanged.
+- **Built (phase 3):** optional step `kind` (`start`, `end`, `decision`; absent means an ordinary step), set from a "Shape" field in the step details. Start/end draw as pills and a decision as a diamond. The first two arrows out of a decision are labelled Yes and No, both when drawn and when made with "+ Next". Clicking an arrow now opens its details to edit the message (a "Branch label" for a decision) or delete it, which also finished the phase 1 item about selecting arrows. The canvas reads `kind` from the Data file, because the old Markdown format has no place for it; the legacy export is unchanged and the new-fields export names shapes in comment lines. Tests: `scripts/test-flow-shapes.mjs`, `scripts/e2e-flow-shapes.mjs`.
+- **Known limit:** two branches out of a decision that land in the same lane sit in one row, so the first branch's arrow (and its label) run behind the second box. Different lanes look right. Worth a layout fix (stack same-lane branches) as a follow-up.
 
 ## Phase 4: Export image
 

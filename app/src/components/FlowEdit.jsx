@@ -1,4 +1,5 @@
 import { useRecords, apply } from '../lib/records.js';
+import { arrowMessage, setArrowMessage, removeArrow } from '../lib/flow-edit.js';
 import * as o from '../lib/ops.js';
 import { FLOW_DAYS } from '../lib/flows-parser.js';
 import { CommitInput, Btn } from './ui.jsx';
@@ -8,7 +9,7 @@ const sel = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm';
 const L = ({ t, children }) => <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
 
 /* Edit one flow: its name and rhythm, and its steps (team, title, day, sheet, who it waits on, where it sends work back). */
-export default function FlowEdit({ flowId, stepId = null, onDeleted }) {
+export default function FlowEdit({ flowId, stepId = null, arrow = null, onArrowGone, onDeleted }) {
   const { data } = useRecords(), flow = data.flows.find((x) => x.id === flowId), [team, setTeam] = useState(''), [title, setTitle] = useState('');
   if (!flow) return null;
   const ed = (fn, key) => apply(fn, key ? { key } : {});
@@ -19,7 +20,17 @@ export default function FlowEdit({ flowId, stepId = null, onDeleted }) {
       <L t="Runs (free text)"><CommitInput aria-label="Runs" placeholder="e.g. every Friday" value={flow.every} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { every: v }))} /></L>
       <L t="Flow note"><CommitInput multiline aria-label="Flow note" placeholder="Anything about the whole flow" value={flow.note || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { note: v.trim() ? v : undefined }))} /></L>
       <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
-      {!stepId && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a step on the diagram to edit its details here. Double-click a step to retype it, drag it into another lane to hand it to that team, and drag from its right edge to another step to draw an arrow.</p>}
+      {arrow && !stepId && (() => {
+        const from = arrow.kind === 'trigger' ? arrow.from : arrow.from, to = arrow.to, name = (i) => `${i + 1}. ${flow.steps[i]?.title ?? ''}`, back = arrow.kind === 'back';
+        return (
+          <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-2.5" role="group" aria-label="Arrow">
+            <div className="mb-1.5 text-sm font-semibold">{back ? 'Sent back' : 'Arrow'}: {name(from)} → {name(to)}</div>
+            <L t={flow.steps[from]?.kind === 'decision' ? 'Branch label (Yes, No, …)' : 'Message'}><CommitInput aria-label="Arrow message" placeholder="what is handed over" value={arrowMessage(data, flow.id, arrow)} onCommit={(v) => ed((d) => setArrowMessage(d, flow.id, arrow, v))} /></L>
+            <div className="text-right"><Btn danger onClick={() => { ed((d) => removeArrow(d, flow.id, arrow)); onArrowGone?.(); }}>Delete arrow</Btn></div>
+          </div>
+        );
+      })()}
+      {!stepId && !arrow && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a step on the diagram to edit its details here. Double-click a step to retype it, drag it into another lane to hand it to that team, and drag from its right edge to another step to draw an arrow.</p>}
       {flow.steps.map((st, i) => {
         if (st.id !== stepId) return null;
         const others = flow.steps.filter((x) => x.id !== st.id), earlier = flow.steps.slice(0, i), label = (x) => `${flow.steps.indexOf(x) + 1}. ${x.team}: ${x.title}`;
@@ -32,6 +43,7 @@ export default function FlowEdit({ flowId, stepId = null, onDeleted }) {
               <Btn aria-label="Move step down" disabled={i === flow.steps.length - 1} onClick={() => ed((d) => o.shiftStep(d, flow.id, st.id, 1))}>↓</Btn></div>
             <div className="grid grid-cols-2 gap-2">
               <L t="Team"><CommitInput aria-label="Step team" list={`teams-${flow.id}`} value={st.team} onCommit={(v) => v.trim() && setSt({ team: v.trim() })} /></L>
+              <L t="Shape"><select aria-label="Step shape" className={`${sel} w-full`} value={st.kind || ''} onChange={(e) => setSt({ kind: e.target.value || undefined })}><option value="">Step</option><option value="start">Start marker</option><option value="end">End marker</option><option value="decision">Decision (yes / no)</option></select></L>
               <L t="Day"><select aria-label="Step day" className={`${sel} w-full`} value={st.day || ''} onChange={(e) => setSt({ day: e.target.value || null })}><option value="">Any</option>{FLOW_DAYS.map((x) => <option key={x}>{x}</option>)}</select></L>
               <L t="Sheet or app"><select aria-label="Step sheet" className={`${sel} w-full`} value={st.sheetId || ''} onChange={(e) => setSt({ sheetId: e.target.value || undefined, sheetName: undefined })}><option value="">None{st.sheetName ? ` (was “${st.sheetName}”, not on the map)` : ''}</option>{data.sheets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></L>
               <L t="Ticket id"><CommitInput aria-label="Step ticket" placeholder="T2026…" value={st.ticket || ''} onCommit={(v) => setSt({ ticket: v.trim() || null })} /></L>

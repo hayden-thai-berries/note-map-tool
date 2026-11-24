@@ -92,10 +92,15 @@ export function LaneNode({ data }) {
   );
 }
 
+/* A step. Its shape says what it is: a plain box, a start or end pill, or a decision diamond (the shape lives in the Data file). */
 export function StepNode({ data, selected }) {
-  const { st, idx } = data, ui = useContext(FlowUi), editing = ui.editing === idx, connecting = useConnection().inProgress;
+  const { st, idx, kind } = data, ui = useContext(FlowUi), editing = ui.editing === idx, connecting = useConnection().inProgress;
+  const title = editing
+    ? <AutoInput aria-label="Step text" className="nodrag nopan min-w-0 flex-1 rounded border border-blue-500 bg-white px-1 text-sm font-semibold" defaultValue={st.title} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') ui.commitTitle?.(idx, e.currentTarget.value); else if (e.key === 'Escape') ui.stopEdit?.(); }} onBlur={(e) => ui.commitTitle?.(idx, e.currentTarget.value)} />
+    : <b className="leading-tight">{st.title}</b>;
+  const ring = selected ? 'ring-2 ring-blue-600' : '';
   return (
-    <div className="relative">
+    <div className="relative h-[74px] w-[180px]" data-kind={kind || 'step'}>
       {selected && !editing && (
         <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Step actions">
           <button type="button" className={tb} onClick={() => ui.edit?.(idx)}>Edit text</button>
@@ -104,23 +109,28 @@ export function StepNode({ data, selected }) {
           <button type="button" className={`${tb} text-red-700`} onClick={() => ui.del?.(idx)}>Delete</button>
         </div>
       )}
-      <div className={`h-[74px] w-[180px] overflow-hidden rounded-lg border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-sm shadow-sm ${selected ? 'ring-2 ring-blue-600' : ''}`} title={st.note}>
-        {/* while an arrow is being dragged, the whole step is where it can land */}
-        <Handle type="target" position={Position.Left} style={{ top: 0, left: 0, width: '100%', height: '100%', transform: 'none', borderRadius: 8, opacity: 0, pointerEvents: connecting ? 'all' : 'none' }} />
-        <Handle type="source" position={Position.Right} />
-        <Handle id="bs" type="source" position={Position.Bottom} />
-        <Handle id="bt" type="target" position={Position.Bottom} />
-        <div className="flex items-start gap-1.5"><span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-600 text-[10px] text-white">{idx + 1}</span>
-          {editing
-            ? <AutoInput aria-label="Step text" className="nodrag nopan min-w-0 flex-1 rounded border border-blue-500 bg-white px-1 text-sm font-semibold" defaultValue={st.title} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') ui.commitTitle?.(idx, e.currentTarget.value); else if (e.key === 'Escape') ui.stopEdit?.(); }} onBlur={(e) => ui.commitTitle?.(idx, e.currentTarget.value)} />
-            : <b className="leading-tight">{st.title}</b>}
-        </div>
-        <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
-          {st.day && <span className="rounded bg-slate-200 px-1">{st.day}</span>}
-          {st.sheet && <span className="rounded bg-emerald-200 px-1">{st.sheet}</span>}
-          {st.ticket && <span className="rounded bg-blue-200 px-1">{st.ticket}</span>}
-        </div>
-      </div>
+      {/* while an arrow is being dragged, the whole step is where it can land */}
+      <Handle type="target" position={Position.Left} style={{ top: 0, left: 0, width: '100%', height: '100%', transform: 'none', borderRadius: 8, opacity: 0, pointerEvents: connecting ? 'all' : 'none' }} />
+      <Handle type="source" position={Position.Right} />
+      <Handle id="bs" type="source" position={Position.Bottom} />
+      <Handle id="bt" type="target" position={Position.Bottom} />
+      {kind === 'start' || kind === 'end'
+        ? <div className="flex h-full items-center" title={st.note}>
+            <div className={`flex h-11 w-full items-center justify-center gap-1.5 rounded-full border-2 px-3 text-sm shadow-sm ${kind === 'start' ? 'border-emerald-500 bg-emerald-100 text-emerald-950' : 'border-slate-600 bg-slate-200 text-slate-900'} ${ring}`}>{title}</div>
+          </div>
+        : kind === 'decision'
+          ? <div className="relative h-full w-full" title={st.note}>
+              <svg className="absolute inset-0" width="180" height="74" viewBox="0 0 180 74" aria-hidden="true"><polygon points="90,2 178,37 90,72 2,37" fill="#fef3c7" stroke={selected ? '#2563eb' : '#f59e0b'} strokeWidth={selected ? 3 : 2} /></svg>
+              <div className="absolute inset-y-0 left-[38px] right-[38px] flex items-center justify-center text-center text-xs">{title}</div>
+            </div>
+          : <div className={`h-full w-full overflow-hidden rounded-lg border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-sm shadow-sm ${ring}`} title={st.note}>
+              <div className="flex items-start gap-1.5"><span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-blue-600 text-[10px] text-white">{idx + 1}</span>{title}</div>
+              <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+                {st.day && <span className="rounded bg-slate-200 px-1">{st.day}</span>}
+                {st.sheet && <span className="rounded bg-emerald-200 px-1">{st.sheet}</span>}
+                {st.ticket && <span className="rounded bg-blue-200 px-1">{st.ticket}</span>}
+              </div>
+            </div>}
     </div>
   );
 }

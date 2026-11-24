@@ -5,7 +5,7 @@ import { Canvas, Select, Btn } from '../components/ui.jsx';
 import { FlowUi } from '../components/nodes.jsx';
 import { useRecords, apply } from '../lib/records.js';
 import * as o from '../lib/ops.js';
-import { connect, removeArrow } from '../lib/flow-edit.js';
+import { connect, removeArrow, branchLabel } from '../lib/flow-edit.js';
 import FlowEdit from '../components/FlowEdit.jsx';
 
 /* Business flows as swimlanes (one lane per team; blue arrows are hand-offs, dashed red arrows send work back). The diagram is the editor:
@@ -13,16 +13,17 @@ import FlowEdit from '../components/FlowEdit.jsx';
  * double-click an empty lane to add a step (Enter adds the next), Delete removes what is selected. Every change goes through apply(), so it undoes. */
 export default function Flows({ idx, setIdx }) {
   const { data, rev } = useRecords(), [editing, setEditing] = useState(true), [name, setName] = useState(''), [laneName, setLaneName] = useState('');
-  const [typing, setTyping] = useState(null), [editingNote, setEditingNote] = useState(null), [noteDraft, setNoteDraft] = useState(null), [draft, setDraft] = useState(null), [hot, setHot] = useState(null), [tick, setTick] = useState(0), [selIdx, setSelIdx] = useState(null);
+  const [typing, setTyping] = useState(null), [editingNote, setEditingNote] = useState(null), [noteDraft, setNoteDraft] = useState(null), [draft, setDraft] = useState(null), [hot, setHot] = useState(null), [tick, setTick] = useState(0), [selIdx, setSelIdx] = useState(null), [selArrow, setSelArrow] = useState(null);
   const inst = useRef(null), box = useRef(null);
   const f = flows[idx], meta = data.flows[idx];
   const stepAt = (id) => (id ? meta.steps.findIndex((x) => x.id === id) : null);
   const graph = useMemo(() => (f ? buildFlow(f, {
     draft: draft && { team: draft.team, key: draft.key, from: draft.fromId ? stepAt(draft.fromId) : null },
     notes: (meta.notes || []).map((n) => ({ id: n.id, text: n.text, x: n.x, y: n.y, pinned: !!n.stepId, at: stepAt(n.stepId) })),
+    kinds: meta.steps.map((x) => x.kind || null),
     noteDraft: noteDraft && { x: noteDraft.x, y: noteDraft.y, key: noteDraft.key, at: stepAt(noteDraft.stepId) },
   }) : null), [f, rev, tick, draft, noteDraft]);
-  useEffect(() => { setTyping(null); setDraft(null); setSelIdx(null); setHot(null); setEditingNote(null); setNoteDraft(null); }, [idx]);
+  useEffect(() => { setTyping(null); setDraft(null); setSelIdx(null); setHot(null); setEditingNote(null); setNoteDraft(null); setSelArrow(null); }, [idx]);
   const create = () => { if (!name.trim()) return; const n = data.flows.length; if (apply((d) => o.addFlow(d, { title: name }))) { setName(''); setIdx(n); setEditing(true); } };
 
   const FID = meta?.id, sid = (i) => meta?.steps[i]?.id;
@@ -41,7 +42,8 @@ export default function Flows({ idx, setIdx }) {
       let lastId = null;
       const ok = apply((d) => {
         let prev = draft.fromId || null;
-        for (const title of lines) prev = o.addStep(d, FID, { team, title, afterStepId: prev, ...(prev ? { triggers: [{ stepId: prev, msg: '' }] } : { standalone: true }) });
+        const fl = d.flows.find((x) => x.id === FID);
+        for (const title of lines) prev = o.addStep(d, FID, { team, title, afterStepId: prev, ...(prev ? { triggers: [{ stepId: prev, msg: branchLabel(fl, fl.steps.find((x) => x.id === prev)) }] } : { standalone: true }) });
         lastId = prev;
       });
       if (!ok) return setDraft(null);
@@ -115,11 +117,11 @@ export default function Flows({ idx, setIdx }) {
             {meta?.note && <div className="whitespace-pre-wrap border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-sm text-slate-700" aria-label="Flow note">{meta.note}</div>}
             <div ref={box} className="min-h-0 flex-1" onDoubleClick={(e) => { if (e.target.classList?.contains('react-flow__pane')) newNote(e); }}>
             {graph.nodes.length
-              ? <FlowUi.Provider value={ui}><Canvas graph={graph} fitKey={'flow' + idx} rf={rf} onConnect={onConnect} onNode={(n) => setSelIdx(n?.type === 'step' ? n.data.idx : null)} /></FlowUi.Provider>
+              ? <FlowUi.Provider value={ui}><Canvas graph={graph} fitKey={'flow' + idx} rf={rf} onConnect={onConnect} onNode={(n) => { setSelIdx(n?.type === 'step' ? n.data.idx : null); setSelArrow(null); }} onEdge={(e) => { if (e.data) { setSelArrow(e.data); setSelIdx(null); } }} /></FlowUi.Provider>
               : <p className="p-8 text-slate-500">This flow has no lanes yet. Add a lane above (a team, like Finance), then double-click it to add the first step.</p>}
             </div>
           </div>
-          {editing && meta && <aside className="w-[360px] shrink-0 overflow-auto border-l border-slate-200 bg-white p-4"><FlowEdit key={meta.id} flowId={meta.id} stepId={selIdx != null ? sid(selIdx) : null} onDeleted={() => setIdx(0)} /></aside>}
+          {editing && meta && <aside className="w-[360px] shrink-0 overflow-auto border-l border-slate-200 bg-white p-4"><FlowEdit key={meta.id} flowId={meta.id} stepId={selIdx != null ? sid(selIdx) : null} arrow={selArrow} onArrowGone={() => setSelArrow(null)} onDeleted={() => setIdx(0)} /></aside>}
         </div>
       )}
     </div>
