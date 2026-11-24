@@ -18,9 +18,9 @@ export async function aiTest() {
 
 /* Ask the server to turn a brief into a flow. The server builds the rest of what is sent (descriptions, sheet names) from the Data file on disk,
  * strips emails and ticket ids, and checks the answer. Resolves to { ok: true, flow, label } or { ok: false, error }. */
-export async function aiGenerate({ mapId, title, brief, draft }) {
+export async function aiGenerate({ mapId, title, brief, draft, instruction, flow }) {
   try {
-    const r = await fetch('/api/ai/flow', { method: 'POST', headers: { 'X-Map-Save': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ mapId, title, brief, draft }) });
+    const r = await fetch('/api/ai/flow', { method: 'POST', headers: { 'X-Map-Save': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ mapId, title, brief, draft, instruction, flow }) });
     return await r.json();
   } catch { return { ok: false, error: 'Could not reach the local server.' }; }
 }

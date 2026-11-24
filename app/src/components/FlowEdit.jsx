@@ -6,6 +6,7 @@ import { CommitInput, Btn } from './ui.jsx';
 import { MAX_TEXT_CHARS } from '../lib/ai.js';
 import { useState } from 'react';
 import GenerateFlow from './GenerateFlow.jsx';
+import AskAi from './AskAi.jsx';
 
 const sel = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm';
 const L = ({ t, children }) => <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">{t}<div className="mt-0.5 text-sm font-normal normal-case tracking-normal text-slate-900">{children}</div></label>;
@@ -28,6 +29,7 @@ export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null,
         <div className="text-[11px] text-slate-500">Saved with the flow. Up to {MAX_TEXT_CHARS} characters each.</div>
         <GenerateFlow flow={flow} mapName={mapName} />
       </div>
+      <AskAi flow={flow} mapName={mapName} />
       <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
       {arrow && !stepId && (() => {
         const from = arrow.kind === 'trigger' ? arrow.from : arrow.from, to = arrow.to, name = (i) => `${i + 1}. ${flow.steps[i]?.title ?? ''}`, back = arrow.kind === 'back';

@@ -29,10 +29,16 @@ Only when you use an AI feature, and only to the one provider named in the file:
 
 On a Flow with no steps, write a brief (and, if you like, a rough draft of the steps) in **Describe your case**, then press **Generate flow**. The first time, a notice names the provider and asks you to confirm. The AI's answer is checked on the server (unknown sheets are kept as plain text and flagged, step references are validated, limits of 40 steps and 12 teams apply) and shown as a preview of the real diagram. Nothing changes until you press **Accept**; one **Undo** takes the whole flow back, and nothing is written to disk until you press **Save**.
 
+## Ask AI
+
+On a Flow that already has steps, type a change in **Ask AI to change this flow** ("add a QA check before Finance") and press **Ask AI**. The preview draws the result with each step marked: green and NEW for added steps, amber and CHANGED for steps whose words changed, red, struck through and REMOVED for steps that would go. A list says the same in words, including how many arrows change and which notes are new. **Discard** changes nothing. **Accept** applies everything in one step: one **Undo** takes it all back, a removed step lands in **Removed** and can be restored, and nothing is written to disk until you press **Save**.
+
+Steps the AI keeps stay the same entries: their ticket, note and sheet are not touched unless the AI changed them. The AI is only given the words on the flow, so a text it hands back with an email or ticket id replaced by `[email removed]` or `[ticket]` is treated as unchanged and never overwrites your real text. Ask AI only adds notes; it never edits or deletes the ones you wrote, and it leaves "sent back" arrows alone.
+
 ## Limits
 
 The brief and the draft are each limited to 8000 characters, so one request has a bounded cost. A missing or wrong key, a provider outage or an empty answer leaves your data untouched and shows a short reason.
 
 ## For developers
 
-Tests never call a real provider: `scripts/lib/ai_stub.py` fakes both APIs. Run `python3 scripts/test_ai.py`, `python3 scripts/test_ai_flow.py`, `node scripts/e2e-ai-setup.mjs` and `node scripts/e2e-ai-generate.mjs`. DeepSeek's model name and base URL were checked against its docs (api-docs.deepseek.com) on 2026-11-24; thinking mode is turned off for these calls and has not been tried against the live service.
+Tests never call a real provider: `scripts/lib/ai_stub.py` fakes both APIs. Run `python3 scripts/test_ai.py`, `python3 scripts/test_ai_flow.py`, `node scripts/e2e-ai-setup.mjs` and `node scripts/e2e-ai-generate.mjs` and `node scripts/e2e-ai-edit.mjs`. DeepSeek's model name and base URL were checked against its docs (api-docs.deepseek.com) on 2026-11-24; thinking mode is turned off for these calls and has not been tried against the live service.

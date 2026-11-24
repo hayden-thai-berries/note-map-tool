@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { buildFlow } from '../graph.js';
+import { drawCopy } from './flow-preview.js';
 import { Canvas, Btn } from './ui.jsx';
 import { FlowUi } from './nodes.jsx';
 import { apply, useRecords } from '../lib/records.js';
 import { validate } from '../lib/schema.js';
-import { exportLegacy } from '../lib/export-legacy.js';
-import { parseFlows } from '../lib/flows-parser.js';
 import { applyGenerated } from '../lib/ai-flow.js';
 import { aiStatus, aiGenerate, aiNotice, noticeSeen, markNoticeSeen } from '../lib/ai.js';
 
@@ -17,8 +15,7 @@ function preview(data, flowId, gen) {
   try {
     const copy = structuredClone(data); applyGenerated(copy, flowId, gen);
     const bad = validate(copy); if (bad.length) return { error: 'The result would break the data file (' + bad[0] + '), so nothing was changed.' };
-    const i = copy.flows.findIndex((x) => x.id === flowId), meta = copy.flows[i], legacy = parseFlows(exportLegacy(copy).flowsMd)[i], at = (id) => meta.steps.findIndex((x) => x.id === id);
-    return { graph: buildFlow(legacy, { kinds: meta.steps.map((x) => x.kind || null), notes: (meta.notes || []).map((n) => ({ id: n.id, text: n.text, x: n.x, y: n.y, pinned: !!n.stepId, at: n.stepId ? at(n.stepId) : null })) }) };
+    return { graph: drawCopy(copy, flowId) };
   } catch (e) { return { error: e.message }; }
 }
 

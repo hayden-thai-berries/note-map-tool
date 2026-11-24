@@ -1,6 +1,6 @@
 # Plan: Business flow canvas and AI flows
 
-Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); tickets 04, 05 and 06 (brief, AI provider setup, Generate) are built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
+Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); tickets 04, 05, 06 and 08 (brief, AI provider setup, Generate, Ask AI) are built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
 
 ## Goal
 
@@ -129,7 +129,7 @@ Recommended by the assistant and confirmed by the user ("yes"):
 
 **Built (ticket 06):** a **Generate flow** button in the Describe your case card, for an empty flow only. `POST /api/ai/flow` (`ai_flow.py`) builds the request from the brief, the draft, Department and Function descriptions and sheet and app names, strips emails and ticket ids, and checks the answer (valid JSON, at most 40 steps and 12 teams, arrows only to earlier steps, sheets matched by name, unknown ones kept as text and flagged). The page draws a read-only preview with the chart type and reason, and Accept applies it in one `apply` (one Undo). The AI always answers `swimlane` for now; ticket 07 adds the other chart types. Tests: `scripts/test_ai_flow.py`, `scripts/test-ai-flow.mjs`, `scripts/e2e-ai-generate.mjs`. Screenshot: `docs/screenshots/ai-generate-preview.png`.
 
-Done when: a brief produces a valid Flow in a sensible chart type, an Ask AI edit previews and applies with undo, and a missing key or a bad response leaves the data untouched.
+**Built (ticket 08):** an **Ask AI** card on a flow that has steps. The page sends the words on the flow (with the arrows spelled out the way the diagram draws them, no tickets) and the request; the AI returns the whole flow with a `was` number on each step it keeps. `applyEdit` keeps those steps' ids, tickets and sheets, changes only the words that differ, adds new steps where the AI put them, sends dropped steps to Removed and adds new notes (existing notes and "sent back" arrows are never touched). The preview marks new, changed and removed steps and lists the changes in words; Accept is one `apply`. A field the AI leaves out, or a copy with `[email removed]` in it, means unchanged. Tests: `scripts/test_ai_flow.py`, `scripts/test-ai-flow.mjs`, `scripts/e2e-ai-edit.mjs`. Screenshot: `docs/screenshots/ai-ask-preview.png`. Swimlane only; ticket 07 adds the other chart types.\n\nDone when: a brief produces a valid Flow in a sensible chart type, an Ask AI edit previews and applies with undo, and a missing key or a bad response leaves the data untouched.
 
 ## Phase 6: Flow map (ticket 03)
 

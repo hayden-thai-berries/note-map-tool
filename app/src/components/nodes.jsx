@@ -93,14 +93,17 @@ export function LaneNode({ data }) {
 }
 
 /* A step. Its shape says what it is: a plain box, a start or end pill, or a decision diamond (the shape lives in the Data file). */
+/* In an "Ask AI" preview a step is marked: new, changed (its words differ), or about to be removed (struck through). */
+const DIFF = { new: { label: 'NEW', tag: 'bg-emerald-600', box: 'rounded-xl outline outline-4 outline-emerald-400' }, changed: { label: 'CHANGED', tag: 'bg-amber-600', box: 'rounded-xl outline outline-4 outline-amber-400' }, removed: { label: 'REMOVED', tag: 'bg-red-600', box: 'rounded-xl opacity-60 outline-dashed outline-4 outline-red-400 [&_b]:line-through' } };
 export function StepNode({ data, selected }) {
-  const { st, idx, kind } = data, ui = useContext(FlowUi), editing = ui.editing === idx, connecting = useConnection().inProgress;
+  const { st, idx, kind, diff } = data, ui = useContext(FlowUi), editing = ui.editing === idx, connecting = useConnection().inProgress;
   const title = editing
     ? <AutoInput aria-label="Step text" className="nodrag nopan min-w-0 flex-1 rounded border border-blue-500 bg-white px-1 text-sm font-semibold" defaultValue={st.title} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') ui.commitTitle?.(idx, e.currentTarget.value); else if (e.key === 'Escape') ui.stopEdit?.(); }} onBlur={(e) => ui.commitTitle?.(idx, e.currentTarget.value)} />
     : <b className="leading-tight">{st.title}</b>;
   const ring = selected ? 'ring-2 ring-blue-600' : '';
   return (
-    <div className="relative h-[74px] w-[180px]" data-kind={kind || 'step'}>
+    <div className={`relative h-[74px] w-[180px] ${DIFF[diff]?.box || ''}`} data-kind={kind || 'step'} data-diff={diff || undefined}>
+      {diff && <span className={`absolute -top-2 right-0 z-10 rounded-full px-1.5 text-[10px] font-bold text-white ${DIFF[diff].tag}`}>{DIFF[diff].label}</span>}
       {selected && !editing && (
         <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Step actions">
           <button type="button" className={tb} onClick={() => ui.edit?.(idx)}>Edit text</button>

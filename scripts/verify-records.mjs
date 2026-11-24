@@ -50,6 +50,6 @@ for (const f of fs.readdirSync(dir).sort().filter((x) => x.endsWith('.md') && !x
 }
 /* 5. data files already written */
 const dd = path.join(root, 'data');
-if (fs.existsSync(dd)) for (const f of fs.readdirSync(dd).filter((x) => x.endsWith('.json')).sort()) { const raw = JSON.parse(fs.readFileSync(path.join(dd, f), 'utf8')), up = upgrade(raw), p = validate(up.data); say('data/' + f, 'valid data file', !p.length, p.length ? ' | ' + p.join('; ') : up.changes.length ? ` | will be upgraded when opened (${up.changes.join('; ')}); nothing is lost` : ''); }
+if (fs.existsSync(dd)) for (const f of fs.readdirSync(dd).filter((x) => x.endsWith('.json') && !x.startsWith('.')).sort()) { const raw = JSON.parse(fs.readFileSync(path.join(dd, f), 'utf8')), up = upgrade(raw), p = validate(up.data); say('data/' + f, 'valid data file', !p.length, p.length ? ' | ' + p.join('; ') : up.changes.length ? ` | will be upgraded when opened (${up.changes.join('; ')}); nothing is lost` : ''); }
 console.log(bad ? `\n${bad} PROBLEM(S): do not migrate.` : '\nAll records pass: nothing lost, new parsers identical to the old ones.');
 process.exit(bad ? 1 : 0);

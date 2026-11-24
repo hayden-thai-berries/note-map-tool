@@ -29,6 +29,21 @@ Rules:
 - Always answer with "chart": "swimlane" for now. Keep titles short. Use the user's language."""
 
 
+SYSTEM_EDIT = """You edit an existing business-process flow diagram, as JSON only (no prose, no code fences).
+You get the current flow (its steps are numbered from 0, each with the steps it waits on), the user's instruction, and the sheets and apps on the map.
+Answer with the COMPLETE flow after the change, in this shape:
+{"chart": "swimlane", "reason": "one short sentence", "summary": "what you changed, in one sentence", "teams": ["Sales", "Finance"],
+ "steps": [{"was": 0, "team": "Sales", "title": "Send the quote", "kind": "start|step|decision|end", "day": null, "sheet": null, "note": "",
+            "waits": [{"on": 0, "msg": "what is handed over"}]}],
+ "notes": [{"text": "an assumption or open question", "step": null}]}
+Rules:
+- "was" is the number the step has in the CURRENT flow. Every step you keep must have its "was" and keep its words unless the instruction asks to change them. A step with no "was" (or null) is new. A current step you leave out is deleted. Keep the kept steps in their current order.
+- "waits" are the steps this step waits on, by 0-based index in YOUR new list (not the old numbers); "on" must be smaller than the step's own index. Keep existing arrows unless the instruction changes them. A decision's outgoing arrows use the msg "Yes" and "No".
+- At most 40 steps and 12 teams. "sheet" must be copied exactly from the list given, or null; never invent one.
+- "notes" are only NEW notes (assumptions, open questions). Do not repeat notes that already exist.
+- Change only what the instruction asks for. If it is unclear, change nothing and say so in "summary"."""
+
+
 def clean(text):
     """Strip what must never leave: email addresses and ticket ids."""
     return TICKET.sub("[ticket]", EMAIL.sub("[email removed]", str(text or "")))
@@ -69,7 +84,7 @@ def _text(v, limit):
     return re.sub(r"\s+", " ", v).strip()[:limit] if isinstance(v, str) else ""
 
 
-def parse_answer(raw, sheet_names):
+def parse_answer(raw, sheet_names, current_count=None):
     """The AI's reply -> a checked flow, or AiError. Unknown sheet names are kept as plain text and listed in 'unknownSheets'."""
     s = raw.strip()
     m = re.search(r"```(?:json)?\s*(.*?)```", s, re.S)
@@ -98,13 +113,19 @@ def parse_answer(raw, sheet_names):
             on = w.get("on") if isinstance(w, dict) else None
             if isinstance(on, int) and not isinstance(on, bool) and 0 <= on < i and on not in [x["on"] for x in waits]:
                 waits.append({"on": on, "msg": _text(w.get("msg"), 80)})
+        was = st.get("was")
+        was = was if current_count and isinstance(was, int) and not isinstance(was, bool) and 0 <= was < current_count and was not in [x.get("was") for x in steps] else None
         sheet, sheet_name = None, None
         raw_sheet = _text(st.get("sheet"), 100)
         if raw_sheet:
             if raw_sheet.lower() in known: sheet = known[raw_sheet.lower()]
             else: sheet_name = raw_sheet; unknown.append(raw_sheet)
-        steps.append({"team": team, "title": title, "kind": None if kind == "step" else kind, "day": st.get("day") if st.get("day") in DAYS else None,
+        omit = ()
+        if current_count: omit = tuple(k for k in ("kind", "day", "note", "sheet") if k not in st)   # in an edit, a field the AI left out means "unchanged"
+        item = ({"was": was, "team": team, "title": title, "kind": kind if current_count else (None if kind == "step" else kind), "day": st.get("day") if st.get("day") in DAYS else None,
                       "sheet": sheet, "sheetName": sheet_name, "note": _text(st.get("note"), 400), "waits": waits})
+        for k in omit: item.pop(k, None); item.pop("sheetName", None) if k == "sheet" else None
+        steps.append(item)
     if len(teams) > MAX_TEAMS:
         raise ai.AiError("The AI used %d teams; the limit is %d. Nothing was changed; ask for fewer teams." % (len(teams), MAX_TEAMS))
     notes = []
@@ -113,18 +134,39 @@ def parse_answer(raw, sheet_names):
         at = n.get("step") if isinstance(n, dict) else None
         if text: notes.append({"text": text, "step": at if isinstance(at, int) and not isinstance(at, bool) and 0 <= at < len(steps) else None})
     chart = j.get("chart") if j.get("chart") in CHARTS else "swimlane"
-    return {"chart": chart, "reason": _text(j.get("reason"), 200), "teams": teams, "steps": steps, "notes": notes, "unknownSheets": sorted(set(unknown))}
+    return {"chart": chart, "reason": _text(j.get("reason"), 200), "teams": teams, "steps": steps, "notes": notes, "summary": _text(j.get("summary"), 300), "unknownSheets": sorted(set(unknown))}
 
 
-def generate(root, map_id, title, brief, draft):
-    """The whole request. Returns {'ok': True, 'flow': ..., 'provider': ...} or {'ok': False, 'error': ...}. Never raises."""
+def current_flow(raw):
+    """The flow the page says is open, reduced to the fields the AI needs. Anything else (tickets, ids, positions, arrows sent back) is dropped."""
+    if not isinstance(raw, dict) or not isinstance(raw.get("steps"), list) or not raw["steps"] or len(raw["steps"]) > MAX_STEPS:
+        raise ai.AiError("There is no flow to change yet. Use Generate flow on an empty flow first.")
+    steps = []
+    for i, st in enumerate(raw["steps"]):
+        if not isinstance(st, dict): raise ai.AiError("The flow could not be read.")
+        waits = [{"on": w["on"], "msg": clean(_text(w.get("msg"), 80))} for w in (st.get("waits") or []) if isinstance(w, dict) and isinstance(w.get("on"), int) and not isinstance(w.get("on"), bool) and 0 <= w["on"] < i]
+        steps.append({"n": i, "team": clean(_text(st.get("team"), 60)), "title": clean(_text(st.get("title"), 140)), "kind": st.get("kind") if st.get("kind") in KINDS else "step",
+                      "day": st.get("day") if st.get("day") in DAYS else None, "sheet": clean(_text(st.get("sheet"), 100)) or None, "note": clean(_text(st.get("note"), 400)), "waits": waits})
+    return steps
+
+
+def generate(root, map_id, title, brief, draft, instruction=None, flow=None):
+    """The whole request. Returns {'ok': True, 'flow': ..., 'provider': ...} or {'ok': False, 'error': ...}. Never raises.
+    With an instruction it edits the flow the page sent instead of making one from the brief."""
     cfg, problem = ai.load_config(root)
     if not cfg: return {"ok": False, "error": problem}
     try:
         brief, draft, title = (x if isinstance(x, str) else "" for x in (brief, draft, title))
+        ctx = map_context(root, map_id)
+        if instruction is not None:
+            if not isinstance(instruction, str) or not instruction.strip(): raise ai.AiError("Type the change you want first.")
+            ai.check_length(instruction=instruction, brief=brief)
+            cur = current_flow(flow)
+            user = build_user_message(title, brief, "", ctx) + "\n\nCurrent flow (JSON):\n" + json.dumps(cur, ensure_ascii=False) + "\n\nInstruction:\n" + clean(instruction)
+            raw = ai.complete(cfg, SYSTEM_EDIT, user, max_tokens=ai.MAX_OUT_TOKENS)
+            return {"ok": True, "flow": parse_answer(raw, ctx["sheets"], len(cur)), "provider": cfg["provider"], "label": cfg["label"]}
         if not brief.strip() and not draft.strip(): raise ai.AiError("Write a brief or a rough draft first, so the AI has something to work from.")
         ai.check_length(brief=brief, draft=draft)
-        ctx = map_context(root, map_id)
         raw = ai.complete(cfg, SYSTEM, build_user_message(title, brief, draft, ctx), max_tokens=ai.MAX_OUT_TOKENS)
         return {"ok": True, "flow": parse_answer(raw, ctx["sheets"]), "provider": cfg["provider"], "label": cfg["label"]}
     except ai.AiError as e:

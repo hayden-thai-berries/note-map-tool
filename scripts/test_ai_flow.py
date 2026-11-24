@@ -21,7 +21,7 @@ GOOD = {"chart": "swimlane", "reason": "Two teams hand work over.", "teams": ["S
     "notes": [{"text": "I assumed Finance approves", "step": 1}, {"text": "Who owns pricing?", "step": None}]}
 
 
-class Generate(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); os.makedirs(os.path.join(self.tmp.name, "data"))
         with open(os.path.join(self.tmp.name, "data", "m.json"), "w") as f: json.dump(DATA, f)
@@ -44,6 +44,8 @@ class Generate(unittest.TestCase):
 
     def sent(self): return json.dumps(self.stub.requests[0]["body"])
 
+
+class Generate(Base):
     # what is sent
     def test_only_allowed_text_is_sent_and_emails_and_tickets_are_stripped(self):
         self.on(GOOD)
@@ -103,6 +105,52 @@ class Generate(unittest.TestCase):
     def test_deepseek_reply_works_too(self):
         self.on(GOOD, "deepseek"); self.assertTrue(self.post({"mapId": "m", "title": "t", "brief": "b"})[1]["ok"])
         self.assertEqual(self.stub.requests[0]["path"], "/chat/completions")
+
+
+EDIT_ANSWER = {"chart": "swimlane", "summary": "Added a QA check", "teams": ["Sales", "Finance"], "steps": [
+    {"was": 0, "team": "Sales", "title": "Send quote", "kind": "start"},
+    {"was": 1, "team": "Finance", "title": "Price OK?", "kind": "decision", "waits": [{"on": 0, "msg": "quote"}]},
+    {"team": "Finance", "title": "QA check", "waits": [{"on": 1, "msg": "Yes"}]},
+    {"was": 1, "team": "Sales", "title": "dup was", "waits": [{"on": 1}]},
+    {"was": 99, "team": "Sales", "title": "bad was"}],
+    "notes": [{"text": "Who does QA?", "step": 2}]}
+CURRENT = {"steps": [{"team": "Sales", "title": "Send quote", "kind": "start", "ticket": "T20261112.001", "x": 5, "waits": []},
+                     {"team": "Finance", "title": "Price OK? mail a@b.com", "kind": "decision", "note": "see T20261113.002", "waits": [{"on": 0, "msg": "quote"}, {"on": 5}]}]}
+
+
+class Edit(Base):
+    def test_edit_sends_the_current_flow_and_the_instruction_and_nothing_private(self):
+        self.on(EDIT_ANSWER)
+        out = self.post({"mapId": "m", "title": "Quotes", "brief": "Mail x@y.com", "instruction": "add a QA check after pricing, mail me@z.com", "flow": CURRENT})[1]
+        self.assertTrue(out["ok"], out); sent = self.sent()
+        for good in ("Send quote", "QA check after pricing", "Current flow", "Payroll Sheet"): self.assertIn(good, sent)
+        for bad in ("T20261112", "T20261113", "a@b.com", "me@z.com", "x@y.com", "secret.person", "SECRET-TICKET-TITLE", "OTHER-FLOW-TITLE", '"x": 5', KEY): self.assertNotIn(bad, sent, bad)
+        self.assertIn("[email removed]", sent); self.assertIn("[ticket]", sent)
+
+    def test_edit_answers_keep_valid_was_numbers_only_once_and_add_summary_and_notes(self):
+        self.on(EDIT_ANSWER)
+        f = self.post({"mapId": "m", "title": "t", "instruction": "go", "flow": CURRENT})[1]["flow"]
+        self.assertEqual([s["was"] for s in f["steps"]], [0, 1, None, None, None]); self.assertEqual(f["summary"], "Added a QA check"); self.assertEqual(f["notes"][0]["step"], 2)
+
+    def test_edit_needs_an_instruction_and_a_flow_and_respects_the_limit(self):
+        self.on(EDIT_ANSWER)
+        self.assertIn("Type the change", self.post({"mapId": "m", "instruction": "  ", "flow": CURRENT})[1]["error"])
+        self.assertIn("no flow to change", self.post({"mapId": "m", "instruction": "x", "flow": {"steps": []}})[1]["error"])
+        self.assertIn("no flow to change", self.post({"mapId": "m", "instruction": "x"})[1]["error"])
+        self.assertIn("too long", self.post({"mapId": "m", "instruction": "x" * (ai.MAX_TEXT_CHARS + 1), "flow": CURRENT})[1]["error"]); self.assertEqual(self.stub.requests, [])
+
+    def test_in_an_edit_a_field_the_ai_leaves_out_stays_absent_so_it_means_unchanged(self):
+        f = ai_flow.parse_answer(json.dumps({"steps": [{"was": 0, "team": "A", "title": "x"}, {"was": 1, "team": "A", "title": "y", "note": "n", "kind": "step", "sheet": None}]}), [], 2)["steps"]
+        self.assertEqual([k in f[0] for k in ("kind", "day", "note", "sheet", "sheetName")], [False] * 5)
+        self.assertEqual((f[1]["note"], f[1]["kind"], f[1]["sheet"]), ("n", "step", None))
+        g = ai_flow.parse_answer(json.dumps({"steps": [{"team": "A", "title": "x"}]}), [])["steps"][0]
+        self.assertEqual((g["note"], g["kind"]), ("", None))   # making a new flow still fills every field
+
+    def test_a_generate_answer_has_no_was_numbers(self):
+        self.on(GOOD); f = self.post({"mapId": "m", "title": "t", "brief": "b"})[1]["flow"]; self.assertEqual([s["was"] for s in f["steps"]], [None] * 4)
+
+    def test_a_bad_edit_answer_is_an_error(self):
+        self.on("nonsense"); out = self.post({"mapId": "m", "instruction": "x", "flow": CURRENT})[1]; self.assertFalse(out["ok"])
 
 
 if __name__ == "__main__":
