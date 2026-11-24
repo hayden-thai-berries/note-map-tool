@@ -1,6 +1,6 @@
 # Plan: Business flow canvas and AI flows
 
-Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below); phases 4 and 5 not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
+Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); ticket 05 (AI provider setup) is built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
 
 ## Goal
 
@@ -10,7 +10,9 @@ Make Business flows simple to build, flexible to note, and clear as a diagram:
 2. Notes are free text, with sticky notes anywhere.
 3. The diagram explains the process: start/end, decisions with labelled branches, labelled hand-offs.
 4. The diagram can be shared as PNG/SVG (Mermaid export stays).
-5. The user writes descriptions per Department and Function, and AI generates and later edits the flow.
+5. The user writes a brief (and optionally a rough draft of the steps); AI suggests a chart that suits it (swimlane, flowchart, waterfall or entity) and later edits it on request.
+6. Simple PowerPoint-like shapes on a free canvas: rectangle, rounded, pill, diamond, entity box, note and labelled arrows.
+7. Flows connect to each other and can be seen together on a Flow map.
 
 ## Rules that apply to every phase
 
@@ -29,15 +31,23 @@ Make Business flows simple to build, flexible to note, and clear as a diagram:
 
 ## Build order
 
+Phases 1 to 3 are done. The rest, by ticket (numbers are files in `.scratch/flow-ai/issues/`):
+
 ```mermaid
 flowchart LR
-  P1[1 Canvas editing] --> P2[2 Notes]
-  P1 --> P3[3 Start, end, decisions]
-  P2 --> P4[4 Export image and skins]
-  P3 --> P4
-  P1 --> P5[5 AI flows]
-  P3 --> P5
+  T5[05 AI provider] --> T6[06 Generate swimlane]
+  T4[04 Brief on Flow] --> T6
+  T1[01 Free canvas] --> T2[02 Entity and shapes]
+  T2 --> T7[07 AI picks chart type]
+  T6 --> T7
+  T6 --> T8[08 Ask AI edit]
+  T2 --> T9[09 Image export and skins]
+  T2 --> T10[10 Mermaid export]
+  T3[03 Flow map]
+  T11[11 Swimlane layout fixes]
 ```
+
+**Suggested order:** 05, 04, 06 first, so "brief in, suggested swimlane out" works within three tickets. Then 01 and 02, then 07 and 08. Tickets 03, 09, 10 and 11 can go in at any time.
 
 ## Phase 1: Edit on the canvas
 
@@ -71,39 +81,66 @@ flowchart LR
 - **Built (phase 3):** optional step `kind` (`start`, `end`, `decision`; absent means an ordinary step), set from a "Shape" field in the step details. Start/end draw as pills and a decision as a diamond. The first two arrows out of a decision are labelled Yes and No, both when drawn and when made with "+ Next". Clicking an arrow now opens its details to edit the message (a "Branch label" for a decision) or delete it, which also finished the phase 1 item about selecting arrows. The canvas reads `kind` from the Data file, because the old Markdown format has no place for it; the legacy export is unchanged and the new-fields export names shapes in comment lines. Tests: `scripts/test-flow-shapes.mjs`, `scripts/e2e-flow-shapes.mjs`.
 - **Known limit:** two branches out of a decision that land in the same lane sit in one row, so the first branch's arrow (and its label) run behind the second box. Different lanes look right. Worth a layout fix (stack same-lane branches) as a follow-up.
 
-## Phase 4: Export image
+## Decisions for phases 4 to 7
 
-- Export the swimlane as SVG and PNG (client side, from the rendered diagram, including notes). Mermaid `.md` export stays.
-- Skins (Paper light, Blueprint dark, Marker sketch) are a styling layer only: tokens for colour, line weight, corner radius and step font. Paper and Blueprint follow the app's light/dark mode; Marker is optional. Concept screens (open in a browser): `docs/flow-concepts/flow-canvas-skins.html`.
-- Done when: an exported image matches the on-screen diagram in the chosen skin.
+Settled with the user:
+- **Shapes** are simple and PowerPoint-like: rectangle (resize for a square), rounded, pill, diamond, entity box, note, and arrows as labelled connectors. Block arrows wait until needed.
+- **AI provider** is Claude or DeepSeek, chosen in a local gitignored config file. Only that provider is ever called.
+- **Flows connect** to each other, and the connected Flows can be seen as one map.
 
-## Phase 5: AI flows
+Recommended by the assistant and confirmed by the user ("yes"):
+- **Two layouts** (tickets 01, 07). A Flow has an optional `layout`: `swimlane` (default; today's behaviour) or `free`. On the free canvas each shape keeps its own position and size and there are no lanes; a Team lane is just a rectangle the user draws. Every later feature must work in both, so the free canvas stays small.
+- **Shapes are steps** (ticket 01). A free-canvas shape is a Flow step with position, size and a shape added, not a new kind of Entry. Generate, Ask AI, notes and Flow connections then treat both layouts the same way. An entity box is a step with shape `entity`.
+- **The free canvas reads the Data file** (ticket 01). The swimlane canvas draws from flows rebuilt from the old Markdown format, which cannot hold positions. The free canvas must draw straight from the Data file, as phase 3 already does for `kind`.
+- **Switching layout** (ticket 01). Swimlane to free canvas only: it copies the current on-screen positions. There is no way back, because hand placement cannot be turned back into lanes and columns without losing it.
+- **The app lays out, not the AI** (ticket 07). The AI returns the steps, arrows, notes and a chart type with a one-line reason. The app computes positions for that chart type. Changing the type in the preview is instant and needs no second AI call.
+- **Chart types** (ticket 07). Swimlane (lanes per Team), flowchart (one column, no lanes), waterfall (stages in a staircase, each starting when the previous one ends; not the financial bar chart), and entity (boxes and relationships). Anything else falls back to the closest of the four, and the reason says so.
+- **One brief, one Flow** (ticket 06). Generating several connected Flows from one brief is left for later.
 
-Builds on Phase 1 (preview highlighting) and Phase 3 (decision kinds).
+## Phase 4: Free canvas and shapes (tickets 01, 02)
 
-**Input.** Department `text`, Function `note`, and a new optional flow `brief` (free text). Nothing else is required.
+- Optional Flow `layout`; on `free`, steps carry `x`, `y`, `w`, `h` and `shape` (`rect`, `rounded`, `pill`, `diamond`, `entity`). Start/end/decision keep working and map to pill and diamond.
+- Drag, resize, type inside, labelled arrows, notes; everything through apply/undo/Removed.
+- Entity box: bold title, free description lines, optional Sheet reference. A relationship is a labelled arrow with text such as "1 to many"; no field types or keys.
+- Done when: an entity diagram and a waterfall can be drawn by hand, saved, reloaded and undone, and old flows are unchanged.
+
+## Phase 5: AI flows (tickets 04, 05, 06, 07, 08)
+
+**Input.** The Flow's **brief** (what the process is for, who is involved, what goes wrong today) and an optional rough **draft** of the steps, both saved on the Flow so the user can edit them and generate again. Department and Function descriptions are optional extra context.
 
 **Server.** Add to `server.py`:
-- `POST /api/ai/flow` with `{ mapId, flowId?, brief?, instruction? }`.
-- The Claude API key and model are read from a local gitignored file (for example `data/.ai.json`: `{ "apiKey", "model" }`; default model `claude-sonnet-5-5`). The key is never sent to the browser or logged.
-- `GET /api/ai/status` tells the browser only whether AI is configured.
+- `POST /api/ai/flow` with `{ mapId, flowId?, instruction? }`; `GET /api/ai/status` returns only whether AI is on and the provider name.
+- Config in a local gitignored file (for example `data/.ai.json`: `{ "provider": "claude" | "deepseek", "apiKey", "model" }`). The key is never sent to the browser or logged. DeepSeek uses its OpenAI-style chat API; check its current model names at build time.
+- A length limit on the brief and draft keeps the cost of each request bounded.
+- Tests use a local stub provider, so no test calls a real AI or needs a key.
 
-**What is sent.** The relevant Department descriptions, Function descriptions, the current flow (for edits), and the names of sheets and apps on the map (for matching). Not sent: member emails, tickets, time logs, other maps.
+**What is sent.** The brief, the draft, the relevant Department and Function descriptions, the current Flow (for edits), and the names of sheets and apps on the map (for matching). Not sent: member emails, tickets, time logs, other maps. The first time the user generates, a notice names the provider and says that this text leaves the computer for that provider's servers.
 
-**What comes back.** A flow in the existing flow shape, validated against `schema.js` before the browser sees it. Invalid output means an error message and no change.
-
-**Sheet matching.** Step sheets are matched by name to real sheets. An unknown name is kept as `sheetName` and flagged with the existing warning. The AI never creates sheets.
+**What comes back.** Steps, arrows, notes and a chart type with a reason, validated against `schema.js` before the browser sees it. Invalid output means an error and no change. Unknown sheet names are kept as plain text and flagged; the AI never creates sheets. Assumptions and open questions arrive as notes, not guesses.
 
 **UI.**
-- "Generate flow" on a new or empty flow, using the descriptions and the brief.
-- "Ask AI" box on a flow: type a change ("add a QA check before Finance"), the AI returns the edited flow.
-- **Preview before apply:** new steps highlighted, removed ones struck through, changed text marked. Accept applies through the normal `apply`/undo path; Discard drops it. Nothing is saved until the user presses Save.
-- No key set: buttons disabled with a short hint. API failure: flow untouched, reason shown.
+- "Generate" on a Flow with a brief. A preview shows the chart type and reason, with an override dropdown. Accept applies through apply/undo; Discard drops it. Nothing is saved until Save.
+- "Ask AI" on an existing Flow: type a change, see a preview with new shapes highlighted, removed ones struck through and changed text marked.
+- No key: buttons disabled with a short hint. API failure: Flow untouched, reason shown. The provider name shows on the button and in the preview.
 
-Done when: a map with written descriptions produces a valid flow, an "Ask AI" edit previews and applies with undo, and a missing key or a bad response leaves the data untouched.
+**Built (ticket 05):** `ai.py` and `server.py` read `data/.ai.json` and answer `GET /api/ai/status` and `POST /api/ai/test`; dot-files in `data/` are never served, listed or written; the Business flows header has an **AI** button that opens a panel with the provider's name, the privacy notice and Test connection. Setup guide: `docs/AI.md`; decision: `docs/adr/0003-ai-calls-only-from-the-server.md`. Tests: `scripts/test_ai.py`, `scripts/e2e-ai-setup.mjs`, with a fake provider in `scripts/lib/ai_stub.py`. DeepSeek thinking mode is turned off for these calls and is untested against the live service.
+
+Done when: a brief produces a valid Flow in a sensible chart type, an Ask AI edit previews and applies with undo, and a missing key or a bad response leaves the data untouched.
+
+## Phase 6: Flow map (ticket 03)
+
+- New **Flow connection** Entry: Flow A leads to Flow B, with an optional label and an optional starting step in A. Not called a Link, which is a data flow between Sheets.
+- A Flow map view under Business flows draws each Flow as a box and each connection as an arrow; clicking a box opens the Flow. Box colour comes from the Department of the Flow's first Team, or a neutral colour when that Team is not a Department.
+- Deleting a connection sends it to Removed. Deleting a Flow sends its connections with it, and restoring the Flow brings them back.
+
+## Phase 7: Share and polish (tickets 09, 10, 11)
+
+- PNG and SVG export of either layout, including notes. Skins (Paper light, Blueprint dark; Marker later) are styling only and also fix the black canvas on a dark-mode OS. Concept screens: `docs/flow-concepts/flow-canvas-skins.html`.
+- Mermaid export in the Flow document. Swimlane and free-canvas Flows keep their steps and arrows, but Mermaid places the boxes itself, so free-canvas positions are not kept. An entity diagram exports as a Mermaid ER diagram.
+- Swimlane fixes left from phase 3: stack two decision branches that land in the same lane, and decide whether dragging within a lane reorders steps.
 
 ## Open items
 
-- Exact `kind` and `notes` field names, to settle when Phase 2 and 3 start (they live in `schema.js` and `upgrade()`).
 - Whether Marker ships in the first release or later.
-- A cap on AI cost per request, if it matters in use.
+- Generating several connected Flows from one brief.
+- Glossary terms to add when they land: Note, Decision, Brief, Layout, Shape, Flow connection, Flow map. (`GLOSSARY.md` is the user's own file; ask before committing it.)
