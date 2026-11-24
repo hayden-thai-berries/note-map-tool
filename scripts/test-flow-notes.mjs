@@ -64,3 +64,19 @@ test('the old file formats do not change because of notes; the "new fields" expo
   const withNew = exportLegacy(d, { withNewFields: true }).flowsMd; assert.match(withNew, /<!-- Flow note: Runs on payday -->/); assert.match(withNew, /<!-- Note: line one \/ line two -> x -->/); assert.equal((withNew.match(/note:/gi) || []).length, 2);
   assert.deepEqual(parseFlows(withNew)[0].steps.map((s) => s.title), ['Top up', 'Check']);
 });
+
+// ---- brief and draft (the text a person writes for AI) ----
+test('a flow has no brief or draft until one is typed, and the old file is still valid', () => {
+  const { d } = build(); assert.equal(d.flows[0].brief, undefined); assert.equal(d.flows[0].draft, undefined); assert.deepEqual(validate(d), []);
+});
+test('a brief and a draft are saved as text, can be cleared, and must be text', () => {
+  const { d, f } = build(); o.updateFlow(d, f, { brief: 'Quotes wait for Finance', draft: '- send\n- check' });
+  assert.deepEqual([d.flows[0].brief, d.flows[0].draft], ['Quotes wait for Finance', '- send\n- check']); assert.deepEqual(validate(d), []);
+  o.updateFlow(d, f, { brief: undefined }); assert.equal(JSON.parse(JSON.stringify(d.flows[0])).brief, undefined); assert.deepEqual(validate(d), []);
+  d.flows[0].draft = 42; assert.match(validate(d).join(), /draft that is not text/);
+});
+test('the brief and draft survive the new-fields export as comments; the default export is unchanged', () => {
+  const { d, f } = build(); const plain = exportLegacy(d).flowsMd; o.updateFlow(d, f, { brief: 'Why\nthis', draft: '- a\n- b' });
+  assert.equal(exportLegacy(d).flowsMd, plain); const out = exportLegacy(d, { withNewFields: true }).flowsMd;
+  assert.match(out, /<!-- Brief: Why \/ this -->/); assert.match(out, /<!-- Draft: - a \/ - b -->/); assert.equal(parseFlows(out)[0].steps.length, 2);
+});

@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] Optional `brief` and `draft` text on the Flow; old flows unchanged
-- [ ] Edits go through apply/undo and persist on Save
-- [ ] Add "Brief" to GLOSSARY.md
+- [x] Optional `brief` and `draft` text on the Flow; old flows unchanged
+- [x] Edits go through apply/undo and persist on Save
+- [x] Add "Brief" to GLOSSARY.md

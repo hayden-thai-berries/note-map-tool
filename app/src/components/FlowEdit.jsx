@@ -3,6 +3,7 @@ import { arrowMessage, setArrowMessage, removeArrow } from '../lib/flow-edit.js'
 import * as o from '../lib/ops.js';
 import { FLOW_DAYS } from '../lib/flows-parser.js';
 import { CommitInput, Btn } from './ui.jsx';
+import { MAX_TEXT_CHARS } from '../lib/ai.js';
 import { useState } from 'react';
 
 const sel = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm';
@@ -19,6 +20,12 @@ export default function FlowEdit({ flowId, stepId = null, arrow = null, onArrowG
       <L t="Flow name"><CommitInput aria-label="Flow name" value={flow.title} onCommit={(v) => v.trim() && ed((d) => o.updateFlow(d, flow.id, { title: v.trim() }))} /></L>
       <L t="Runs (free text)"><CommitInput aria-label="Runs" placeholder="e.g. every Friday" value={flow.every} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { every: v }))} /></L>
       <L t="Flow note"><CommitInput multiline aria-label="Flow note" placeholder="Anything about the whole flow" value={flow.note || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { note: v.trim() ? v : undefined }))} /></L>
+      <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5" role="group" aria-label="Describe your case">
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Describe your case</div>
+        <L t="Brief"><CommitInput multiline aria-label="Brief" maxLength={MAX_TEXT_CHARS} placeholder="What is this process for, who is involved, what goes wrong today?" value={flow.brief || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { brief: v.trim() ? v : undefined }))} /></L>
+        <L t="Rough draft of the steps (optional)"><CommitInput multiline aria-label="Draft" maxLength={MAX_TEXT_CHARS} placeholder={'Bullets or sentences are fine, e.g.\n- Sales sends the quote\n- Finance checks the price'} value={flow.draft || ''} onCommit={(v) => ed((d) => o.updateFlow(d, flow.id, { draft: v.trim() ? v : undefined }))} /></L>
+        <div className="text-[11px] text-slate-500">Saved with the flow. Up to {MAX_TEXT_CHARS} characters each.</div>
+      </div>
       <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
       {arrow && !stepId && (() => {
         const from = arrow.kind === 'trigger' ? arrow.from : arrow.from, to = arrow.to, name = (i) => `${i + 1}. ${flow.steps[i]?.title ?? ''}`, back = arrow.kind === 'back';

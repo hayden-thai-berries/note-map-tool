@@ -125,6 +125,8 @@ Recommended by the assistant and confirmed by the user ("yes"):
 
 **Built (ticket 05):** `ai.py` and `server.py` read `data/.ai.json` and answer `GET /api/ai/status` and `POST /api/ai/test`; dot-files in `data/` are never served, listed or written; the Business flows header has an **AI** button that opens a panel with the provider's name, the privacy notice and Test connection. Setup guide: `docs/AI.md`; decision: `docs/adr/0003-ai-calls-only-from-the-server.md`. Tests: `scripts/test_ai.py`, `scripts/e2e-ai-setup.mjs`, with a fake provider in `scripts/lib/ai_stub.py`. DeepSeek thinking mode is turned off for these calls and is untested against the live service.
 
+**Built (ticket 04):** optional `brief` and `draft` text on a Flow, typed in a "Describe your case" card at the top of the Flow details (8000 characters each), saved with Save, undoable, and written as `Brief:` and `Draft:` comment lines by the new-fields export. Tests: `scripts/test-flow-notes.mjs`, `scripts/e2e-flow-brief.mjs`. The "New flow" box still only asks for a name; the details panel opens straight after creating one, so the brief is the first thing to fill in.
+
 Done when: a brief produces a valid Flow in a sensible chart type, an Ask AI edit previews and applies with undo, and a missing key or a bad response leaves the data untouched.
 
 ## Phase 6: Flow map (ticket 03)

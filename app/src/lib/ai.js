@@ -16,5 +16,7 @@ export async function aiTest() {
   } catch { return { ok: false, error: 'Could not reach the local server.' }; }
 }
 
+export const MAX_TEXT_CHARS = 8000; // the same limit the server enforces on the brief and the draft
+
 /* Said before anything is sent, and reused by Generate and Ask AI. */
 export const aiNotice = (label) => `When you use AI, the text you write (your brief and draft, and the Department and Function descriptions it needs) leaves this computer and goes to ${label}'s servers. Member emails, tickets and other maps are never sent. Nothing is saved until you press Save.`;

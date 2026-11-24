@@ -6,7 +6,7 @@
  *   sheets:      [{ id, kind: 'sheet'|'app', name, departmentId|null, sectionId|null, owner, details: [], crit|null, url|null, note,
  *                   type?: 'doc'|'excel'|'pdf'|'other' (absent = Google Sheet), docs?: [{ label, url }] }],
  *   links:       [{ id, fromId|fromName, toId|toName, label }],
- *   flows:       [{ id, title, every, note?: text about the whole flow, notes?: [{ id, sort, text, x, y, stepId? }] (sticky notes: x,y are canvas coordinates, or an offset from the step when stepId is set),
+ *   flows:       [{ id, title, every, note?: text about the whole flow, brief?: what the process is for and who is involved, draft?: a rough list of the steps (both are the input for AI, typed by the user), notes?: [{ id, sort, text, x, y, stepId? }] (sticky notes: x,y are canvas coordinates, or an offset from the step when stepId is set),
  *                   teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?, kind?: 'start'|'end'|'decision' (absent = an ordinary step),
  *                   triggers: [{ stepId, msg } | { team, msg }], backs: [{ stepId, msg }] }] }],
  *   tickets:     { nextId, extra: {}, items: [ticket as before, with target replaced by targetId (or targetRaw if it points at nothing)] },
@@ -78,6 +78,7 @@ export function validate(d) {
   });
   d.flows.forEach((f) => {
     dup(f.id, 'flow');
+    ['brief', 'draft'].forEach((k) => { if (f[k] !== undefined && typeof f[k] !== 'string') bad.push(`flow ${f.id} has a ${k} that is not text`); });
     /* an arrow may point at a step that is in Removed */
     const steps = new Set([...(f.steps || []).map((s) => s.id), ...d.removed.filter((r) => r.kind === 'step' && r.flowId === f.id).map((r) => r.entry.id)]);
     (f.notes || []).forEach((n) => {

@@ -11,7 +11,7 @@
     "verify": "node scripts/verify-records.mjs && node --test scripts/test-migration.mjs scripts/test-org.mjs scripts/test-board.mjs scripts/test-report.mjs scripts/test-ui-helpers.mjs scripts/test-flow-edit.mjs scripts/test-flow-notes.mjs scripts/test-flow-shapes.mjs && python3 scripts/test_server.py && python3 scripts/test_ai.py",
     "import": "node scripts/import-legacy.mjs",
     "prepare": "husky",
-    "e2e": "npm --prefix app run build && node scripts/e2e-local.mjs && node scripts/e2e-from-scratch.mjs && node scripts/e2e-upgrade.mjs && node scripts/e2e-tickets.mjs && node scripts/e2e-map-edit.mjs && node scripts/e2e-flow-canvas.mjs && node scripts/e2e-flow-notes.mjs && node scripts/e2e-flow-shapes.mjs && node scripts/e2e-ai-setup.mjs"
+    "e2e": "npm --prefix app run build && node scripts/e2e-local.mjs && node scripts/e2e-from-scratch.mjs && node scripts/e2e-upgrade.mjs && node scripts/e2e-tickets.mjs && node scripts/e2e-map-edit.mjs && node scripts/e2e-flow-canvas.mjs && node scripts/e2e-flow-notes.mjs && node scripts/e2e-flow-shapes.mjs && node scripts/e2e-flow-brief.mjs && node scripts/e2e-ai-setup.mjs"
   },
   "type": "module"
 }
