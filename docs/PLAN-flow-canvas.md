@@ -1,6 +1,6 @@
 # Plan: Business flow canvas and AI flows
 
-Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); tickets 01, 02, 04, 05, 06, 07 and 08 (free canvas and shapes, brief, AI provider setup, Generate with chart types, Ask AI on swimlanes) are built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
+Status: Phases 1 to 3 built on branch `feat/flow-canvas-editing` (see their notes below). Phases 4 to 7 are planned as tickets in `.scratch/flow-ai/issues/` (01 to 11); tickets 01, 02, 04 to 11 (free canvas and shapes, brief, AI provider, Generate with chart types, Ask AI on swimlanes, skins and image export, Mermaid export, swimlane fixes) are built on branch `feat/ai-flows`, the rest not started. Scope is the React app (`app/`) only. The legacy vanilla app is frozen.
 
 ## Goal
 
@@ -141,12 +141,11 @@ Recommended by the assistant and confirmed by the user ("yes"):
 
 ## Phase 7: Share and polish (tickets 09, 10, 11)
 
-- PNG and SVG export of either layout, including notes. Skins (Paper light, Blueprint dark; Marker later) are styling only and also fix the black canvas on a dark-mode OS. Concept screens: `docs/flow-concepts/flow-canvas-skins.html`.
-- Mermaid export in the Flow document. Swimlane and free-canvas Flows keep their steps and arrows, but Mermaid places the boxes itself, so free-canvas positions are not kept. An entity diagram exports as a Mermaid ER diagram.
-- Swimlane fixes left from phase 3: stack two decision branches that land in the same lane, and decide whether dragging within a lane reorders steps.
+- **Built (ticket 09):** three **skins** (Paper, Blueprint, Marker): colour, line weight, corner radius and font tokens in `app/src/lib/skins.js`, applied on screen through CSS variables on the canvas and used by the exporter, so an exported image matches what you see. The choice is a per-viewer convenience kept in this browser (not in the Data file; a skin never changes data). **Export PNG** and **Export SVG** draw the diagram (lanes, every shape, arrows with labels, notes) straight from the graph in `app/src/lib/export-image.js`, for swimlanes and free canvases alike; the PNG is drawn at twice the size. It also fixes the canvas turning black on a dark-mode computer: this version of React Flow follows the system theme unless told otherwise, so every canvas now forces light mode (Blueprint forces dark). Tests: `scripts/test-flow-export.mjs`, `scripts/e2e-flow-export.mjs` (with the computer set to dark mode). Screenshot: `docs/screenshots/flow-skin-blueprint.png`. Marker is included in the first release. Known: tags inside boxes (sheet, day, ticket) keep fixed colours in every skin.
+- **Built (ticket 10):** **Export Mermaid** (this flow) and **All flows (.md)** download Markdown with a Mermaid diagram per flow (`app/src/lib/flow-mermaid.js`). A swimlane is a left-to-right flowchart with a subgraph per lane, decision diamonds, start and end pills, Yes/No and message labels, and dashed "sent back" arrows. A free canvas is a top-down flowchart (Mermaid places the boxes itself, so positions are not kept; the document says so). A free canvas of only entity boxes becomes an ER diagram with fields and cardinalities read from labels such as "1 to many" (field names are transliterated to ASCII because Mermaid refuses accents; the real text is kept as a comment). Sticky notes are comments in the diagram and a list under it. An Export is never read back. Tests: `scripts/test-flow-mermaid.mjs`; `scripts/check-mermaid.mjs` feeds sample output to the real Mermaid parser (needs a network, so it is not in `npm run verify`); it caught the accent problem.
+- **Built (ticket 11):** two or more branches of one step that land in the same lane are stacked in that lane (the lane grows), so no arrow or label hides behind another box; unrelated steps that want the same place still go one column along, and lanes without stacking keep their usual height. **Decided:** dragging a step sideways inside its lane will not reorder it, because a step's column comes from its arrows and hand reordering would silently break "waits on an earlier step"; use the free canvas to place boxes by hand, or the up/down buttons in the details to reorder. Tests: `scripts/test-flow-layout.mjs`.
 
 ## Open items
 
-- Whether Marker ships in the first release or later.
 - Generating several connected Flows from one brief.
 - Glossary terms to add when they land: Note, Decision, Brief, Layout, Shape, Flow connection, Flow map. (`GLOSSARY.md` is the user's own file; ask before committing it.)

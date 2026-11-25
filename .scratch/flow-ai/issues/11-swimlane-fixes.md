@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent (ask the user about within-lane reorder first)
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] Same-lane branches out of a decision sit in separate rows; arrows and labels are not hidden behind boxes
-- [ ] Within-lane drag: either reorders without breaking "waits on an earlier step", or is dropped on purpose and noted in the plan
-- [ ] Existing flow canvas browser tests still pass
+- [x] Same-lane branches out of a decision sit in separate rows; arrows and labels are not hidden behind boxes
+- [x] Within-lane drag: either reorders without breaking "waits on an earlier step", or is dropped on purpose and noted in the plan
+- [x] Existing flow canvas browser tests still pass

@@ -10,9 +10,9 @@ import { connectFree, removeArrow } from '../lib/flow-edit.js';
 /* The free canvas: boxes you place by hand, like a slide. Double-click empty space to add a box, drag to move, drag the handles of a selected box to resize,
  * drag from a dot on a box's edge to another box to draw an arrow, double-click a box to retype it, Delete removes what is selected.
  * Every change goes through apply(), so it undoes; a deleted box or arrow goes to Removed. Drawn straight from the Data file. */
-export default function FreeCanvas({ meta, rev, onSelect, onArrow, addRef }) {
+export default function FreeCanvas({ meta, rev, onSelect, onArrow, addRef, skin = 'paper' }) {
   const { data } = useRecords(), [typing, setTyping] = useState(null), [typingBody, setTypingBody] = useState(null), [editingNote, setEditingNote] = useState(null), [noteDraft, setNoteDraft] = useState(null), inst = useRef(null), box = useRef(null), FID = meta.id, sid = (i) => meta.steps[i]?.id;
-  const graph = useMemo(() => buildFree(meta, { sheets: data.sheets, noteDraft: noteDraft && { x: noteDraft.x, y: noteDraft.y, key: noteDraft.key, stepId: noteDraft.stepId } }), [meta, rev, noteDraft]);
+  const graph = useMemo(() => buildFree(meta, { sheets: data.sheets, noteDraft: noteDraft && { x: noteDraft.x, y: noteDraft.y, key: noteDraft.key, stepId: noteDraft.stepId }, skin }), [meta, rev, noteDraft, skin]);
   useEffect(() => { setTyping(null); setTypingBody(null); setEditingNote(null); setNoteDraft(null); }, [FID]);
   const ui = useMemo(() => ({
     editing: typing, edit: setTyping, stopEdit: () => setTyping(null), editingBody: typingBody, editBody: setTypingBody, stopBody: () => setTypingBody(null), editingNote,
@@ -65,7 +65,7 @@ export default function FreeCanvas({ meta, rev, onSelect, onArrow, addRef }) {
   };
   return (
     <div ref={box} className="min-h-0 flex-1" onDoubleClick={(e) => { if (e.target.classList?.contains('react-flow__pane')) add('rounded', e); }}>
-      <FlowUi.Provider value={ui}><Canvas graph={graph} fitKey={'free' + FID} rf={rf} onConnect={onConnect} onNode={(n) => { onSelect(n?.type === 'free' ? n.data.idx : null); if (n) onArrow(null); }} onEdge={(e) => { if (e.data) { onArrow(e.data); onSelect(null); } }} /></FlowUi.Provider>
+      <FlowUi.Provider value={ui}><Canvas skin={skin} graph={graph} fitKey={'free' + FID} rf={rf} onConnect={onConnect} onNode={(n) => { onSelect(n?.type === 'free' ? n.data.idx : null); if (n) onArrow(null); }} onEdge={(e) => { if (e.data) { onArrow(e.data); onSelect(null); } }} /></FlowUi.Provider>
     </div>
   );
 }

@@ -58,6 +58,8 @@ export async function harness({ files = [], data = {} } = {}) {
     text: () => js('document.body.innerText'),
     status: () => js(`document.querySelector('[role=status]')?.textContent || ''`),
     readJson: (f) => JSON.parse(fs.readFileSync(path.join(sandbox, f), 'utf8')),
+    /* pretend the computer is in dark mode (or light): emulate({ 'prefers-color-scheme': 'dark' }) */
+    emulate: (features) => send('Emulation.setEmulatedMedia', { features: Object.entries(features).map(([name, value]) => ({ name, value })) }),
     finish: () => procs.forEach((p) => p.kill()),
   };
   return H;

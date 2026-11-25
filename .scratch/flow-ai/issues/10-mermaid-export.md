@@ -4,9 +4,9 @@
 
 **Blocked by:** 02: Entity box, pill, diamond and notes on the free canvas
 
-**Status:** ready-for-agent
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] Swimlane and free-canvas Flows both export with their steps and arrows; Mermaid places the boxes itself, so free-canvas positions are not kept (say so in the export)
-- [ ] An entity diagram exports as a Mermaid ER diagram
-- [ ] Decisions show Yes/No labels; notes appear as comments
-- [ ] An Export is never edited or read back
+- [x] Swimlane and free-canvas Flows both export with their steps and arrows; Mermaid places the boxes itself, so free-canvas positions are not kept (say so in the export)
+- [x] An entity diagram exports as a Mermaid ER diagram
+- [x] Decisions show Yes/No labels; notes appear as comments
+- [x] An Export is never edited or read back

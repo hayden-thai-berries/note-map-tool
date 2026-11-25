@@ -59,6 +59,7 @@ try {
   await until(`!!document.querySelector('[aria-label=Preview]')`, 'second preview', 15000); await H.dlg('Accept'); await until(`!${dlg}`, 'accepted');
   await until(`document.querySelectorAll('.react-flow__node-step').length === 4`, 'steps drawn');
   r.check('Accept draws the steps, decision diamond and notes on the real canvas', (await mainSteps()) === 4 && await js(`!![...document.querySelectorAll('.react-flow__node-step [data-kind=decision]')].length`) && await js(`document.body.innerText.includes('I assumed Finance approves prices')`));
+  r.check('the Yes and No branches that land in the same lane are stacked, so no box hides another', await js(`(() => { const B = [...document.querySelectorAll('.react-flow__node-step')].filter((e) => !e.closest('[aria-label=Preview]')).map((e) => e.getBoundingClientRect()); return B.length === 4 && !B.some((a, i) => B.some((b, j) => j > i && a.x < b.right - 1 && b.x < a.right - 1 && a.y < b.bottom - 1 && b.y < a.bottom - 1)); })()`));
   r.check('the Yes and No labels are on the decision arrows', await js(`(() => { const t = [...document.querySelectorAll('.react-flow__edge')].map((e) => e.textContent.trim()); return t.includes('Yes') && t.includes('No'); })()`));
   await H.click('Undo'); await until(`document.querySelectorAll('.react-flow__node-step').length === 0`, 'undone');
   r.check('one Undo takes the whole generated flow back', (await mainSteps()) === 0);

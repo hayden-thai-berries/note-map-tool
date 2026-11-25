@@ -4,8 +4,8 @@
 
 **Blocked by:** 02: Entity box, pill, diamond and notes on the free canvas
 
-**Status:** ready-for-agent
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] Exported image matches the on-screen diagram in the chosen skin
-- [ ] Skins are styling only; no data changes
-- [ ] Canvas is readable on a dark-mode OS
+- [x] Exported image matches the on-screen diagram in the chosen skin
+- [x] Skins are styling only; no data changes
+- [x] Canvas is readable on a dark-mode OS
