@@ -4,11 +4,11 @@
 
 **Blocked by:** 01: Free canvas Flow with shapes and arrows
 
-**Status:** ready-for-agent
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] Palette adds each shape; text is editable inside the shape
-- [ ] Start, end and decision steps map to pill and diamond; Yes/No branch labels still work
-- [ ] Entity box holds a title, free lines and an optional Sheet reference
-- [ ] Notes work as in swimlane flows (free or pinned)
-- [ ] Undo, Removed/restore and Save round-trip cover every shape
-- [ ] An entity diagram and a waterfall can be drawn by hand, saved and reloaded
+- [x] Palette adds each shape; text is editable inside the shape
+- [x] Start, end and decision steps map to pill and diamond; Yes/No branch labels still work
+- [x] Entity box holds a title, free lines and an optional Sheet reference
+- [x] Notes work as in swimlane flows (free or pinned)
+- [x] Undo, Removed/restore and Save round-trip cover every shape
+- [x] An entity diagram and a waterfall can be drawn by hand, saved and reloaded

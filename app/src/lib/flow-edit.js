@@ -61,3 +61,22 @@ export function setArrowMessage(d, flowId, e, msg) {
     const s = f.steps[e.from]; if (!s) return; const k = placeInFile(f, s.backs, e.k); if (k >= 0) s.backs[k].msg = msg;
   }
 }
+
+/* the arrows into a step as a swimlane diagram draws them: a "waits on" arrow to a step, an arrow from the nearest earlier step of a named team,
+ * or (when the step has no arrow of its own) the one automatic arrow from the step before. Same rules as lib/flows-parser.js. */
+export function effectiveWaits(f, i) {
+  const s = f.steps[i], out = [];
+  s.triggers.forEach((t) => {
+    if (t.stepId) { const k = f.steps.findIndex((x) => x.id === t.stepId); if (k >= 0 && k < i) out.push({ on: k, msg: t.msg || '' }); return; }
+    for (let j = i - 1; j >= 0; j--) if (f.steps[j].team.toLowerCase() === String(t.team || '').toLowerCase()) { out.push({ on: j, msg: t.msg || '' }); return; }
+  });
+  return out.length || s.triggers.length || s.standalone || i === 0 ? out : [{ on: i - 1, msg: '' }];
+}
+
+/* A new arrow on a free canvas: from one box to another, in any direction (there is no "earlier" or "later" without lanes).
+ * Returns false when there was nothing to add. */
+export function connectFree(d, flowId, a, b) {
+  const f = d.flows.find((x) => x.id === flowId), A = f?.steps[a], B = f?.steps[b];
+  if (!A || !B || A === B || B.triggers.some((x) => x.stepId === A.id)) return false;
+  B.triggers.push({ stepId: A.id, msg: branchLabel(f, A) }); delete B.standalone; return true;
+}

@@ -24,7 +24,7 @@ export default function GenerateFlow({ flow, mapName }) {
   const { data } = useRecords(), [st, setSt] = useState(null), [phase, setPhase] = useState(null), [out, setOut] = useState(null);
   useEffect(() => { aiStatus().then(setSt); }, []);
   const has = !!(flow.brief || '').trim() || !!(flow.draft || '').trim(), empty = flow.steps.length === 0;
-  const why = !st ? 'Checking AI…' : !st.on ? 'AI is off. Press AI at the top to set it up.' : !empty ? 'Generate fills an empty flow.' : !has ? 'Write a brief or a rough draft first.' : '';
+  const why = !st ? 'Checking AI…' : !st.on ? 'AI is off. Press AI at the top to set it up.' : flow.layout === 'free' ? 'Generate works on swimlane flows for now.' : !empty ? 'Generate fills an empty flow.' : !has ? 'Write a brief or a rough draft first.' : '';
   const run = async () => { setPhase('loading'); setOut(await aiGenerate({ mapId: mapName, title: flow.title, brief: flow.brief || '', draft: flow.draft || '' })); setPhase('done'); };
   const start = () => (noticeSeen(st.provider) ? run() : setPhase('notice'));
   const close = () => { setPhase(null); setOut(null); };

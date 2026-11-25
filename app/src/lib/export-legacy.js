@@ -27,7 +27,7 @@ export function exportLegacy(data, { withNewFields = false } = {}) {
     });
     /* the old format has no place for notes: with the new fields on they are written as comment lines, which the old parser skips */
     const one = (t) => String(t).trim().replace(/\s*\n\s*/g, ' / ').replace(/--+>/g, '->');
-    const shapes = f.steps.map((x, i) => x.kind && `Step ${i + 1} (${one(x.title)}) is ${{ decision: 'a decision', start: 'a start marker', end: 'an end marker' }[x.kind]}`).filter(Boolean);
+    const shapes = f.steps.map((x, i) => { const what = x.kind ? { decision: 'a decision', start: 'a start marker', end: 'an end marker' }[x.kind] : f.layout === 'free' && x.shape && x.shape !== 'rounded' ? { rect: 'a rectangle', pill: 'a pill', diamond: 'a diamond', entity: 'an entity box' }[x.shape] : null; return what && `Step ${i + 1} (${one(x.title)}) is ${what}`; }).filter(Boolean);
     const comments = withNewFields ? [f.note && `Flow note: ${one(f.note)}`, f.brief && f.brief.trim() && `Brief: ${one(f.brief)}`, f.draft && f.draft.trim() && `Draft: ${one(f.draft)}`, ...shapes, ...(f.notes || []).filter((n) => n.text.trim()).map((n) => `Note: ${one(n.text)}`)].filter(Boolean) : [];
     return { title: f.title, every: f.every, teams: f.teams, steps, comments };
   });

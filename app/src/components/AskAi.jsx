@@ -34,7 +34,7 @@ export default function AskAi({ flow, mapName }) {
   const close = () => { setPhase(null); setOut(null); };
   const pv = useMemo(() => (phase === 'done' && out?.ok ? preview(data, flow.id, out.flow) : null), [phase, out]);
   const accept = () => { if (apply((d) => applyEdit(d, flow.id, out.flow))) { close(); setText(''); } };
-  if (!flow.steps.length) return null; // after every hook, so the order of hooks never changes when a flow gets its first steps
+  if (!flow.steps.length || flow.layout === 'free') return null; // after every hook, so the order of hooks never changes when a flow gets its first steps
   return (
     <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5" role="group" aria-label="Ask AI">
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Ask AI to change this flow</div>

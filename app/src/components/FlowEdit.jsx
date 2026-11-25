@@ -15,6 +15,7 @@ const L = ({ t, children }) => <label className="mb-1.5 block text-[11px] font-s
 export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null, onArrowGone, onDeleted }) {
   const { data } = useRecords(), flow = data.flows.find((x) => x.id === flowId), [team, setTeam] = useState(''), [title, setTitle] = useState('');
   if (!flow) return null;
+  const free = flow.layout === 'free';
   const ed = (fn, key) => apply(fn, key ? { key } : {});
   const addStep = () => { if (!team.trim() || !title.trim()) return; if (apply((d) => o.addStep(d, flow.id, { team, title }))) { setTitle(''); } };
   return (
@@ -30,7 +31,7 @@ export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null,
         <GenerateFlow flow={flow} mapName={mapName} />
       </div>
       <AskAi flow={flow} mapName={mapName} />
-      <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>
+      {!free && <div className="mb-3 text-xs text-slate-500">Lanes: {flow.teams.join(', ') || 'none yet'}</div>}
       {arrow && !stepId && (() => {
         const from = arrow.kind === 'trigger' ? arrow.from : arrow.from, to = arrow.to, name = (i) => `${i + 1}. ${flow.steps[i]?.title ?? ''}`, back = arrow.kind === 'back';
         return (
@@ -41,7 +42,8 @@ export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null,
           </div>
         );
       })()}
-      {!stepId && !arrow && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a step on the diagram to edit its details here. Double-click a step to retype it, drag it into another lane to hand it to that team, and drag from its right edge to another step to draw an arrow.</p>}
+      {!stepId && !arrow && free && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a box to edit its details here. Double-click empty space to add a box, double-click a box to retype it, drag its handles to resize it, and drag from a dot on its edge to another box to draw an arrow.</p>}
+      {!stepId && !arrow && !free && <p className="mb-3 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">Click a step on the diagram to edit its details here. Double-click a step to retype it, drag it into another lane to hand it to that team, and drag from its right edge to another step to draw an arrow.</p>}
       {flow.steps.map((st, i) => {
         if (st.id !== stepId) return null;
         const others = flow.steps.filter((x) => x.id !== st.id), earlier = flow.steps.slice(0, i), label = (x) => `${flow.steps.indexOf(x) + 1}. ${x.team}: ${x.title}`;
@@ -50,16 +52,17 @@ export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null,
           <div key={st.id} className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5" role="group" aria-label={`Step ${i + 1}`}>
             <div className="mb-1.5 flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-blue-600 text-[11px] text-white">{i + 1}</span>
               <CommitInput aria-label="Step title" value={st.title} onCommit={(v) => v.trim() && setSt({ title: v.trim() })} />
-              <Btn aria-label="Move step up" disabled={i === 0} onClick={() => ed((d) => o.shiftStep(d, flow.id, st.id, -1))}>↑</Btn>
-              <Btn aria-label="Move step down" disabled={i === flow.steps.length - 1} onClick={() => ed((d) => o.shiftStep(d, flow.id, st.id, 1))}>↓</Btn></div>
+              {!free && <Btn aria-label="Move step up" disabled={i === 0} onClick={() => ed((d) => o.shiftStep(d, flow.id, st.id, -1))}>↑</Btn>}
+              {!free && <Btn aria-label="Move step down" disabled={i === flow.steps.length - 1} onClick={() => ed((d) => o.shiftStep(d, flow.id, st.id, 1))}>↓</Btn>}</div>
             <div className="grid grid-cols-2 gap-2">
-              <L t="Team"><CommitInput aria-label="Step team" list={`teams-${flow.id}`} value={st.team} onCommit={(v) => v.trim() && setSt({ team: v.trim() })} /></L>
+              {!free && <L t="Team"><CommitInput aria-label="Step team" list={`teams-${flow.id}`} value={st.team} onCommit={(v) => v.trim() && setSt({ team: v.trim() })} /></L>}
+              {free && <L t="Box shape"><select aria-label="Box shape" className={`${sel} w-full`} value={st.shape || 'rounded'} onChange={(e) => setSt({ shape: e.target.value })}><option value="rounded">Rounded box</option><option value="rect">Rectangle</option><option value="pill">Pill</option><option value="diamond">Diamond</option><option value="entity">Entity box</option></select></L>}
               <L t="Shape"><select aria-label="Step shape" className={`${sel} w-full`} value={st.kind || ''} onChange={(e) => setSt({ kind: e.target.value || undefined })}><option value="">Step</option><option value="start">Start marker</option><option value="end">End marker</option><option value="decision">Decision (yes / no)</option></select></L>
               <L t="Day"><select aria-label="Step day" className={`${sel} w-full`} value={st.day || ''} onChange={(e) => setSt({ day: e.target.value || null })}><option value="">Any</option>{FLOW_DAYS.map((x) => <option key={x}>{x}</option>)}</select></L>
               <L t="Sheet or app"><select aria-label="Step sheet" className={`${sel} w-full`} value={st.sheetId || ''} onChange={(e) => setSt({ sheetId: e.target.value || undefined, sheetName: undefined })}><option value="">None{st.sheetName ? ` (was “${st.sheetName}”, not on the map)` : ''}</option>{data.sheets.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></L>
               <L t="Ticket id"><CommitInput aria-label="Step ticket" placeholder="T2026…" value={st.ticket || ''} onCommit={(v) => setSt({ ticket: v.trim() || null })} /></L>
             </div>
-            <L t="Note"><CommitInput multiline aria-label="Step note" value={st.note} onCommit={(v) => setSt({ note: v })} /></L>
+            <L t={st.shape === 'entity' ? 'Description lines (one per line)' : 'Note'}><CommitInput multiline aria-label="Step note" value={st.note} onCommit={(v) => setSt({ note: v })} /></L>
             <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Waits on</div>
             {st.triggers.map((t, k) => (
               <div key={k} className="mb-1 flex items-center gap-1.5">
@@ -87,10 +90,10 @@ export default function FlowEdit({ mapName, flowId, stepId = null, arrow = null,
         );
       })}
       <datalist id={`teams-${flow.id}`}>{flow.teams.map((t) => <option key={t} value={t} />)}</datalist>
-      <div className="rounded-xl border border-dashed border-slate-300 p-2.5">
+      {!free && <div className="rounded-xl border border-dashed border-slate-300 p-2.5">
         <div className="mb-1.5 text-sm font-semibold">Add a step</div>
         <div className="flex gap-1.5"><input aria-label="New step team" list={`teams-${flow.id}`} className={`${sel} w-28`} placeholder="Team" value={team} onChange={(e) => setTeam(e.target.value)} /><input aria-label="New step title" className={`${sel} min-w-0 flex-1`} placeholder="What happens" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addStep()} /><Btn disabled={!team.trim() || !title.trim()} onClick={addStep}>Add step</Btn></div>
-      </div>
+      </div>}
       <div className="mt-4"><Btn danger onClick={() => { if (window.confirm(`Move the flow "${flow.title}" to Removed? You can restore it.`)) { ed((d) => o.removeFlow(d, flow.id)); onDeleted?.(); } }}>Delete flow</Btn></div>
     </div>
   );

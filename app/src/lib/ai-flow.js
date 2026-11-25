@@ -1,6 +1,7 @@
 /* Turn what the AI answered (checked on the server by ai_flow.py) into edits of the Data file. Pure: no DOM, no network.
  * Everything happens inside one apply(), so one Undo takes the whole generated flow back. */
 import * as o from './ops.js';
+import { effectiveWaits } from './flow-edit.js';
 
 const NOTE_AT = { x: 20, y: 86 };   // a note pinned to a step starts just below it (the same offset a hand-added note gets)
 const LANE_H = 144, NOTE_W = 200;   // lane height with its gap, and the room one free note takes: free notes go in a row under the lanes
@@ -36,17 +37,6 @@ export function applyGenerated(d, flowId, gen) {
 }
 
 /* ---------- Ask AI: change a flow that already has steps ---------- */
-
-/* the arrows into a step as the diagram draws them: a "waits on" arrow to a step, an arrow from the nearest earlier step of a named team,
- * or (when the step has no arrow of its own) the one automatic arrow from the step before. Same rules as lib/flows-parser.js. */
-function effectiveWaits(f, i) {
-  const s = f.steps[i], out = [];
-  s.triggers.forEach((t) => {
-    if (t.stepId) { const k = f.steps.findIndex((x) => x.id === t.stepId); if (k >= 0 && k < i) out.push({ on: k, msg: t.msg || '' }); return; }
-    for (let j = i - 1; j >= 0; j--) if (f.steps[j].team.toLowerCase() === String(t.team || '').toLowerCase()) { out.push({ on: j, msg: t.msg || '' }); return; }
-  });
-  return out.length || s.triggers.length || s.standalone || i === 0 ? out : [{ on: i - 1, msg: '' }];
-}
 
 /* The flow as the AI is told about it: only the words on it (never ticket ids), with the arrows spelled out. */
 export function flowForAi(flow, sheets = []) {

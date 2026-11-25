@@ -8,6 +8,7 @@
  * (the file stays valid while it is in Removed), so restoring needs no re-linking. Departments and sections can only be deleted when empty,
  * so nothing is lost with them. */
 import { newId, STEP, FILE_TYPES } from './schema.js';
+import { effectiveWaits } from './flow-edit.js';
 
 export { STEP };
 const now = () => new Date().toISOString();
@@ -214,6 +215,33 @@ export function removeStep(d, flowId, stepId) {
   const { f, s } = findStep(d, flowId, stepId);
   f.steps = f.steps.filter((x) => x !== s);
   d.removed.push({ id: newId('x'), kind: 'step', label: `${f.title}: ${s.title}`, removedAt: now(), flowId, entry: s });
+}
+
+/* ---- the free canvas: a flow whose steps are boxes placed by hand ---- */
+export const FREE_TEAM = 'General'; // a box has no lane, but every step has a team in the file; this is the one a new box gets
+export const BOX = { W: 180, H: 74, MIN_W: 60, MIN_H: 40, ENTITY_W: 210, ENTITY_H: 130 };
+const geom = ({ x, y, w, h }) => ({ x: Math.round(x), y: Math.round(y), w: Math.max(BOX.MIN_W, Math.round(w)), h: Math.max(BOX.MIN_H, Math.round(h)) });
+export function addShape(d, flowId, { x = 0, y = 0, shape = 'rounded', title, w, h } = {}) {
+  const f = pick(d.flows, flowId, 'flow'); need(f.layout === 'free', 'Boxes can only be added to a free-canvas flow.');
+  const entity = shape === 'entity';
+  /* a diamond is a yes/no question, so its arrows get the Yes and No labels like a decision on a swimlane */
+  return addStep(d, flowId, { team: FREE_TEAM, title: title ?? (entity ? 'New entity' : 'New box'), shape, ...(shape === 'diamond' ? { kind: 'decision' } : {}), ...geom({ x, y, w: w ?? (entity ? BOX.ENTITY_W : BOX.W), h: h ?? (entity ? BOX.ENTITY_H : BOX.H) }), standalone: true });
+}
+export function placeShape(d, flowId, stepId, box) { const { f, s } = findStep(d, flowId, stepId); need(f.layout === 'free', 'That flow is not a free canvas.'); Object.assign(s, geom({ x: s.x, y: s.y, w: s.w, h: s.h, ...box })); }
+/* Turn a swimlane flow into a free canvas, keeping what is on screen: `positions` is { stepId: { x, y, w, h } } as drawn now. Every arrow the swimlane
+ * drew (including the automatic one and the "from a team" ones) becomes an explicit arrow between two boxes. There is no way back to lanes. */
+export function switchToFree(d, flowId, positions) {
+  const f = pick(d.flows, flowId, 'flow'); need(f.layout !== 'free', 'That flow is already a free canvas.');
+  f.steps.forEach((s) => need(positions?.[s.id], 'A step has no place on the canvas yet.'));
+  const waits = f.steps.map((_, i) => effectiveWaits(f, i));
+  f.steps.forEach((s, i) => {
+    s.triggers = waits[i].map((w) => ({ stepId: f.steps[w.on].id, msg: w.msg }));
+    if (s.triggers.length) delete s.standalone; else s.standalone = true;   // a box with no arrow in stays that way: nothing quietly follows the box before it
+    Object.assign(s, geom(positions[s.id]), { shape: s.shape || 'rounded' });
+  });
+  /* steps waiting in Removed get a place too, so restoring one onto the canvas is valid */
+  d.removed.filter((r) => r.kind === 'step' && r.flowId === flowId).forEach((r, k) => Object.assign(r.entry, geom({ x: 24 + k * 24, y: 24 + k * 24, w: BOX.W, h: BOX.H }), { shape: r.entry.shape || 'rounded' }));
+  f.layout = 'free';
 }
 
 /* ---- sticky notes on a flow: free text on the diagram, free-floating or pinned to a step ---- */

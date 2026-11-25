@@ -6,7 +6,7 @@
  *   sheets:      [{ id, kind: 'sheet'|'app', name, departmentId|null, sectionId|null, owner, details: [], crit|null, url|null, note,
  *                   type?: 'doc'|'excel'|'pdf'|'other' (absent = Google Sheet), docs?: [{ label, url }] }],
  *   links:       [{ id, fromId|fromName, toId|toName, label }],
- *   flows:       [{ id, title, every, note?: text about the whole flow, brief?: what the process is for and who is involved, draft?: a rough list of the steps (both are the input for AI, typed by the user), notes?: [{ id, sort, text, x, y, stepId? }] (sticky notes: x,y are canvas coordinates, or an offset from the step when stepId is set),
+ *   flows:       [{ id, title, every, note?: text about the whole flow, layout?: 'swimlane' | 'free' (on a free flow each step also has x, y, w, h and shape?: 'rect' | 'rounded' | 'pill' | 'diamond' | 'entity'), brief?: what the process is for and who is involved, draft?: a rough list of the steps (both are the input for AI, typed by the user), notes?: [{ id, sort, text, x, y, stepId? }] (sticky notes: x,y are canvas coordinates, or an offset from the step when stepId is set),
  *                   teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?, kind?: 'start'|'end'|'decision' (absent = an ordinary step),
  *                   triggers: [{ stepId, msg } | { team, msg }], backs: [{ stepId, msg }] }] }],
  *   tickets:     { nextId, extra: {}, items: [ticket as before, with target replaced by targetId (or targetRaw if it points at nothing)] },
@@ -16,6 +16,9 @@
  * Sheets, links, tickets, flows and flow steps carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
 export const STEP_KINDS = ['start', 'end', 'decision'];
+/* a flow's layout: absent or 'swimlane' = lanes (the default); 'free' = every step is a box placed by hand (x, y, w, h and a shape) and there are no lanes */
+export const LAYOUTS = ['swimlane', 'free'];
+export const SHAPES = ['rect', 'rounded', 'pill', 'diamond', 'entity'];   // an entity box: the step's title is its name, its note the description lines, its sheet an optional reference
 export const STEP = 1024;
 export const FILE_TYPE_LABEL = { sheet: 'Google Sheet', doc: 'Doc', excel: 'Excel', pdf: 'PDF', other: 'Other' };
 export const FILE_TYPES = Object.keys(FILE_TYPE_LABEL); /* a missing `type` means 'sheet' */ /* gap between neighbouring `sort` numbers */
@@ -78,6 +81,7 @@ export function validate(d) {
   });
   d.flows.forEach((f) => {
     dup(f.id, 'flow');
+    if (f.layout !== undefined && !LAYOUTS.includes(f.layout)) bad.push(`flow ${f.id} has an unknown layout`);
     ['brief', 'draft'].forEach((k) => { if (f[k] !== undefined && typeof f[k] !== 'string') bad.push(`flow ${f.id} has a ${k} that is not text`); });
     /* an arrow may point at a step that is in Removed */
     const steps = new Set([...(f.steps || []).map((s) => s.id), ...d.removed.filter((r) => r.kind === 'step' && r.flowId === f.id).map((r) => r.entry.id)]);
@@ -89,6 +93,8 @@ export function validate(d) {
     (f.steps || []).forEach((s) => {
       dup(s.id, 'step');
       if (s.kind != null && !STEP_KINDS.includes(s.kind)) bad.push(`step ${s.id} has an unknown kind`);
+      if (s.shape !== undefined && !SHAPES.includes(s.shape)) bad.push(`step ${s.id} has an unknown shape`);
+      if (f.layout === 'free' && !(Number.isFinite(s.x) && Number.isFinite(s.y) && s.w >= 20 && s.h >= 20)) bad.push(`step ${s.id} on a free canvas has no position or size`);
       if (s.sheetId && !known.has(s.sheetId)) bad.push(`step ${s.id} points at a missing sheet`);
       [...(s.triggers || []), ...(s.backs || [])].forEach((t) => { if (t.stepId && !steps.has(t.stepId)) bad.push(`step ${s.id} points at a missing step`); });
     });

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Handle, Position, useConnection } from '@xyflow/react';
+import { Handle, Position, NodeResizer, useConnection } from '@xyflow/react';
 import { useModals } from './modals/ModalHost.jsx';
 
 const CRIT = { high: 'bg-red-100 text-red-800', medium: 'bg-amber-100 text-amber-800', low: 'bg-slate-200 text-slate-700' };
@@ -175,6 +175,53 @@ export function NoteNode({ data, selected }) {
   );
 }
 
+/* A box on the free canvas. Its shape says what it is (rectangle, rounded box, pill, diamond, or an entity box with a name and description lines); its size is its
+ * own and is changed by dragging the handles shown when it is selected. Arrows start from any of the four dots (shown on hover) and end anywhere on a box
+ * while one is being drawn. A start or end marker is drawn as a coloured pill, and a decision (or diamond) as a diamond, as on a swimlane. */
+export function FreeNode({ data, selected }) {
+  const { st, idx, kind, shape, sheetName } = data, ui = useContext(FlowUi), editing = ui.editing === idx, editingBody = ui.editingBody === idx, connecting = useConnection().inProgress;
+  const entity = shape === 'entity', diamond = kind === 'decision' || shape === 'diamond';
+  const title = editing
+    ? <AutoInput aria-label="Step text" className="nodrag nopan w-full min-w-0 rounded border border-blue-500 bg-white px-1 text-sm font-semibold" defaultValue={st.title} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') ui.commitTitle?.(idx, e.currentTarget.value); else if (e.key === 'Escape') ui.stopEdit?.(); }} onBlur={(e) => ui.commitTitle?.(idx, e.currentTarget.value)} />
+    : <b className="break-words leading-tight">{st.title}</b>;
+  const dot = `z-10 !h-2.5 !w-2.5 !border-blue-600 !bg-white transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`, ring = selected ? 'ring-2 ring-blue-600' : '';
+  const look = kind === 'start' ? 'rounded-full border-2 border-emerald-500 bg-emerald-100 text-emerald-950' : kind === 'end' ? 'rounded-full border-2 border-slate-600 bg-slate-200 text-slate-900'
+    : shape === 'pill' ? 'rounded-full border-2 border-blue-400 bg-blue-50' : shape === 'rect' ? 'rounded-none border-2 border-blue-400 bg-blue-50' : 'rounded-xl border-2 border-blue-400 bg-blue-50';
+  const lines = String(st.note || '').split(/\r?\n/).filter((l) => l.trim());
+  return (
+    <div className="group relative h-full w-full" data-kind={kind || 'step'} data-shape={shape}>
+      <NodeResizer isVisible={selected && !editing && !editingBody} minWidth={60} minHeight={40} lineClassName="!border-blue-600" handleClassName="!h-2 !w-2 !rounded-sm !border-blue-600 !bg-white" onResizeEnd={(_, p) => ui.resize?.(idx, p)} />
+      {selected && !editing && !editingBody && (
+        <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Box actions">
+          <button type="button" className={tb} onClick={() => ui.edit?.(idx)}>Edit text</button>
+          <button type="button" className={tb} onClick={() => ui.noteOn?.(idx)}>+ Note</button>
+          <button type="button" className={`${tb} text-red-700`} onClick={() => ui.del?.(idx)}>Delete</button>
+        </div>
+      )}
+      <Handle id="t" type="source" position={Position.Top} className={dot} /><Handle id="r" type="source" position={Position.Right} className={dot} />
+      <Handle id="b" type="source" position={Position.Bottom} className={dot} /><Handle id="l" type="source" position={Position.Left} className={dot} />
+      {/* while an arrow is being dragged, the whole box is where it can land */}
+      <Handle type="target" position={Position.Left} style={{ top: 0, left: 0, width: '100%', height: '100%', transform: 'none', borderRadius: 8, opacity: 0, pointerEvents: connecting ? 'all' : 'none' }} />
+      {entity
+        ? <div className={`flex h-full w-full flex-col overflow-hidden rounded-md border-2 border-indigo-400 bg-white text-left shadow-sm ${ring}`}>
+            <div className="shrink-0 border-b-2 border-indigo-400 bg-indigo-100 px-2 py-1 text-sm" aria-label="Entity name">{title}</div>
+            <div className="min-h-0 flex-1 overflow-hidden px-2 py-1 text-xs text-slate-700" aria-label="Entity lines" onDoubleClick={(e) => { e.stopPropagation(); ui.editBody?.(idx); }} title="Double-click to edit the lines">
+              {editingBody
+                ? <AutoInput multiline aria-label="Entity lines text" className="nodrag nopan h-full w-full resize-none rounded border border-blue-500 bg-white px-1 text-xs outline-none" defaultValue={st.note || ''} onFocus={(e) => e.target.select()} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') ui.stopBody?.(); else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) ui.commitBody?.(idx, e.currentTarget.value); }} onBlur={(e) => ui.commitBody?.(idx, e.currentTarget.value)} />
+                : lines.length ? lines.map((l, i) => <div key={i} className="truncate">{l}</div>) : <span className="text-slate-400">Double-click to describe</span>}
+            </div>
+            {sheetName && <div className="shrink-0 truncate border-t border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-900" aria-label="Entity sheet">▦ {sheetName}</div>}
+          </div>
+        : diamond
+          ? <div className="relative h-full w-full" title={st.note}>
+              <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polygon points="50,2 98,50 50,98 2,50" fill="#fef3c7" stroke={selected ? '#2563eb' : '#f59e0b'} strokeWidth="2" vectorEffect="non-scaling-stroke" /></svg>
+              <div className="absolute inset-y-0 left-[22%] right-[22%] flex items-center justify-center text-center text-xs">{title}</div>
+            </div>
+          : <div className={`flex h-full w-full items-center justify-center overflow-hidden px-2.5 py-1.5 text-center text-sm shadow-sm ${look} ${ring}`} title={st.note}>{title}</div>}
+    </div>
+  );
+}
+
 /* A note that is still being typed: it exists once it has text. */
 export function NoteDraftNode() {
   const ui = useContext(FlowUi), finished = useRef(false);
@@ -186,4 +233,4 @@ export function NoteDraftNode() {
   );
 }
 
-export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, draft: DraftNode, note: NoteNode, notedraft: NoteDraftNode };
+export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, free: FreeNode, draft: DraftNode, note: NoteNode, notedraft: NoteDraftNode };
