@@ -62,3 +62,10 @@ test('an empty flow gives a note instead of an empty diagram, and a document of 
   assert.ok(all.startsWith('# Demo flows\n\n## Empty\n')); assert.match(all, /\n## Quote approval\n/); assert.ok(all.endsWith('\n') && !all.endsWith('\n\n')); assert.match(flowsDoc(emptyData('T')), /No business flows yet/);
 });
 test('the same flow always exports the same text', () => { const { flow } = swim(); assert.equal(flowDoc(flow), flowDoc(flow)); });
+
+test('the document of all flows starts with a diagram of how the flows connect, and has none when nothing is connected', () => {
+  const d = emptyData('T'), a = o.addFlow(d, { title: 'Payroll' }), b = o.addFlow(d, { title: 'Budget "review"' }); o.addFlow(d, { title: 'Alone' }); o.addStep(d, a, { team: 'A', title: 'x' });
+  assert.ok(!flowsDoc(d).includes('How flows connect')); o.addFlowLink(d, { fromFlowId: a, toFlowId: b, label: 'monthly close' }); const doc = flowsDoc(d, 'Demo');
+  assert.match(doc, /^# Demo\n\n## How flows connect\n\n```mermaid\nflowchart LR\n  f1\["Payroll"\]\n  f2\["Budget #quot;review#quot;"\]\n  f1 -->\|"monthly close"\| f2\n```/); assert.ok(!doc.split('How flows connect')[1].split('```')[1].includes('Alone'));
+  assert.ok(doc.indexOf('How flows connect') < doc.indexOf('## Payroll'));
+});

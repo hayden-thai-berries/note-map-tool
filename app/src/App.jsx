@@ -5,6 +5,7 @@ import { model, flows, tickets, allNodes } from './data.js';
 import Toolbar from './components/Toolbar.jsx';
 import Overview from './views/Overview.jsx';
 import Journey from './views/Journey.jsx';
+import FlowMap from './views/FlowMap.jsx';
 import Catalog from './views/Catalog.jsx';
 import Detail from './views/Detail.jsx';
 import Work from './views/Work.jsx';
@@ -64,7 +65,7 @@ export default function App() {
     ['Map', [['overview', 'Overview', 'see and edit'], ['journey', 'Journey', 'how data travels']]],
     ['Docs', [['catalog', 'Catalog', allNodes().length], ['detail', 'Detail', '']]],
     ['Work', [['work', 'Tickets & projects', open.length + (blocked ? ' · ' + blocked + '!' : '')]]],
-    ['Workflows', [['flows', 'Business flows', flows.length]]],
+    ['Workflows', [['flows', 'Business flows', flows.length], ['flowmap', 'Flow map', (r.data.flowLinks || []).length || 'how flows connect']]],
     ['Safety', [['removed', 'Removed', r.data.removed.length || '']]],
   ];
   const toDetail = () => setWs('detail');
@@ -95,6 +96,7 @@ export default function App() {
           {ws === 'detail' && <Detail key={file} sel={sel} setSel={setSel} />}
           {ws === 'work' && <div className="h-full overflow-auto"><Work key={file} /></div>}
           {ws === 'flows' && <Flows key={file} idx={fIdx} setIdx={setFIdx} />}
+          {ws === 'flowmap' && <FlowMap key={file} onOpen={(i) => { setFIdx(i); setWs('flows'); }} />}
           {ws === 'removed' && <div className="h-full overflow-auto"><Removed /></div>}
         </main>
       </div>

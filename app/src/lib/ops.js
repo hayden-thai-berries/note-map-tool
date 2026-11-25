@@ -27,6 +27,7 @@ function sortAfter(d, what, list, flowId) {
     if (what === 'links') return [...(r.links || []).map((x) => x.link), ...(r.kind === 'link' ? [r.entry] : [])];
     if (what === 'tickets') return r.kind === 'ticket' ? [r.entry] : [];
     if (what === 'flows') return r.kind === 'flow' ? [r.entry] : [];
+    if (what === 'flowlinks') return [...(r.flowLinks || []), ...(r.kind === 'flowlink' ? [r.entry] : [])];
     if (what === 'notes') return r.kind === 'note' && r.flowId === flowId ? [r.entry] : [];
     return r.kind === 'step' && r.flowId === flowId ? [r.entry] : [];
   });
@@ -192,7 +193,30 @@ export function updateFlow(d, id, patch) { Object.assign(pick(d.flows, id, 'flow
 export function removeFlow(d, id) {
   const i = d.flows.findIndex((f) => f.id === id), f = d.flows[i]; need(f, 'That flow no longer exists.');
   d.flows.splice(i, 1);
-  d.removed.push({ id: newId('x'), kind: 'flow', label: f.title, removedAt: now(), entry: f });
+  /* the connections to and from it go with it (as a bundle, like the links of a sheet) and come back when it is restored */
+  const bundle = (d.flowLinks || []).filter((l) => l.fromFlowId === id || l.toFlowId === id);
+  if (bundle.length) d.flowLinks = d.flowLinks.filter((l) => !bundle.includes(l));          // a file with no connections is left exactly as it was
+  d.removed.push({ id: newId('x'), kind: 'flow', label: f.title, removedAt: now(), entry: f, ...(bundle.length ? { flowLinks: bundle } : {}) });
+}
+
+/* ---- connections between flows: "this Flow leads to that one" (drawn on the Flow map) ---- */
+export function addFlowLink(d, { fromFlowId, toFlowId, label = '', fromStepId = null }) {
+  const a = pick(d.flows, fromFlowId, 'flow'), b = pick(d.flows, toFlowId, 'flow'); need(a !== b, 'A flow cannot lead to itself.');
+  if (fromStepId) pick(a.steps, fromStepId, 'step');
+  d.flowLinks ||= [];
+  need(!d.flowLinks.some((l) => l.fromFlowId === fromFlowId && l.toFlowId === toFlowId && (l.fromStepId || null) === (fromStepId || null)), 'Those two flows are already connected that way.');
+  const l = { id: newId('fl'), sort: sortAfter(d, 'flowlinks', d.flowLinks), fromFlowId, toFlowId, label: String(label).trim(), ...(fromStepId ? { fromStepId } : {}) };
+  d.flowLinks.push(l); return l.id;
+}
+export function updateFlowLink(d, id, patch) {
+  const l = pick(d.flowLinks || [], id, 'flow connection'); if ('label' in patch) patch = { ...patch, label: String(patch.label).trim() };
+  if (patch.fromStepId) pick(pick(d.flows, l.fromFlowId, 'flow').steps, patch.fromStepId, 'step');
+  Object.assign(l, patch); for (const [k, v] of Object.entries(l)) if (v === undefined || v === null && k === 'fromStepId') delete l[k];
+}
+export function removeFlowLink(d, id) {
+  const i = (d.flowLinks || []).findIndex((x) => x.id === id), l = d.flowLinks?.[i]; need(l, 'That connection no longer exists.');
+  const name = (fid) => d.flows.find((f) => f.id === fid)?.title || '?';
+  d.flowLinks.splice(i, 1); d.removed.push({ id: newId('x'), kind: 'flowlink', label: `${name(l.fromFlowId)} → ${name(l.toFlowId)}${l.label ? ` (${l.label})` : ''}`, removedAt: now(), entry: l });
 }
 export function addStep(d, flowId, { team, title, afterStepId = null, ...rest }) {
   const f = pick(d.flows, flowId, 'flow'); need(team.trim() && title.trim(), 'A step needs a team and a title.');
@@ -285,7 +309,18 @@ export function removeTeam(d, flowId, team) {
 export function restore(d, removedId) {
   const i = d.removed.findIndex((r) => r.id === removedId), r = d.removed[i];
   if (r.kind === 'ticket') place(d.tickets.items, r.entry);
-  else if (r.kind === 'flow') place(d.flows, r.entry);
+  else if (r.kind === 'flow') {
+    place(d.flows, r.entry);
+    (r.flowLinks || []).forEach((l) => {
+      d.flowLinks ||= [];
+      /* the other end may itself be in Removed: hand the connection to that flow's bundle so it comes back with it, never dropped */
+      const other = l.fromFlowId === r.entry.id ? l.toFlowId : l.fromFlowId, wait = !d.flows.some((f) => f.id === other) && d.removed.find((o) => o !== r && o.kind === 'flow' && o.entry.id === other);
+      if (wait) (wait.flowLinks ||= []).push(l); else if (d.flows.some((f) => f.id === other)) place(d.flowLinks, l);
+    });
+  } else if (r.kind === 'flowlink') {
+    need([r.entry.fromFlowId, r.entry.toFlowId].every((x) => d.flows.some((f) => f.id === x)), 'Restore the flows this connection joins first.');
+    d.flowLinks ||= []; place(d.flowLinks, r.entry);
+  }
   else if (r.kind === 'step') {
     const f = d.flows.find((x) => x.id === r.flowId); need(f, 'Restore the flow first: this step belongs to it.');
     place(f.steps, r.entry);

@@ -79,7 +79,15 @@ export function flowDoc(flow, level = 1) {
   return out.join('\n');
 }
 
-/* every flow of a map in one document */
+/* how the flows connect: a diagram of the flows that have a connection, with the connection labels */
+function mapDoc(data) {
+  const links = (data.flowLinks || []).filter((l) => data.flows.some((f) => f.id === l.fromFlowId) && data.flows.some((f) => f.id === l.toFlowId));
+  if (!links.length) return [];
+  const used = data.flows.filter((f) => links.some((l) => l.fromFlowId === f.id || l.toFlowId === f.id)), id = (fid) => 'f' + (data.flows.findIndex((f) => f.id === fid) + 1);
+  return ['## How flows connect', '', '```mermaid', 'flowchart LR', ...used.map((f) => `  ${id(f.id)}[${q(f.title)}]`), ...links.map((l) => `  ${id(l.fromFlowId)} -->${l.label ? `|${q(l.label)}|` : ''} ${id(l.toFlowId)}`), '```', ''];
+}
+
+/* every flow of a map in one document, after a diagram of how they connect */
 export function flowsDoc(data, title = 'Business flows') {
-  return [`# ${one(title)}`, '', ...(data.flows.length ? data.flows.map((f) => flowDoc(f, 2)) : ['_No business flows yet._', ''])].join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+  return [`# ${one(title)}`, '', ...mapDoc(data), ...(data.flows.length ? data.flows.map((f) => flowDoc(f, 2)) : ['_No business flows yet._', ''])].join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
 }

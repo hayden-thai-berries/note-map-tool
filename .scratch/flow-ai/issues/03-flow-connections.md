@@ -4,11 +4,11 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] New Flow connection Entry with a permanent sort; old files load unchanged
-- [ ] Box colour comes from the Department of the Flow's first Team, or a neutral colour when that Team is not a Department
-- [ ] Draw and delete connections on the Flow map; deleting sends to Removed and restores exactly
-- [ ] Deleting a Flow sends its connections with it; restoring the Flow brings them back
-- [ ] Add "Flow connection" and "Flow map" to GLOSSARY.md (avoid "Link"), after asking the user
-- [ ] Unit and browser tests
+- [x] New Flow connection Entry with a permanent sort; old files load unchanged
+- [x] Box colour comes from the Department of the Flow's first Team, or a neutral colour when that Team is not a Department
+- [x] Draw and delete connections on the Flow map; deleting sends to Removed and restores exactly
+- [x] Deleting a Flow sends its connections with it; restoring the Flow brings them back
+- [x] Add "Flow connection" and "Flow map" to GLOSSARY.md (avoid "Link"), after asking the user
+- [x] Unit and browser tests

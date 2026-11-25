@@ -13,6 +13,7 @@
  *   removed:     [{ id, kind, label, removedAt, entry, ... where it sat, so it can be put back }],
  *   meta:        { importedFrom?, legacy?: { mapMd?, flowsMd? } }
  * }
+ *   flowLinks?:  [{ id, sort, fromFlowId, toFlowId, label, fromStepId? }]   (a Flow connection: this Flow leads to that one; optional list, absent = none)
  * Sheets, links, tickets, flows and flow steps carry a permanent `sort` number (ascending in their list); see ops.js. Order of the arrays is the order on screen. Entries point at each other by id; names are only labels. */
 export const SCHEMA_VERSION = 1;
 export const STEP_KINDS = ['start', 'end', 'decision'];
@@ -99,9 +100,19 @@ export function validate(d) {
       [...(s.triggers || []), ...(s.backs || [])].forEach((t) => { if (t.stepId && !steps.has(t.stepId)) bad.push(`step ${s.id} points at a missing step`); });
     });
   });
+  /* Flow connections: both ends are flows of this map (a flow in Removed takes its connections with it), never the same flow, and a starting step must be one of that flow's */
+  const flowIds = new Set(d.flows.map((f) => f.id));
+  if (d.flowLinks !== undefined && !Array.isArray(d.flowLinks)) bad.push('flowLinks must be a list');
+  (Array.isArray(d.flowLinks) ? d.flowLinks : []).forEach((l) => {
+    dup(l.id, 'flow connection');
+    if (!flowIds.has(l.fromFlowId) || !flowIds.has(l.toFlowId)) bad.push(`flow connection ${l.id} points at a missing flow`);
+    else if (l.fromFlowId === l.toFlowId) bad.push(`flow connection ${l.id} joins a flow to itself`);
+    if (l.fromStepId) { const f = d.flows.find((x) => x.id === l.fromFlowId); if (f && !(f.steps || []).some((s) => s.id === l.fromStepId) && !d.removed.some((r) => r.kind === 'step' && r.flowId === f.id && r.entry.id === l.fromStepId)) bad.push(`flow connection ${l.id} starts at a missing step`); }
+    if (typeof l.label !== 'string') bad.push(`flow connection ${l.id} has no label text`);
+  });
   d.tickets.items.forEach((t) => { if (t.targetId && !known.has(t.targetId) && !deptIds.has(t.targetId)) bad.push(`ticket ${t.id} points at a missing target`); });
   const sorted = (list, what) => list.forEach((x, i) => { if (typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort)) bad.push(`${what} ${x.id ?? i} is out of order or has no sort number`); });
-  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket'); sorted(d.flows, 'flow'); d.flows.forEach((f) => { sorted(f.steps || [], 'step'); sorted(f.notes || [], 'note'); });
+  sorted(d.sheets, 'sheet'); sorted(d.links, 'link'); sorted(d.tickets.items, 'ticket'); sorted(d.flows, 'flow'); sorted(Array.isArray(d.flowLinks) ? d.flowLinks : [], 'flow connection'); d.flows.forEach((f) => { sorted(f.steps || [], 'step'); sorted(f.notes || [], 'note'); });
   return bad;
 }
 
@@ -115,7 +126,7 @@ export function upgrade(d) {
     if (!Array.isArray(list) || !list.some((x, i) => typeof x.sort !== 'number' || (i && x.sort <= list[i - 1].sort))) return;
     list.forEach((x, i) => { x.sort = (i + 1) * STEP; }); changes.push(`numbered the ${what}`);
   };
-  fill(out.sheets, 'sheets'); fill(out.links, 'links'); fill(out.tickets?.items, 'tickets'); fill(out.flows, 'flows');
+  fill(out.sheets, 'sheets'); fill(out.links, 'links'); fill(out.tickets?.items, 'tickets'); fill(out.flows, 'flows'); fill(out.flowLinks, 'flow connections');
   (out.flows || []).forEach((f) => { fill(f.steps, `steps of "${f.title}"`); if (f.notes) fill(f.notes, `notes of "${f.title}"`); });
   return { data: out, changes };
 }
