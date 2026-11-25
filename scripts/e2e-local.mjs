@@ -44,7 +44,7 @@ try {
   // 5. ticket status change
   await click('Tickets & projects'); await until(`!!document.querySelector('select[aria-label=Status]')`, 'work board');
   await H.choose('Status', 'Done'); await click('Save'); await saved();
-  r.check('ticket status change is saved', readJson('data/demo.json').tickets.items.some((t) => t.status === 'done' && t.updated === new Date().toISOString().slice(0, 10)));
+  r.check('ticket status change is saved', readJson('data/demo.json').tickets.items.some((t) => t.status === 'done' && t.updated === new Date().toLocaleDateString('en-CA')));
 
   // 6. conflict: the file changes on disk behind the app's back
   const disk = readJson('data/demo.json'); disk.title = 'Edited elsewhere'; fs.writeFileSync(path.join(H.sandbox, 'data/demo.json'), JSON.stringify(disk, null, 2) + '\n');

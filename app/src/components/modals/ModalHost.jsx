@@ -19,7 +19,7 @@ export function ModalProvider({ children }) {
       {m?.kind === 'function' && <FunctionModal key={m.n} {...p} onClose={close} />}
       {m?.kind === 'file' && <FileModal key={m.n} {...p} onClose={close} open={open} />}
       {m?.kind === 'link' && <LinkModal key={m.n} {...p} onClose={close} />}
-      {m?.kind === 'ticket' && <TicketForm key={m.n} id={p.id} preset={p.preset} onClose={close} />}
+      {m?.kind === 'ticket' && <TicketForm key={m.n} id={p.id} preset={p.preset} onOpen={(id, preset) => open('ticket', { id, preset })} onClose={close} />}
     </Ctx.Provider>
   );
 }

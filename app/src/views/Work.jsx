@@ -43,7 +43,7 @@ export default function Work() {
       {view !== 'report' && <Summary items={items} onOpen={(id) => setForm({ id })} />}
       {view === 'report' ? <Report d={d} list={reportList} onOpen={(id) => setForm({ id })} /> : view === 'board' ? <Board d={d} list={list} quick={quick} onMove={onMove} onOpen={(id) => setForm({ id })} onAdd={onAdd} /> : <Table d={d} list={list} quick={quick} onMove={onMove} onOpen={(id) => setForm({ id })} />}
       {ask && <BlockedAsk ticket={ask} onDone={(reason) => { if (reason !== null) apply((x) => moveTicket(x, ask.id, 'blocked', reason)); setAsk(null); }} />}
-      {form && <TicketForm key={form.id || 'new'} id={form.id} onClose={() => setForm(null)} />}
+      {form && <TicketForm key={form.id || `new:${form.preset?.type || ''}`} id={form.id} preset={form.preset} onOpen={(id, preset) => setForm({ id, preset })} onClose={() => setForm(null)} />}
     </div>
   );
 }

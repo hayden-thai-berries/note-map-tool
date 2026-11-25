@@ -47,7 +47,7 @@ const OwnerInput = ({ d, t, quick, className = '' }) => (
 function Chip({ d, t }) { const tg = targetOf(d, t); return tg ? <span className={`rounded px-1.5 text-xs ${CHIP[tg.kind === 'dept' || tg.kind === 'app' || tg.kind === 'orphan' ? tg.kind : 'sheet']}`}>{tg.name}</span> : <span />; }
 
 function Card({ d, t, quick, onMove, onOpen }) {
-  const [editing, setEditing] = useState(false), items = d.tickets.items, project = t.project && items.find((x) => x.id === t.project), ps = t.type === 'project' ? projectStats(items, t) : null, h = hoursOf(t);
+  const [editing, setEditing] = useState(false), [showKids, setShowKids] = useState(false), items = d.tickets.items, project = t.project && items.find((x) => x.id === t.project), ps = t.type === 'project' ? projectStats(items, t) : null, h = hoursOf(t);
   const open = (e) => { if (!e.target.closest('input,select,textarea,a,button:not([data-open])')) onOpen(t.id); };
   return (
     <article draggable={!editing} onDragStart={(e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; }} onClick={open} data-ticket={t.id}
@@ -59,6 +59,8 @@ function Card({ d, t, quick, onMove, onOpen }) {
       <div className="mt-0.5 flex items-start gap-1"><Title t={t} quick={quick} onEditing={setEditing} className="min-w-0 flex-1" />{/^https?:\/\//i.test(t.url || '') && <a href={t.url} target="_blank" rel="noreferrer" aria-label="Open link" className="text-blue-600">↗</a>}</div>
       {t.description && <p className="mt-0.5 line-clamp-2 text-xs text-slate-600">{t.description}</p>}
       {ps && (ps.total || ps.hours) ? <div className="mt-1 text-xs text-slate-600">{statsLine(ps)}{ps.total ? <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><i className="block h-full bg-emerald-500" style={{ width: `${Math.round(ps.done / ps.total * 100)}%` }} /></div> : null}</div> : null}
+      {ps && ps.total > 0 && <div className="mt-1 text-xs"><button type="button" aria-expanded={showKids} className={linkBtn} onClick={() => setShowKids(!showKids)}>{showKids ? 'Hide items' : `Show ${ps.total} ${ps.total === 1 ? 'item' : 'items'}`}</button>
+        {showKids && <ul className="mt-1 space-y-0.5 text-slate-600">{items.filter((x) => x.project === t.id && x.decision !== 'rejected').map((x) => <li key={x.id} className="flex justify-between gap-2"><button type="button" className="min-w-0 truncate text-left hover:text-blue-700" onClick={() => onOpen(x.id)}>{x.title}</button><span className="shrink-0 text-slate-400">{STATUS_LIST.find((s) => s[0] === x.status)?.[1]}</span></li>)}</ul>}</div>}
       {project && <div className="mt-1 text-xs text-slate-500">↳ {project.id} {project.title}</div>}
       {t.status === 'blocked' && <CommitInput aria-label="Blocked reason" placeholder="Why is it blocked?" className="mt-1 !border-red-300 !bg-red-50 !py-0.5 text-xs text-red-800" value={t.blocked || ''} onCommit={(v) => quick(t, { blocked: v.trim() }, 'blocked')} />}
       <div className="mt-1.5 flex items-center justify-between gap-2 text-xs"><Chip d={d} t={t} />{h ? <span className="text-slate-500">⏱ {fmtH(h)}</span> : null}{t.owner ? <span title={t.owner} className="grid h-5 w-5 place-items-center rounded-full bg-slate-200 text-[10px] font-semibold">{initials(t.owner)}</span> : null}</div>
