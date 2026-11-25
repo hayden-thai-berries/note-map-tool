@@ -4,11 +4,11 @@
 
 **Blocked by:** 07: AI picks the chart type; the app lays it out (done); 08: Ask AI to edit a Flow (done)
 
-**Status:** ready-for-agent
+**Status:** done on branch `feat/ai-flows`
 
-- [ ] The current flow is described to the AI including arrows that point at "later" boxes (free canvases have no earlier or later)
-- [ ] Kept boxes keep their position, size and shape; only words the AI changed are touched
-- [ ] New boxes are placed beside their first connection without overlapping any box
-- [ ] The preview marks boxes as NEW, CHANGED or REMOVED on the free canvas (the marks already exist for swimlane steps)
-- [ ] Accept is one undoable step; removed boxes go to Removed and restore exactly
-- [ ] Entity boxes keep their description lines and sheet unless the AI changes them
+- [x] The current flow is described to the AI including arrows that point at "later" boxes (free canvases have no earlier or later)
+- [x] Kept boxes keep their position, size and shape; only words the AI changed are touched
+- [x] New boxes are placed beside their first connection without overlapping any box
+- [x] The preview marks boxes as NEW, CHANGED or REMOVED on the free canvas (the marks already exist for swimlane steps)
+- [x] Accept is one undoable step; removed boxes go to Removed and restore exactly
+- [x] Entity boxes keep their description lines and sheet unless the AI changes them

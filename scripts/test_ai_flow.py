@@ -158,6 +158,27 @@ ENTITY = {"chart": "entity", "reason": "These are things and how they relate.", 
     {"title": "Order", "lines": "id\ntotal", "waits": [{"on": 0, "msg": "1 to many"}], "kind": "decision", "team": "Sales"}]}
 
 
+FREE_CURRENT = {"layout": "free", "steps": [{"title": "Customer", "kind": "step", "note": "id\nname", "waits": [{"on": 1, "msg": "belongs to"}]}, {"title": "Order", "waits": [{"on": 0, "msg": "1 to many"}, {"on": 1}, {"on": 9}]}]}
+FREE_ANSWER = {"summary": "Added Shipment", "steps": [{"was": 0, "team": "General", "title": "Customer", "waits": [{"on": 1, "msg": "belongs to"}]}, {"was": 1, "team": "General", "title": "Order", "lines": ["id", "total"], "waits": [{"on": 0, "msg": "1 to many"}, {"on": 1}]},
+                                                                     {"team": "General", "title": "Shipment", "lines": ["id", "carrier"], "waits": [{"on": 1, "msg": "1 to 1"}, {"on": 2}, {"on": 7}]}]}
+
+
+class FreeEdit(Base):
+    def test_a_free_canvas_keeps_arrows_that_point_forward_and_tells_the_ai_it_is_free(self):
+        self.on(FREE_ANSWER); out = self.post({"mapId": "m", "title": "Data", "instruction": "add a shipment entity", "flow": FREE_CURRENT})[1]; self.assertTrue(out["ok"], out)
+        sent = self.sent(); self.assertIn("FREE CANVAS", sent); self.assertIn('\\"on\\": 1, \\"msg\\": \\"belongs to\\"', sent); self.assertIn("id\\nname", self.stub.requests[0]["body"]["messages"][0]["content"]); self.assertNotIn('"on": 9', sent)   # the forward arrow is kept, the one at nothing is dropped
+        steps = out["flow"]["steps"]; self.assertEqual(steps[0]["waits"], [{"on": 1, "msg": "belongs to"}]); self.assertEqual(steps[1]["waits"], [{"on": 0, "msg": "1 to many"}])   # its own index is refused
+        self.assertEqual(steps[2]["waits"], [{"on": 1, "msg": "1 to 1"}]); self.assertEqual([s["was"] for s in steps], [0, 1, None])
+
+    def test_lines_in_an_edit_become_the_description_and_a_missing_note_still_means_unchanged(self):
+        self.on(FREE_ANSWER); steps = self.post({"mapId": "m", "title": "t", "instruction": "x", "flow": FREE_CURRENT})[1]["flow"]["steps"]
+        self.assertEqual(steps[1]["note"], "id\ntotal"); self.assertEqual(steps[2]["note"], "id\ncarrier"); self.assertNotIn("note", steps[0])
+
+    def test_a_swimlane_still_refuses_arrows_that_point_forward(self):
+        f = ai_flow.parse_answer(json.dumps({"steps": [{"was": 0, "team": "A", "title": "x", "waits": [{"on": 1}]}, {"was": 1, "team": "A", "title": "y"}]}), [], 2)["steps"]; self.assertEqual(f[0]["waits"], [])
+        cur = ai_flow.current_flow({"steps": [{"title": "a", "waits": [{"on": 1}]}, {"title": "b"}]}); self.assertEqual(cur[0][0]["waits"], []); self.assertFalse(cur[1])
+
+
 class Charts(Base):
     def test_the_prompt_offers_all_four_chart_types_and_the_entity_format(self):
         self.assertTrue(all(w in ai_flow.SYSTEM for w in ('"swimlane"', '"flowchart"', '"waterfall"', '"entity"', '"lines"', "relationship")))

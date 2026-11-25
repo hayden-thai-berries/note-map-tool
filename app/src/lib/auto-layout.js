@@ -49,3 +49,14 @@ export function layoutSteps(steps, chart) {
 
 /* the lowest edge of the laid-out boxes, so free notes can go in a row underneath */
 export const bottomOf = (boxes) => Math.max(0, ...boxes.map((b) => b.y + b.h));
+
+/* A place for one new box on a canvas that already has boxes (boxes are { x, y, w, h }): beside the box it connects to if there is room (to its right, then a
+ * row up or down), otherwise under everything. Never overlaps, and keeps some air around each box. */
+export function freeSpot(boxes, size, anchor = null, clear = 50) {
+  const hit = (x, y) => boxes.some((b) => x < b.x + b.w + clear && b.x < x + size.w + clear && y < b.y + b.h + clear && b.y < y + size.h + clear);
+  if (anchor) for (let ring = 0; ring < 8; ring++) {
+    const x = anchor.x + anchor.w + 70 + ring * (size.w + 70);
+    for (const k of [0, 1, -1, 2, -2, 3, -3]) { const y = anchor.y + k * (size.h + 40); if (!hit(x, y)) return { x: Math.round(x), y: Math.round(y) }; }
+  }
+  return { x: Math.round(boxes.length ? Math.min(...boxes.map((b) => b.x)) : MARGIN), y: Math.round((boxes.length ? Math.max(...boxes.map((b) => b.y + b.h)) : 0) + 70) };
+}

@@ -163,3 +163,50 @@ test('it fills only an empty flow, a free canvas cannot become a swimlane, and a
   const b = base2(); o.switchToFree(b.d, b.f, {}); assert.throws(() => applyGeneratedAs(b.d, b.f, PROCESS, 'swimlane'), /no lanes/); applyGeneratedAs(b.d, b.f, PROCESS, 'flowchart'); assert.equal(b.d.flows[0].steps.length, 5); assert.deepEqual(validate(b.d), []);
 });
 function base2() { const d = emptyData('T'); d.sheets.push({ id: 'h_orders', kind: 'sheet', name: 'Orders', departmentId: null, sectionId: null, owner: '', details: [], crit: null, url: null, note: '', sort: 1 }); const f = o.addFlow(d, { title: 'Chart' }); return { d, f }; }
+
+// ---- Ask AI on a free canvas ----
+const { freeSpot } = await lib('auto-layout.js'), { switchToFree } = o;
+function freeBase() { // Customer -> Order (entity boxes), plus an arrow that points "backwards": Order -> Customer ("belongs to")
+  const d = emptyData('T'); d.sheets.push({ id: 'h1', kind: 'sheet', name: 'Orders', departmentId: null, sectionId: null, owner: '', details: [], crit: null, url: null, note: '', sort: 1 }); const f = o.addFlow(d, { title: 'Data' }); switchToFree(d, f, {});
+  const a = o.addShape(d, f, { x: 40, y: 40, shape: 'entity', title: 'Customer' }), b = o.addShape(d, f, { x: 340, y: 40, shape: 'entity', title: 'Order' }); o.updateStep(d, f, a, { note: 'id\nname' }); o.updateStep(d, f, b, { note: 'id', sheetId: 'h1' });
+  const { connectFree } = { connectFree: null }; d.flows[0].steps[1].triggers.push({ stepId: a, msg: '1 to many' }); delete d.flows[0].steps[1].standalone; d.flows[0].steps[0].triggers.push({ stepId: b, msg: 'belongs to' }); delete d.flows[0].steps[0].standalone; return { d, f, a, b };
+}
+/* like the server's answer for an edit: a field the AI did not mention is absent */
+const FS = (was, title, waits = [], x = {}) => ({ was, team: 'General', title, waits, ...x });
+const boxesOf = (d) => d.flows[0].steps.map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h }));
+
+test('a free canvas is described to the AI with its arrows in both directions, including ones that point at a later box', () => {
+  const { d } = freeBase(), t = flowForAi(d.flows[0], d.sheets);
+  assert.equal(t.layout, 'free'); assert.deepEqual(t.steps.map((s) => s.waits), [[{ on: 1, msg: 'belongs to' }], [{ on: 0, msg: '1 to many' }]]); assert.equal(t.steps[1].sheet, 'Orders'); assert.equal(t.steps[0].note, 'id\nname'); assert.equal(flowForAi(swim2().d.flows[0], []).layout, undefined);
+});
+function swim2() { const d = emptyData('T'), f = o.addFlow(d, { title: 'S' }); o.addStep(d, f, { team: 'A', title: 'x' }); return { d, f }; }
+test('a new box on a free canvas goes beside the box it connects to, as an entity when the diagram is entities, and clear of every other box', () => {
+  const { d, f, b } = freeBase(); const r = applyEdit(d, f, { notes: [], steps: [FS(0, 'Customer', [{ on: 1, msg: 'belongs to' }], { note: 'id\nname' }), FS(1, 'Order', [{ on: 0, msg: '1 to many' }], { note: 'id', sheet: 'Orders' }), FS(null, 'Shipment', [{ on: 1, msg: '1 to 1' }], { note: 'id\ncarrier' })] });
+  const n = d.flows[0].steps[2]; assert.deepEqual([n.title, n.shape, n.note], ['Shipment', 'entity', 'id\ncarrier']); assert.ok(n.x >= d.flows[0].steps[1].x + d.flows[0].steps[1].w + 40, 'to the right of Order'); assert.equal(r.added.length, 1); assert.ok(!overlaps(boxesOf(d)));
+  assert.deepEqual(d.flows[0].steps[2].triggers, [{ stepId: b, msg: '1 to 1' }]); assert.equal(d.flows[0].steps[2].standalone, undefined); assert.deepEqual(validate(d), []);
+});
+test('kept boxes keep their place, size, shape, sheet and arrows (including a backward one) unless the AI changes them; the team is not compared on a free canvas', () => {
+  const { d, f } = freeBase(); const before = structuredClone(d.flows[0].steps); const r = applyEdit(d, f, { notes: [], steps: [FS(0, 'Customer', [{ on: 1, msg: 'belongs to' }]), FS(1, 'Order', [{ on: 0, msg: '1 to many' }])] });
+  assert.deepEqual([r.added, r.changed, r.removed, r.arrowsAdded, r.arrowsRemoved], [[], [], [], 0, 0]); assert.deepEqual(d.flows[0].steps, before);
+  applyEdit(d, f, { notes: [], steps: [FS(0, 'Client', [{ on: 1, msg: 'belongs to' }], { note: 'id\nname\nemail' }), FS(1, 'Order', [])] }); const [c, o2] = d.flows[0].steps;
+  assert.deepEqual([c.title, c.note, c.x, c.y, c.w, c.shape], ['Client', 'id\nname\nemail', 40, 40, 210, 'entity']); assert.deepEqual(o2.triggers, []); assert.equal(o2.standalone, true); assert.deepEqual(validate(d), []);
+});
+test('an arrow can be turned round on a free canvas, and a box the AI drops goes to Removed with its place and comes back exactly', () => {
+  const { d, f, a, b } = freeBase(); const orig = structuredClone(d.flows[0].steps[1]);
+  applyEdit(d, f, { notes: [], steps: [FS(0, 'Customer', [{ on: 1, msg: 'places' }]), FS(1, 'Order', [])] }); assert.deepEqual(d.flows[0].steps[0].triggers, [{ stepId: b, msg: 'places' }]); assert.ok(a);
+  const g = freeBase(); const r = applyEdit(g.d, g.f, { notes: [], steps: [FS(0, 'Customer', [])] }); assert.deepEqual(r.removed, [g.b]); assert.equal(g.d.flows[0].steps.length, 1); assert.deepEqual(validate(g.d), []);
+  o.restore(g.d, g.d.removed.at(-1).id); assert.equal(g.d.flows[0].steps.length, 2); assert.equal(g.d.flows[0].steps[1].x, orig.x); assert.equal(g.d.flows[0].steps[1].shape, 'entity'); assert.deepEqual(validate(g.d), []);
+});
+test('in the preview the boxes to be removed stay on the canvas so new boxes are placed clear of them too', () => {
+  const { d, f } = freeBase(); const r = applyEdit(d, f, { notes: [], steps: [FS(0, 'Customer', []), FS(null, 'Address', [{ on: 0, msg: '' }])] }, { keepRemoved: true });
+  assert.equal(d.flows[0].steps.length, 3); assert.equal(d.removed.length, 0); assert.equal(r.removed.length, 1); assert.ok(!overlaps(boxesOf(d)));
+});
+test('new boxes without a connection go under everything, and notes go pinned (below their box) or in a row under the boxes', () => {
+  const { d, f } = freeBase(); applyEdit(d, f, { notes: [{ text: 'pinned', step: 0 }, { text: 'loose', step: null }], steps: [FS(0, 'Customer', [{ on: 1, msg: 'belongs to' }]), FS(1, 'Order', [{ on: 0, msg: '1 to many' }]), FS(null, 'Loner', [])] });
+  const st = d.flows[0].steps, bottom = Math.max(st[0].y + st[0].h, st[1].y + st[1].h); assert.ok(st[2].y >= bottom + 50); assert.equal(st[2].standalone, true); assert.equal(d.flows[0].notes[0].stepId, st[0].id); assert.equal(d.flows[0].notes[0].y, st[0].h + 12);
+  assert.ok(d.flows[0].notes[1].y >= Math.max(...st.map((s) => s.y + s.h)) + 40); assert.deepEqual(validate(d), []);
+});
+test('freeSpot never overlaps, tries beside the anchor first, and works on an empty canvas', () => {
+  const B = [{ x: 0, y: 0, w: 200, h: 100 }, { x: 320, y: 0, w: 200, h: 100 }]; const s = freeSpot(B, { w: 200, h: 100 }, B[0]); assert.ok(!overlaps([...B, { ...s, w: 200, h: 100 }])); assert.ok(s.x > 0 || s.y > 0);
+  const e = freeSpot([], { w: 200, h: 100 }); assert.deepEqual(e, { x: 40, y: 70 }); const crowd = Array.from({ length: 30 }, (_, i) => ({ x: (i % 6) * 260, y: Math.floor(i / 6) * 160, w: 200, h: 100 })); const c = freeSpot(crowd, { w: 200, h: 100 }, crowd[0]); assert.ok(!overlaps([...crowd, { ...c, w: 200, h: 100 }]));
+});

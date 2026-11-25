@@ -80,3 +80,8 @@ export function connectFree(d, flowId, a, b) {
   if (!A || !B || A === B || B.triggers.some((x) => x.stepId === A.id)) return false;
   B.triggers.push({ stepId: A.id, msg: branchLabel(f, A) }); delete B.standalone; return true;
 }
+
+/* the arrows into a box on a free canvas: exactly the "waits on" arrows to other boxes, in any direction (no automatic arrow, no lanes) */
+export function effectiveWaitsFree(f, i) {
+  return f.steps[i].triggers.filter((t) => t.stepId).map((t) => ({ on: f.steps.findIndex((x) => x.id === t.stepId), msg: t.msg || '' })).filter((w) => w.on >= 0 && w.on !== i);
+}

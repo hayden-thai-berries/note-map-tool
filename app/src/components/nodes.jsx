@@ -191,7 +191,8 @@ export function FreeNode({ data, selected }) {
   const boxStyle = { background: sk(fill[0]), borderColor: sk(fill[1]), color: sk('boxText'), borderWidth: sk('stroke'), fontFamily: sk('font'), ...(look === 'border-2' ? { borderRadius: sk('radius') } : {}) };
   const lines = String(st.note || '').split(/\r?\n/).filter((l) => l.trim());
   return (
-    <div className="group relative h-full w-full" data-kind={kind || 'step'} data-shape={shape}>
+    <div className={`group relative h-full w-full ${DIFF[data.diff]?.box || ''}`} data-kind={kind || 'step'} data-shape={shape} data-diff={data.diff || undefined}>
+      {data.diff && <span className={`absolute -top-2 right-0 z-10 rounded-full px-1.5 text-[10px] font-bold text-white ${DIFF[data.diff].tag}`}>{DIFF[data.diff].label}</span>}
       <NodeResizer isVisible={selected && !editing && !editingBody} minWidth={60} minHeight={40} lineClassName="!border-blue-600" handleClassName="!h-2 !w-2 !rounded-sm !border-blue-600 !bg-white" onResizeEnd={(_, p) => ui.resize?.(idx, p)} />
       {selected && !editing && !editingBody && (
         <div className="nodrag nopan absolute -top-7 left-0 z-10 flex gap-0.5 rounded-full border border-slate-300 bg-white px-1 py-0.5 text-[11px] shadow" role="toolbar" aria-label="Box actions">
@@ -235,4 +236,21 @@ export function NoteDraftNode() {
   );
 }
 
-export const nodeTypes = { dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, free: FreeNode, draft: DraftNode, note: NoteNode, notedraft: NoteDraftNode };
+/* A flow on the Flow map: its name, how big it is, and a colour bar for the Department of its first team (grey when that team is not a Department). Drag from its right dot to another flow to connect them. */
+export function FlowBox({ data, selected }) {
+  const { flow, dept, tone } = data, boxes = flow.steps.length, free = flow.layout === 'free', connecting = useConnection().inProgress;
+  return (
+    <div className={`relative h-full w-full rounded-xl border bg-white shadow-sm ${selected ? 'ring-2 ring-blue-600' : ''} ${tone.ring}`} data-dept={dept || 'none'}>
+      <div className={`h-1.5 w-full rounded-t-[10px] ${tone.dot}`} />
+      <div className="px-3 py-1.5">
+        <b className="block truncate text-sm" title={flow.title}>{flow.title}</b>
+        <div className="mt-0.5 truncate text-xs text-slate-500">{boxes} {free ? (boxes === 1 ? 'box' : 'boxes') : (boxes === 1 ? 'step' : 'steps')} · {free ? 'free canvas' : `${flow.teams.length} ${flow.teams.length === 1 ? 'lane' : 'lanes'}`}</div>
+        <div className={`mt-1 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10px] ${dept ? `${tone.soft} ${tone.text}` : 'bg-slate-100 text-slate-500'}`}>{dept || 'No department'}</div>
+      </div>
+      {/* while an arrow is being dragged, the whole flow is where it can land */}
+      <Handle type="target" position={Position.Left} style={{ top: 0, left: 0, width: '100%', height: '100%', transform: 'none', borderRadius: 12, opacity: 0, pointerEvents: connecting ? 'all' : 'none' }} /><Handle type="source" position={Position.Right} />
+    </div>
+  );
+}
+
+export const nodeTypes = { flowbox: FlowBox, dept: DeptNode, section: SectionNode, sheet: SheetNode, lane: LaneNode, step: StepNode, free: FreeNode, draft: DraftNode, note: NoteNode, notedraft: NoteDraftNode };
