@@ -153,5 +153,34 @@ class Edit(Base):
         self.on("nonsense"); out = self.post({"mapId": "m", "instruction": "x", "flow": CURRENT})[1]; self.assertFalse(out["ok"])
 
 
+ENTITY = {"chart": "entity", "reason": "These are things and how they relate.", "steps": [
+    {"title": "Customer", "lines": ["id", "name", "email", "x" * 200, "", "f", "g", "h", "i", "j"], "sheet": "crm"},
+    {"title": "Order", "lines": "id\ntotal", "waits": [{"on": 0, "msg": "1 to many"}], "kind": "decision", "team": "Sales"}]}
+
+
+class Charts(Base):
+    def test_the_prompt_offers_all_four_chart_types_and_the_entity_format(self):
+        self.assertTrue(all(w in ai_flow.SYSTEM for w in ('"swimlane"', '"flowchart"', '"waterfall"', '"entity"', '"lines"', "relationship")))
+
+    def test_each_chart_type_is_kept_and_an_unknown_one_becomes_swimlane(self):
+        for c in ("swimlane", "flowchart", "waterfall", "entity"):
+            self.assertEqual(ai_flow.parse_answer(json.dumps({"chart": c, "steps": [{"team": "A", "title": "x"}]}), [])["chart"], c)
+        self.assertEqual(ai_flow.parse_answer(json.dumps({"chart": "pie", "steps": [{"team": "A", "title": "x"}]}), [])["chart"], "swimlane")
+
+    def test_an_entity_answer_needs_no_team_and_keeps_its_lines_short_and_few(self):
+        f = ai_flow.parse_answer(json.dumps(ENTITY), ["CRM"]); a, b = f["steps"]
+        self.assertEqual((f["chart"], a["team"], a["title"], a["sheet"], a["kind"]), ("entity", "General", "Customer", "CRM", None))
+        self.assertEqual(a["note"].split("\n")[:3], ["id", "name", "email"]); self.assertEqual(len(a["note"].split("\n")), 7)   # 8 allowed, the empty one dropped; the long one cut
+        self.assertEqual(max(len(x) for x in a["note"].split("\n")), 80)
+        self.assertEqual((b["note"], b["waits"], b["kind"], b["team"]), ("id\ntotal", [{"on": 0, "msg": "1 to many"}], None, "Sales"))
+
+    def test_a_process_answer_still_needs_a_team(self):
+        with self.assertRaises(ai.AiError): ai_flow.parse_answer(json.dumps({"chart": "flowchart", "steps": [{"title": "x"}]}), [])
+
+    def test_the_endpoint_returns_the_chart_for_an_entity_answer(self):
+        self.on(ENTITY); out = self.post({"mapId": "m", "title": "Data", "brief": "customers place orders"})[1]
+        self.assertTrue(out["ok"]); self.assertEqual(out["flow"]["chart"], "entity"); self.assertIn("reason", out["flow"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

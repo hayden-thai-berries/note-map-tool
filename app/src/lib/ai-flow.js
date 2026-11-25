@@ -2,6 +2,7 @@
  * Everything happens inside one apply(), so one Undo takes the whole generated flow back. */
 import * as o from './ops.js';
 import { effectiveWaits } from './flow-edit.js';
+import { layoutSteps, bottomOf } from './auto-layout.js';
 
 const NOTE_AT = { x: 20, y: 86 };   // a note pinned to a step starts just below it (the same offset a hand-added note gets)
 const LANE_H = 144, NOTE_W = 200;   // lane height with its gap, and the room one free note takes: free notes go in a row under the lanes
@@ -32,6 +33,38 @@ export function applyGenerated(d, flowId, gen) {
   gen.notes.forEach((n) => {
     if (n.step != null && ids[n.step]) o.addNote(d, flowId, { text: n.text, x: NOTE_AT.x, y: NOTE_AT.y, stepId: ids[n.step] });
     else o.addNote(d, flowId, { text: n.text, x: 20 + (free++) * NOTE_W, y: f.teams.length * LANE_H + 20 });
+  });
+  return ids;
+}
+
+/* Make the generated diagram in the chart type chosen (the AI's suggestion, or the user's override). A swimlane fills the swimlane flow as it always did.
+ * Any other chart turns the (empty) flow into a free canvas and places the boxes with the app's own layout for that chart type. */
+export function applyGeneratedAs(d, flowId, gen, chart) {
+  if (chart === 'swimlane') {
+    if (d.flows.find((x) => x.id === flowId)?.layout === 'free') throw new Error('A free canvas has no lanes, so a swimlane cannot be made here.');
+    return applyGenerated(d, flowId, gen);
+  }
+  const f = d.flows.find((x) => x.id === flowId);
+  if (!f) throw new Error('That flow no longer exists.');
+  if (f.steps.length) throw new Error('Generate only fills an empty flow.');
+  if (!gen?.steps?.length) throw new Error('The AI made no steps.');
+  const sheetId = (name) => d.sheets.find((s) => s.name.toLowerCase() === String(name || '').toLowerCase())?.id, entity = chart === 'entity';
+  if (f.layout !== 'free') o.switchToFree(d, flowId, {});      // nothing to keep yet: the flow is empty, so this only changes how it is drawn
+  const L = layoutSteps(gen.steps, chart);
+  const ids = gen.steps.map((st, i) => {
+    const id = o.addShape(d, flowId, { x: L[i].x, y: L[i].y, w: L[i].w, h: L[i].h, shape: L[i].shape, title: st.title }), patch = { note: st.note || '' };
+    if (!entity) { patch.team = st.team; if (st.kind) patch.kind = st.kind; if (st.day) patch.day = st.day; }
+    const sid = st.sheet && sheetId(st.sheet); if (sid) patch.sheetId = sid; else if (st.sheetName || st.sheet) patch.sheetName = st.sheetName || st.sheet;
+    o.updateStep(d, flowId, id, patch); return id;
+  });
+  gen.steps.forEach((st, i) => {
+    const s = f.steps.find((x) => x.id === ids[i]); s.triggers = st.waits.filter((w) => w.on < i).map((w) => ({ stepId: ids[w.on], msg: w.msg || '' }));
+    if (s.triggers.length) delete s.standalone;
+  });
+  let free = 0;
+  gen.notes.forEach((n) => {
+    if (n.step != null && ids[n.step]) o.addNote(d, flowId, { text: n.text, x: NOTE_AT.x, y: L[n.step].h + 12, stepId: ids[n.step] });
+    else o.addNote(d, flowId, { text: n.text, x: 20 + (free++) * NOTE_W, y: bottomOf(L) + 40 });
   });
   return ids;
 }

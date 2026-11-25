@@ -41,7 +41,7 @@ try {
 
   await H.click('Generate flow'); await until(`!!${dlg}`, 'dialog');
   r.check('the first time, a notice names the provider and says what is never sent, before anything is sent', await js(`(() => { const t = document.querySelector('[aria-label="AI notice"]').textContent; return t.includes("Claude's servers") && t.includes('emails'); })()`) && seen.length === 0);
-  await H.dlg('Send to Claude'); await until(`!!document.querySelector('[aria-label=Preview]') && ${dlg}.textContent.includes('Chart:')`, 'preview', 15000);
+  await H.dlg('Send to Claude'); await until(`!!document.querySelector('[aria-label=Preview]') && ${dlg}.textContent.includes('AI suggests')`, 'preview', 15000);
   r.check('the preview names the chart type and the reason, and draws the steps', await js(`${dlg}.textContent.includes('Two teams hand the quote over')`) && (await nodes()) === 4);
   r.check('a sheet that is not on the map is flagged, and a known one is not', await js(`document.querySelector('[aria-label="Unknown sheets"]').textContent.includes('Mystery Sheet') && !document.querySelector('[aria-label="Unknown sheets"]').textContent.includes(${q(sheet)})`));
   const sent = seen.join('');
