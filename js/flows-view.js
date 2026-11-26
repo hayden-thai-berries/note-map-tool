@@ -3,7 +3,7 @@
   var S = App.S, $ = App.$, el = App.el;
 
   var LANE_W = 110, LANE_H = 150, CARD_W = 190, CARD_H = 100, GAP = 140, PAD = 20, SVGNS = 'http://www.w3.org/2000/svg';
-  var timer = null, flows = [], selStep = -1, suppressClick = false;
+  var timer = null, pending = null, flows = [], selStep = -1, suppressClick = false;
   /* the arrow open in the editor: { kind: 'in', to: step index, tIdx: index in that step's triggers, -1 = automatic arrow }
    * or { kind: 'back', step: step index, bIdx: index in its backs }. Indices, because every edit re-reads the text. */
   var selArrow = null;
@@ -238,6 +238,8 @@
     sel.textContent = '';
     flows.forEach(function(f, i){ var o = el('option', null, f.title); o.value = i; sel.appendChild(o); });
     sel.value = S.flowIdx; sel.hidden = !flows.length;
+    /* keep the text box in step with the flows, unless the user is typing in it (the debounced input handler sets flowsMd then) */
+    if (document.activeElement !== $('fEd')) $('fEd').value = S.flowsMd;
     if (!flows.length) { $('fcanvas').textContent = ''; $('fcanvas').style.height = '0'; $('fsum').textContent = 'No flows yet. Press New flow.'; $('fwarn').textContent = ''; }
     else drawFlow(flows[S.flowIdx]);
     $('fDelFlow').hidden = !flows.length;
@@ -247,6 +249,7 @@
   App.flowStats = function(){ var n = App.parseFlows(S.flowsMd).length; return n + (n === 1 ? ' flow' : ' flows'); };
 
   function saveFlows(){
+    if (pending != null) { clearTimeout(timer); S.flowsMd = pending; pending = null; selStep = -1; selArrow = null; renderFlows(); }
     var text = S.flowsMd.replace(/\s+$/, '') + '\n', btn = $('fSave');
     btn.disabled = true; setStatus('Saving…');
     fetch('maps/' + flowsFile(), { method: 'PUT', headers: { 'X-Map-Save': '1', 'Content-Type': 'text/markdown' }, body: text })
@@ -277,7 +280,15 @@
     $('flayout').classList.toggle('editing', open);
   }
   /* keepForm: the user is typing in the form, so redraw the diagram but leave the inputs alone */
+  /* the form rewrites the whole file from the parsed flows, so anything the parser could not read would be erased: ask first */
+  function droppedParts(){
+    var out = [];
+    App.parseFlows(S.flowsMd).forEach(function(f){ f.dropped.forEach(function(d){ out.push(f.title + ' › ' + d); }); });
+    return out;
+  }
   function commit(keepForm){
+    var lost = droppedParts();
+    if (lost.length && !confirm('These parts of the flows text cannot be read and will be removed if you keep editing here:\n\n' + lost.slice(0, 6).join('\n') + (lost.length > 6 ? '\n…and ' + (lost.length - 6) + ' more' : '') + '\n\nFix them in the text editor instead, or press OK to remove them.')) { renderFlows(); return; }
     S.flowsMd = App.stringifyFlows(flows).replace(/^\n+|\n+$/g, '');
     $('fEd').value = S.flowsMd;
     setStatus(S.flowsMd === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
@@ -543,7 +554,8 @@
   $('fEd').addEventListener('input', function(){
     var v = this.value;
     setStatus(v.trim() === S.flowsSaved ? '' : 'Unsaved changes. Press Save to keep them.');
-    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; selStep = -1; selArrow = null; renderFlows(); }, 150);
+    pending = v;
+    clearTimeout(timer); timer = setTimeout(function(){ S.flowsMd = v; pending = null; selStep = -1; selArrow = null; renderFlows(); }, 150);
   });
   $('fEd').addEventListener('keydown', function(ev){
     if (ev.key === 'Tab') { ev.preventDefault(); var s = this.selectionStart; this.value = this.value.slice(0, s) + '  ' + this.value.slice(this.selectionEnd); this.selectionStart = this.selectionEnd = s + 2; }
