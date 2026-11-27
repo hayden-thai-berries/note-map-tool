@@ -14,6 +14,7 @@ import Removed from './views/Removed.jsx';
 import ImportPanel from './views/ImportPanel.jsx';
 import { ModalProvider } from './components/modals/ModalHost.jsx';
 import NewMap from './components/NewMap.jsx';
+import MapMenu from './components/MapMenu.jsx';
 
 const hashWs = () => location.hash.replace('#', '') || 'overview';
 
@@ -73,7 +74,7 @@ export default function App() {
     <ModalProvider>
     <div className="flex h-full">
       <nav className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white p-3">
-        <div className="mb-1 px-2 text-base font-semibold tracking-tight">{model.title}</div>
+        <div className="mb-1 flex items-center justify-between gap-2 px-2"><div className="min-w-0 truncate text-base font-semibold tracking-tight">{model.title}</div><MapMenu /></div>
         {picker}
         {newMap}
         {groups.map(([g, items]) => (
