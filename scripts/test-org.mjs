@@ -78,3 +78,20 @@ test('with the option the new fields appear as readable lines; without it the pl
   assert.ok(!/Members:|Docs:|Type:/.test(plain)); assert.match(full, /Members: Kim Tran \(Lead\) <kim@x.test>; Sam/); assert.match(full, /Type: PDF/); assert.match(full, /Docs: How-to https:\/\/doc\.test\/1/);
   const m = parse(full); assert.deepEqual(m.warn, []); assert.equal(m.depts[0].sections[0].nodes[0].note, 'Master list.\nType: PDF\nDocs: How-to https://doc.test/1');
 });
+
+test('a file can be used by other departments: kept off the owner, cleaned up on move, delete and restore, shown in the readable export', () => {
+  const { d, dep, sec, a } = build(), sales = ops.addDepartment(d, 'Sales'), fin = ops.addDepartment(d, 'Finance'), fsec = ops.addSection(d, fin, 'Budget');
+  assert.ok(!('usedBy' in d.sheets[0]));
+  ops.updateSheet(d, a, { usedBy: [sales, dep, sales, fin] });
+  assert.deepEqual(d.sheets.find((s) => s.id === a).usedBy, [sales, fin]); assert.deepEqual(validate(d), []);
+  assert.throws(() => ops.updateSheet(d, a, { usedBy: ['nope'] }), /no longer exists/);
+  const bad = structuredClone(d); bad.sheets[0].usedBy = [dep]; assert.ok(validate(bad).some((p) => /own owning department/.test(p)));
+  bad.sheets[0].usedBy = ['nope']; assert.ok(validate(bad).some((p) => /missing department/.test(p)));
+  const txt = exportLegacy(d, { withNewFields: true }).mapMd; assert.match(txt, /Used by: Sales, Finance/); assert.match(txt, /Also uses: Orders \(Ops\)/);
+  assert.ok(!/Used by/.test(exportLegacy(d).mapMd)); /* the plain legacy form is unchanged */
+  ops.moveSheet(d, a, fsec); assert.deepEqual(d.sheets.find((s) => s.id === a).usedBy, [sales]);
+  ops.removeDepartment(d, sales); assert.ok(!('usedBy' in d.sheets.find((s) => s.id === a))); assert.deepEqual(validate(d), []);
+  const keep = ops.addDepartment(d, 'HR'); ops.updateSheet(d, a, { usedBy: [keep] }); ops.removeSheet(d, a); ops.removeDepartment(d, keep); ops.restore(d, d.removed[0].id);
+  assert.ok(!('usedBy' in d.sheets.find((s) => s.id === a))); assert.deepEqual(validate(d), []);
+  ops.updateSheet(d, a, { usedBy: [] }); assert.ok(!('usedBy' in d.sheets.find((s) => s.id === a)));
+});

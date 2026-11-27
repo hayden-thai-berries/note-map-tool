@@ -8,12 +8,15 @@ const TYPE_LABEL = { doc: 'Doc', excel: 'Excel', pdf: 'PDF', other: 'Other' };
 export function exportLegacy(data, { withNewFields = false } = {}) {
   /* a sheet in Removed keeps its name for anything still pointing at it */
   const nameOf = (id) => data.sheets.find((s) => s.id === id)?.name ?? data.removed.find((r) => r.kind !== 'ticket' && r.entry.id === id)?.entry.name;
-  const extra = (s) => (withNewFields ? [s.type && `Type: ${TYPE_LABEL[s.type]}`, ...(s.docs || []).map((x) => `Docs: ${x.label ? x.label + ' ' : ''}${x.url}`)].filter(Boolean) : []);
+  const depName = (id) => data.departments.find((x) => x.id === id)?.name;
+  const usedBy = (s) => (s.usedBy || []).map(depName).filter(Boolean);
+  const extra = (s) => (withNewFields ? [s.type && `Type: ${TYPE_LABEL[s.type]}`, usedBy(s).length && `Used by: ${usedBy(s).join(', ')}`,...(s.docs || []).map((x) => `Docs: ${x.label ? x.label + ' ' : ''}${x.url}`)].filter(Boolean) : []);
   const node = (s) => ({ name: s.name, parts: [s.owner, ...(s.details || [])].filter((p) => p), crit: s.crit, url: s.url, note: [s.note, ...extra(s)].filter(Boolean).join('\n') });
   const members = (d) => (withNewFields && (d.members || []).length ? [`Members: ${d.members.map((m) => `${m.name}${m.role ? ' (' + m.role + ')' : ''}${m.email ? ' <' + m.email + '>' : ''}`).join('; ')}`] : []);
+  const alsoUses = (d) => { const l = data.sheets.filter((s) => (s.usedBy || []).includes(d.id)).map((s) => `${s.name}${s.departmentId ? ` (${depName(s.departmentId)})` : ''}`); return withNewFields && l.length ? [`Also uses: ${l.join('; ')}`] : []; };
   const model = {
     title: data.title,
-    depts: data.departments.map((d) => ({ name: d.name, text: [...d.text, ...members(d)], sections: d.sections.map((sc) => ({ title: sc.title, note: sc.note, nodes: data.sheets.filter((s) => s.sectionId === sc.id).map(node) })) })),
+    depts: data.departments.map((d) => ({ name: d.name, text: [...d.text, ...members(d), ...alsoUses(d)], sections: d.sections.map((sc) => ({ title: sc.title, note: sc.note, nodes: data.sheets.filter((s) => s.sectionId === sc.id).map(node) })) })),
     apps: data.sheets.filter((s) => s.kind === 'app').map(node),
     links: data.links.map((l) => ({ from: l.fromId ? nameOf(l.fromId) : l.fromName, to: l.toId ? nameOf(l.toId) : l.toName, label: l.label || '' })),
   };

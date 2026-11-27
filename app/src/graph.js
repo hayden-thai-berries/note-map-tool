@@ -3,7 +3,8 @@ import { low } from './data.js';
 import { openTicketsForSheet } from './lib/rollup.js';
 import { SKINS } from './lib/skins.js';
 
-const W = 230, H = 62, GAP = 10, PAD = 14;
+const W = 230, H = 62, H_USED = 80, GAP = 10, PAD = 14;
+const heightOf = (s) => ((s.usedBy || []).length ? H_USED : H); /* a card with a "Used by" row is taller */
 const arrow = (color) => ({ type: MarkerType.ArrowClosed, color });
 
 /* sheets map, drawn straight from the Data file so every node knows its real id:
@@ -14,7 +15,7 @@ export function buildMap(d, { flow, showTix } = {}) {
   const flowSheets = flow ? new Set(flow.steps.filter((s) => s.sheet).map((s) => idOf.get(low(s.sheet))).filter(Boolean)) : null;
   const sheetNode = (s, parentId, x, y) => ({
     id: s.id, type: 'sheet', parentId, extent: 'parent', position: { x, y }, draggable: false,
-    data: { sheetId: s.id, n: { key: low(s.name), name: s.name, kind: s.kind, crit: s.crit, details: [s.owner, ...(s.details || [])].filter(Boolean).join(' · ') }, open: openTicketsForSheet(d, s.id), showTix, dim: !!flowSheets && !flowSheets.has(s.id) },
+    data: { sheetId: s.id, n: { key: low(s.name), name: s.name, kind: s.kind, crit: s.crit, usedBy: (s.usedBy || []).map((u) => d.departments.find((x) => x.id === u)?.name).filter(Boolean), details: [s.owner, ...(s.details || [])].filter(Boolean).join(' · ') }, open: openTicketsForSheet(d, s.id), showTix, dim: !!flowSheets && !flowSheets.has(s.id) },
   });
   let maxH = 0;
   d.departments.forEach((dep, di) => {
@@ -24,13 +25,13 @@ export function buildMap(d, { flow, showTix } = {}) {
     dep.sections.forEach((sc) => {
       nodes.push({ id: 'sec:' + sc.id, type: 'section', parentId: id, extent: 'parent', position: { x: PAD, y }, data: { title: sc.title, note: sc.note, secId: sc.id, depId: dep.id }, draggable: false, selectable: true });
       y += 44;
-      d.sheets.filter((s) => s.sectionId === sc.id).forEach((s) => { onMap.add(s.id); nodes.push(sheetNode(s, id, PAD, y)); y += H + GAP; });
+      d.sheets.filter((s) => s.sectionId === sc.id).forEach((s) => { onMap.add(s.id); nodes.push(sheetNode(s, id, PAD, y)); y += heightOf(s) + GAP; });
       y += 6;
     });
     box.style.height = y + 8; maxH = Math.max(maxH, y + 8);
   });
   const apps = d.sheets.filter((s) => s.kind === 'app'), appsY = maxH + 90;
-  nodes.push({ id: 'apps', type: 'dept', position: { x: 0, y: appsY }, data: { name: 'Connected apps' }, draggable: false, selectable: false, style: { width: Math.max(1, apps.length) * (W + PAD) + PAD, height: 44 + H + 16 } });
+  nodes.push({ id: 'apps', type: 'dept', position: { x: 0, y: appsY }, data: { name: 'Connected apps' }, draggable: false, selectable: false, style: { width: Math.max(1, apps.length) * (W + PAD) + PAD, height: 44 + Math.max(H, ...apps.map(heightOf)) + 16 } });
   apps.forEach((s, i) => { onMap.add(s.id); nodes.push(sheetNode(s, 'apps', PAD + i * (W + PAD), 44)); });
 
   d.links.forEach((l) => {

@@ -34,7 +34,7 @@ export function SheetNode({ data, selected }) {
   const blocked = showTix && open.some((t) => t.status === 'blocked');
   return (
     <div
-      className={`h-[62px] w-[230px] overflow-hidden rounded-lg border px-3 py-1.5 text-sm shadow-sm transition-opacity ${
+      className={`${n.usedBy?.length ? "h-[80px]" : "h-[62px]"} w-[230px] overflow-hidden rounded-lg border px-3 py-1.5 text-sm shadow-sm transition-opacity ${
         n.kind === 'app' ? 'border-violet-300 bg-violet-100' : 'border-emerald-300 bg-emerald-100'
       } ${selected ? 'ring-2 ring-blue-600' : ''} ${blocked ? 'ring-2 ring-red-500' : ''} ${dim ? 'opacity-30' : ''}`}
     >
@@ -58,6 +58,7 @@ export function SheetNode({ data, selected }) {
           </span>
         )}
       </div>
+      {n.usedBy?.length > 0 && <div className="truncate text-[10px] text-slate-600" title={`Used by: ${n.usedBy.join(', ')}`}>Used by: {n.usedBy.join(' · ')}</div>}
       <Handle type="source" position={Position.Right} />
     </div>
   );

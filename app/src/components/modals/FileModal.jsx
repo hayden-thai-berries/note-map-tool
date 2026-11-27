@@ -13,7 +13,7 @@ const STATUS = { todo: 'To do', doing: 'In progress', blocked: 'Blocked', done: 
 /* A file (sheet, doc...) or an app: everything about it, editable in one place. New when `id` is missing. */
 export default function FileModal({ id, sectionId = '', kind: kindIn = 'sheet', onClose, open }) {
   const { data: d } = useRecords(), sheet = id ? d.sheets.find((x) => x.id === id) : null, kind = sheet?.kind || kindIn, isApp = kind === 'app';
-  const [v, setV] = useState(() => ({ name: sheet?.name || '', owner: sheet?.owner || '', crit: sheet?.crit || '', type: sheet?.type || 'sheet', url: sheet?.url || '', note: sheet?.note || '', sectionId: sheet?.sectionId || sectionId || '' }));
+  const [v, setV] = useState(() => ({ name: sheet?.name || '', owner: sheet?.owner || '', crit: sheet?.crit || '', type: sheet?.type || 'sheet', url: sheet?.url || '', note: sheet?.note || '', sectionId: sheet?.sectionId || sectionId || '', usedBy: sheet?.usedBy || [] }));
   const [docs, setDocs] = useState(() => (sheet?.docs || []).map((x) => ({ ...x })));
   const c = useCommit(onClose);
   if (id && !sheet) return null;
@@ -22,7 +22,7 @@ export default function FileModal({ id, sectionId = '', kind: kindIn = 'sheet', 
   const submit = () => {
     if (!v.name.trim()) return c.setError(`${isApp ? 'An app' : 'A file'} needs a name.`);
     if (!isApp && !dep) return c.setError('Choose the function this file belongs to.');
-    const patch = { name: v.name.trim(), owner: v.owner.trim(), crit: v.crit || null, url: v.url.trim() || null, note: v.note, ...(isApp ? {} : { type: v.type }) };
+    const patch = { name: v.name.trim(), owner: v.owner.trim(), usedBy: v.usedBy.filter((u) => u !== dep?.id), crit: v.crit || null, url: v.url.trim() || null, note: v.note, ...(isApp ? {} : { type: v.type }) };
     c.run((x) => {
       const k = sheet ? id : o.addSheet(x, { kind, name: v.name, departmentId: dep?.id ?? null, sectionId: isApp ? null : v.sectionId });
       o.updateSheet(x, k, patch); o.setDocs(x, k, docs);
@@ -54,6 +54,15 @@ export default function FileModal({ id, sectionId = '', kind: kindIn = 'sheet', 
         {!isApp && <Label t="File type"><select className={field} value={v.type} onChange={set('type')}>{Object.entries(FILE_TYPE_LABEL).map(([k, x]) => <option key={k} value={k}>{x}</option>)}</select></Label>}
         <Label t="Link (URL)"><input type="url" className={field} placeholder="https://" value={v.url} onChange={set('url')} /></Label>
       </div>
+      <Section t="Used by">
+        <div className="flex flex-wrap gap-1 text-xs">
+          {d.departments.filter((x) => x.id !== dep?.id).map((x) => {
+            const on = v.usedBy.includes(x.id);
+            return <button type="button" key={x.id} aria-pressed={on} className={`rounded-full border px-2 py-0.5 ${on ? 'border-blue-500 bg-blue-100' : 'border-slate-300 bg-white hover:border-blue-500'}`} onClick={() => setV({ ...v, usedBy: on ? v.usedBy.filter((u) => u !== x.id) : [...v.usedBy, x.id] })}>{x.name}</button>;
+          })}
+        </div>
+        <span className="mt-1 block text-xs text-slate-500">{isApp ? 'Departments that use this app.' : 'Other departments that work in this file. The owning department is the one of its function.'}</span>
+      </Section>
       <Label t="Note"><textarea className={`${field} min-h-16`} value={v.note} onChange={set('note')} /></Label>
       <Section t="Documentation links">
         {docs.map((x, i) => (

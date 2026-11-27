@@ -4,7 +4,8 @@
  *   schemaVersion: 1, title,
  *   departments: [{ id, name, text: [] (the description), members?: [{ id, name, role, email? }], sections: [{ id, title|null, note }] }],   (a section is shown as a "Function"; its note is the description)
  *   sheets:      [{ id, kind: 'sheet'|'app', name, departmentId|null, sectionId|null, owner, details: [], crit|null, url|null, note,
- *                   type?: 'doc'|'excel'|'pdf'|'other' (absent = Google Sheet), docs?: [{ label, url }] }],
+ *                   type?: 'doc'|'excel'|'pdf'|'other' (absent = Google Sheet), docs?: [{ label, url }],
+ *                   usedBy?: [departmentId] (other departments that work in it without owning it; never the owner; absent = none) }],
  *   links:       [{ id, fromId|fromName, toId|toName, label }],
  *   flows:       [{ id, title, every, note?: text about the whole flow, layout?: 'swimlane' | 'free' (on a free flow each step also has x, y, w, h and shape?: 'rect' | 'rounded' | 'pill' | 'diamond' | 'entity'), brief?: what the process is for and who is involved, draft?: a rough list of the steps (both are the input for AI, typed by the user), notes?: [{ id, sort, text, x, y, stepId? }] (sticky notes: x,y are canvas coordinates, or an offset from the step when stepId is set),
  *                   teams: [], unreadable: [], steps: [{ id, team, title, day, sheetId|sheetName, ticket, note, standalone?, kind?: 'start'|'end'|'decision' (absent = an ordinary step),
@@ -74,6 +75,8 @@ export function validate(d) {
     (s.docs || []).forEach((x) => { if (!String(x.url || '').trim()) bad.push(`sheet ${s.id} has a documentation link with no address`); });
     if (s.departmentId && !deptIds.has(s.departmentId)) bad.push(`sheet ${s.id} points at a missing department`);
     if (s.sectionId && secs.get(s.sectionId) !== s.departmentId) bad.push(`sheet ${s.id} points at a section that is not in its department`);
+    if (s.usedBy !== undefined && !Array.isArray(s.usedBy)) bad.push(`sheet ${s.id} usedBy must be a list`);
+    (Array.isArray(s.usedBy) ? s.usedBy : []).forEach((u) => { if (!deptIds.has(u)) bad.push(`sheet ${s.id} is used by a missing department`); else if (u === s.departmentId) bad.push(`sheet ${s.id} is used by its own owning department`); });
   });
   d.links.forEach((l) => {
     dup(l.id, 'link');
