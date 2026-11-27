@@ -14,7 +14,7 @@ export function buildMap(d, { flow, showTix } = {}) {
   d.sheets.forEach((s) => { const k = low(s.name); if (!idOf.has(k)) idOf.set(k, s.id); });
   const flowSheets = flow ? new Set(flow.steps.filter((s) => s.sheet).map((s) => idOf.get(low(s.sheet))).filter(Boolean)) : null;
   const sheetNode = (s, parentId, x, y) => ({
-    id: s.id, type: 'sheet', parentId, extent: 'parent', position: { x, y }, draggable: false,
+    id: s.id, type: 'sheet', parentId, ...(s.kind === 'app' ? { extent: 'parent' } : {}), position: { x, y }, draggable: s.kind === 'sheet', /* a file can be dragged to another function to change its owner (Overview.jsx); an app has no owner */
     data: { sheetId: s.id, n: { key: low(s.name), name: s.name, kind: s.kind, crit: s.crit, usedBy: (s.usedBy || []).map((u) => d.departments.find((x) => x.id === u)?.name).filter(Boolean), details: [s.owner, ...(s.details || [])].filter(Boolean).join(' · ') }, open: openTicketsForSheet(d, s.id), showTix, dim: !!flowSheets && !flowSheets.has(s.id) },
   });
   let maxH = 0;
