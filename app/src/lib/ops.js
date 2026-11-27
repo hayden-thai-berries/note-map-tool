@@ -52,6 +52,7 @@ export function removeDepartment(d, id) {
   need(!d.tickets.items.some((t) => t.targetId === id), `"${dep.name}" still has tickets about it.`);
   need(!(dep.members || []).length, `"${dep.name}" still has members. Remove them first.`);
   d.departments = d.departments.filter((x) => x.id !== id);
+  d.sheets.forEach((s) => dropUsedBy(s, id)); /* restoring the department later does not put it back */
 }
 /* members of a department: who is in it and what they do. Sheet owners stay plain names; members are what the owner pick-list offers. */
 const findMember = (d, depId, id) => pick(pick(d.departments, depId, 'department').members || [], id, 'member');
@@ -96,8 +97,16 @@ export function addSheet(d, { kind = 'sheet', name, departmentId = null, section
   const s = { id: newId('s'), kind, name: name.trim(), departmentId: kind === 'app' ? null : departmentId, sectionId: kind === 'app' ? null : sectionId, owner: '', details: [], crit: null, url: null, note: '', sort: sortAfter(d, 'sheets', d.sheets) };
   d.sheets.push(s); return s.id;
 }
+/* "used by": other departments that work in a file without owning it. A plain list of ids, absent when empty. */
+function dropUsedBy(s, depId) { if (!s.usedBy) return; s.usedBy = s.usedBy.filter((u) => u !== depId); if (!s.usedBy.length) delete s.usedBy; }
 export function updateSheet(d, id, patch) {
   const s = pick(d.sheets, id, 'sheet');
+  if ('usedBy' in patch) {
+    const want = [...new Set(patch.usedBy || [])].filter((u) => u !== s.departmentId);
+    want.forEach((u) => pick(d.departments, u, 'department'));
+    patch = { ...patch }; delete patch.usedBy;
+    if (want.length) s.usedBy = want; else delete s.usedBy;
+  }
   if ('type' in patch) need(!patch.type || FILE_TYPES.includes(patch.type), 'Unknown file type.');
   Object.assign(s, patch);
   if (!s.type || s.type === 'sheet') delete s.type; /* a Google Sheet is the default, so it is not written */
@@ -124,7 +133,7 @@ export function removeDoc(d, sheetId, index) {
 export function moveSheet(d, id, sectionId) {
   const s = pick(d.sheets, id, 'sheet'); need(s.kind === 'sheet', 'Apps do not belong to a department.');
   const { dep } = findSection(d, sectionId);
-  d.sheets = d.sheets.filter((x) => x !== s); s.departmentId = dep.id; s.sectionId = sectionId; s.sort = sortAfter(d, 'sheets', d.sheets); d.sheets.push(s);
+  d.sheets = d.sheets.filter((x) => x !== s); s.departmentId = dep.id; dropUsedBy(s, dep.id); s.sectionId = sectionId; s.sort = sortAfter(d, 'sheets', d.sheets); d.sheets.push(s);
 }
 export function shiftSheet(d, id, dir) { const s = pick(d.sheets, id, 'sheet'); shift(d.sheets, id, dir, (x) => x.sectionId === s.sectionId && x.kind === s.kind); }
 export function removeSheet(d, id) {
@@ -333,6 +342,7 @@ export function restore(d, removedId) {
     place(d.links, r.entry);
   } else {
     place(d.sheets, r.entry);
+    (r.entry.usedBy || []).filter((u) => !d.departments.some((x) => x.id === u)).forEach((u) => dropUsedBy(r.entry, u));
     const known = new Set(d.sheets.map((s) => s.id));
     r.links.forEach(({ link }) => {
       /* the other end may itself be in Removed: hand the link to that bundle so it comes back with it, never dropped */

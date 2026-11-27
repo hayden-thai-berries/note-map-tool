@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useRecords } from '../lib/records.js';
+import { useRecords, apply } from '../lib/records.js';
+import { moveSheet } from '../lib/ops.js';
 import { buildMap } from '../graph.js';
 import { flows } from '../data.js';
 import { Canvas, Select } from '../components/ui.jsx';
@@ -10,8 +11,20 @@ const bar = 'rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm shado
 /* The map is where you work: click a department, function, file or arrow to edit it, use + to add, drag from a card's edge to link.
  * Layers: tickets on files, a business flow drawn over the files it uses. */
 export default function Overview({ setSel }) {
-  const { data: d } = useRecords(), { open } = useModals(), [flowIdx, setFlowIdx] = useState(-1), [showTix, setShowTix] = useState(true);
-  const graph = useMemo(() => buildMap(d, { flow: flowIdx >= 0 ? flows[flowIdx] : null, showTix }), [d, flowIdx, showTix]);
+  const { data: d } = useRecords(), { open } = useModals(), [flowIdx, setFlowIdx] = useState(-1), [showTix, setShowTix] = useState(true), [redraw, setRedraw] = useState(0);
+  const graph = useMemo(() => buildMap(d, { flow: flowIdx >= 0 ? flows[flowIdx] : null, showTix }), [d, flowIdx, showTix, redraw]);
+  /* Dropping a file on a function (or anywhere in that department below its first function header) makes that function's department the owner.
+   * Anywhere else, or on the function it already has, the card springs back. */
+  const drop = (_, node) => {
+    const sheet = node.type === 'sheet' && d.sheets.find((x) => x.id === node.id), parent = sheet && graph.nodes.find((n) => n.id === node.parentId);
+    if (!sheet || !parent) return;
+    const cx = parent.position.x + node.position.x + 115, cy = parent.position.y + node.position.y + 31;
+    const box = graph.nodes.find((n) => n.type === 'dept' && n.data.depId && cx >= n.position.x && cx <= n.position.x + n.style.width && cy >= n.position.y && cy <= n.position.y + n.style.height);
+    const secs = box ? graph.nodes.filter((n) => n.type === 'section' && n.parentId === box.id) : [];
+    const target = secs.length ? [...secs].reverse().find((n) => box.position.y + n.position.y <= cy) || secs[0] : null;
+    if (target && target.data.secId !== sheet.sectionId) apply((x) => moveSheet(x, sheet.id, target.data.secId));
+    else setRedraw((n) => n + 1);
+  };
   const click = (n) => {
     if (!n) return setSel(null);
     if (n.type === 'sheet') { setSel(n.data.n.key); open('file', { id: n.data.sheetId }); }
@@ -21,10 +34,11 @@ export default function Overview({ setSel }) {
   return (
     <div className="relative h-full">
       {d.departments.length || d.sheets.length ? (
-        <Canvas graph={graph} fitKey={`map:${d.departments.length}:${d.sheets.length}`} onNode={click} onEdge={(e) => e.data?.linkId && open('link', { id: e.data.linkId })} onConnect={(c) => open('link', { fromId: c.source, toId: c.target })} />
+        <Canvas graph={graph} fitKey={`map:${d.departments.length}:${d.sheets.length}`} onNode={click} onEdge={(e) => e.data?.linkId && open('link', { id: e.data.linkId })} onConnect={(c) => open('link', { fromId: c.source, toId: c.target })} rf={{ onNodeDragStop: drop, nodeDragThreshold: 6 }} />
       ) : (
         <div className="grid h-full place-items-center p-8 text-center"><div><h2 className="mb-1 text-lg font-semibold">This map is empty</h2><p className="mb-3 text-sm text-slate-600">Start with a department, then add its functions and files.</p><button type="button" className="rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-white hover:bg-blue-700" onClick={() => open('department')}>+ Add department</button></div></div>
       )}
+      <div className="absolute bottom-4 left-16 z-10 rounded-lg border border-slate-200 bg-white/95 px-3 py-1 text-xs text-slate-600 shadow-sm">Drag a file onto another function to change which department owns it.</div>
       <div className="absolute right-4 top-4 z-10 flex gap-2">
         <button type="button" className={bar} onClick={() => open('department')}>+ Department</button>
         <button type="button" className={bar} onClick={() => open('file')}>+ File</button>

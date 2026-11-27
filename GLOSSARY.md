@@ -21,8 +21,12 @@ Anything drawn on the map that can be selected and linked: a Sheet or an App.
 _Avoid_: Node, box
 
 **Sheet**:
-A spreadsheet or other file that belongs to one Department and one Function, with an owner, a criticality, an optional type (Google Sheet by default, or Doc, Excel, PDF, Other) and documentation links. Its current tickets are the open Tickets whose Target it is; they are never stored on it.
+A spreadsheet or other file that belongs to one Department (its owning Department) and one Function, with an owner, a criticality, an optional type (Google Sheet by default, or Doc, Excel, PDF, Other) and documentation links. Its current tickets are the open Tickets whose Target it is; they are never stored on it.
 _Avoid_: Spreadsheet, doc
+
+**Used by**:
+The other Departments that work in a Sheet or App without owning it. A hand-kept list on the Sheet, shown as a "Used by" row on its card; it is not worked out from Links and does not move Tickets or counts away from the owning Department.
+_Avoid_: Shared, co-owner, secondary department
 
 **App**:
 A connected system that is not a Sheet, such as a CRM or Slack, and belongs to no Department.
