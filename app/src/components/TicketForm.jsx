@@ -34,12 +34,16 @@ export default function TicketForm({ id, onClose, onOpen, preset = {} }) {
     };
   };
   const c = useCommit(onClose);
-  const submit = () => c.run((d) => (id ? o.updateTicket(d, id, clean()) : o.addTicket(d, clean())));
+  /* the id letter follows the type: say what the id will become, and stop a project that still has items from changing type */
+  const retyped = !!(live && v.type !== live.type), nextId = retyped ? o.idForType(data, live, v.type) : null;
+  const stuck = retyped && live.type === 'project' ? data.tickets.items.filter((x) => x.project === id).length : 0;
+  const submit = () => { if (!stuck) c.run((d) => (id ? o.updateTicket(d, id, clean()) : o.addTicket(d, clean()))); };
   const total = (live?.log || []).reduce((a, e) => a + (+e.hours || 0), 0);
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/30" onClick={onClose}>
       <form className="h-full w-[420px] overflow-auto bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); submit(); }} aria-label="Ticket">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold">{id ? `${id} · Edit` : 'New ' + (TYPES.find((x) => x[0] === v.type)?.[1] || 'ticket').toLowerCase()}</h2><button type="button" aria-label="Close" className="text-xl text-slate-400 hover:text-slate-700" onClick={onClose}>×</button></div>
+        {live?.formerIds?.length > 0 && <p className="-mt-2 mb-2 text-[11px] text-slate-400">formerly {live.formerIds.join(', ')}</p>}
         <L t="Title"><input className={f} required autoFocus value={v.title} onChange={set('title')} /></L>
         <L t="Description"><textarea className={`${f} min-h-20`} placeholder="What is the request? Who is asking?" value={v.description || ''} onChange={set('description')} /></L>
         <div className="grid grid-cols-2 gap-3">
@@ -48,6 +52,8 @@ export default function TicketForm({ id, onClose, onOpen, preset = {} }) {
           <L t="Status"><select className={f} value={v.status} onChange={set('status')}>{STATUS.map(([a, b]) => <option key={a} value={a}>{b}</option>)}</select></L>
           <L t="Owner"><input className={f} list="ticket-owners" value={v.owner || ''} onChange={set('owner')} /><datalist id="ticket-owners">{memberNamesFor(data, v.targetId).map((n) => <option key={n} value={n} />)}</datalist></L>
         </div>
+        {stuck > 0 && <p role="alert" className="mb-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-sm text-red-800">Move its {stuck} {stuck === 1 ? 'item' : 'items'} out of this project first, then change the type.</p>}
+        {retyped && !stuck && nextId !== id && <p role="status" className="mb-2 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-sm text-blue-900">ID will become <b>{nextId}</b> (now {id}).</p>}
         {kids && onOpen && (
           <section aria-label="Items in this project" className="mb-3 rounded-lg border border-slate-200 p-2.5">
             <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Items in this project ({kids.length})</h3>
@@ -91,7 +97,7 @@ export default function TicketForm({ id, onClose, onOpen, preset = {} }) {
         )}
         {c.error && <p role="alert" className="mb-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-sm text-red-800">{c.error}</p>}
         {c.conflict && <div role="alert" className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm"><b>This map changed on disk</b> since you opened it.<div className="mt-1 flex gap-2"><Btn onClick={() => c.resolve('reload')}>Reload (discard my edits)</Btn><Btn onClick={() => c.resolve('overwrite')}>Overwrite (keep my edits)</Btn></div></div>}
-        <div className="flex items-center gap-2"><Btn primary type="submit">{id ? 'Save' : 'Create'}</Btn><Btn onClick={onClose}>Cancel</Btn>
+        <div className="flex items-center gap-2"><Btn primary type="submit" disabled={!!stuck}>{id ? 'Save' : 'Create'}</Btn><Btn onClick={onClose}>Cancel</Btn>
           {id && (!sure ? <Btn danger className="ml-auto" onClick={() => setSure(true)}>Delete…</Btn> : <Btn danger className="ml-auto" onClick={() => c.run((d) => o.removeTicket(d, id))}>Move to Removed</Btn>)}</div>
       </form>
     </div>

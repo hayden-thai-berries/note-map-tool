@@ -15,7 +15,7 @@ export default function Work() {
   const { data: d } = useRecords(), items = d.tickets.items;
   const [f, setF] = useState({ type: '', owner: '', priority: '', dept: '', project: '', open: false, q: '' }), [form, setForm] = useState(null), [view, setView] = useState(remembered), [ask, setAsk] = useState(null);
   const owners = [...new Set(items.map((t) => t.owner).filter(Boolean))].sort();
-  const text = (t) => [t.id, t.title, t.description, t.owner, targetOf(d, t)?.name, t.notes, t.blocked, t.requestedBy, t.impact, items.find((x) => x.id === t.project)?.title].join(' ').toLowerCase();
+  const text = (t) => [t.id, ...(t.formerIds || []), t.title, t.description, t.owner, targetOf(d, t)?.name, t.notes, t.blocked, t.requestedBy, t.impact, items.find((x) => x.id === t.project)?.title].join(' ').toLowerCase();
   const depts = groupByDepartment(d, items), projects = items.filter((t) => t.type === 'project');
   /* the report always counts done tickets, so it leaves "Open only" out */
   const pass = (t, withOpen) => (!f.type || t.type === f.type) && (!f.owner || t.owner === f.owner) && (!f.priority || priorityOf(t) === f.priority) && (!f.dept || groupIdOf(d, t) === f.dept) && (!f.project || t.id === f.project || t.project === f.project) && (!withOpen || !f.open || t.status !== 'done') && (!f.q || text(t).includes(f.q.toLowerCase()));

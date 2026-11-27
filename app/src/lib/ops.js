@@ -151,11 +151,48 @@ export function removeLink(d, id) {
 
 /* ---- tickets ---- */
 const PREFIX = { ticket: 'T', project: 'P', change: 'C', feature: 'F' };
-export function newTicketId(d, type) {
-  const base = (PREFIX[type] || 'T') + today().replace(/-/g, '') + '.';
-  const all = [...d.tickets.items, ...d.removed.filter((r) => r.kind === 'ticket').map((r) => r.entry)];
-  return base + String(1 + Math.max(0, ...all.filter((t) => String(t.id).startsWith(base)).map((t) => parseInt(String(t.id).slice(base.length), 10) || 0))).padStart(3, '0');
+const ID_RE = /^([TPCF])(\d{8})\.(\d+)$/;
+const ticketPool = (d) => [...d.tickets.items, ...d.removed.filter((r) => r.kind === 'ticket').map((r) => r.entry)];
+/* every id a ticket has ever had (its own and its former ones), for all tickets except `except`: none of these may be handed out again */
+const idsTaken = (d, except) => new Set(ticketPool(d).filter((x) => x !== except).flatMap((x) => [x.id, ...(x.formerIds || [])]));
+const nextFree = (taken, base) => base + String(1 + Math.max(0, ...[...taken].filter((id) => String(id).startsWith(base)).map((id) => parseInt(String(id).slice(base.length), 10) || 0))).padStart(3, '0');
+export function newTicketId(d, type) { return nextFree(idsTaken(d), (PREFIX[type] || 'T') + today().replace(/-/g, '') + '.'); }
+/* The id a ticket gets when it is (or should be) of `type`: same date, same number if that number is free, else the next free number.
+ * An id that is not in the date-based form (the old T-1 style) never changes. */
+export function idForType(d, t, type) {
+  const m = ID_RE.exec(String(t.id)), prefix = PREFIX[type] || 'T';
+  if (!m || m[1] === prefix) return t.id;
+  const taken = idsTaken(d, t), base = prefix + m[2] + '.';
+  return taken.has(base + m[3]) ? nextFree(taken, base) : base + m[3];
 }
+/* Give a ticket (live or in Removed) a new id and move everything that pointed at the old one: tickets in the project, flow steps, steps in Removed. The old id is remembered in formerIds. */
+export function renameTicket(d, id, to) {
+  const t = ticketPool(d).find((x) => x.id === id); need(t, 'That ticket no longer exists.');
+  if (to === id) return id;
+  need(!idsTaken(d, t).has(to), `${to} is already used by another ticket.`);
+  t.formerIds = [...(t.formerIds || []).filter((x) => x !== to), id]; t.id = to;
+  ticketPool(d).forEach((x) => { if (x.project === id) x.project = to; });
+  const steps = [...d.flows.flatMap((f) => f.steps || []), ...d.removed.filter((r) => r.kind === 'step' && r.entry).map((r) => r.entry)];
+  steps.forEach((s) => { if (s.ticket === id) s.ticket = to; });
+  return to;
+}
+/* What fixing the ids would do: one row per ticket whose id letter does not match its type, in order (a later row sees the numbers an earlier one took).
+ * `only` limits it to those ids. Each row says what else would be updated. Nothing is changed. */
+export function planIdRepairs(d, only) {
+  const w = structuredClone(d), rows = [];
+  const liveCount = d.tickets.items.length;
+  ticketPool(w).forEach((t, i) => {
+    if (only && !only.has(t.id)) return;
+    const to = idForType(w, t, t.type); if (to === t.id) return;
+    const from = t.id, kids = ticketPool(w).filter((x) => x.project === from).length;
+    const steps = [...w.flows.flatMap((f) => f.steps || []), ...w.removed.filter((r) => r.kind === 'step' && r.entry).map((r) => r.entry)].filter((s) => s.ticket === from).length;
+    renameTicket(w, from, to); rows.push({ from, to, type: t.type, title: t.title, removed: i >= liveCount, kids, steps });
+  });
+  return rows;
+}
+/* how many ids planIdRepairs would change, without copying the map (for the gear's count) */
+export const countIdMismatches = (d) => ticketPool(d).filter((t) => ID_RE.test(String(t.id)) && ID_RE.exec(String(t.id))[1] !== (PREFIX[t.type] || 'T')).length;
+export function repairTicketIds(d, only) { return planIdRepairs(d, only).map((r) => { renameTicket(d, r.from, r.to); return r; }); }
 export function addTicket(d, fields) {
   const type = fields.type || 'ticket'; need((fields.title || '').trim(), 'A ticket needs a title.');
   const t = { id: newTicketId(d, type), title: fields.title.trim(), type, status: 'todo', owner: '', ...fields, updated: today(), sort: sortAfter(d, 'tickets', d.tickets.items) };
@@ -165,8 +202,16 @@ export function addTicket(d, fields) {
 export function updateTicket(d, id, patch) {
   const t = pick(d.tickets.items, id, 'ticket');
   if ('title' in patch) need(String(patch.title).trim(), 'A ticket needs a title.');
+  const retyped = patch.type && patch.type !== t.type;
+  if (retyped && t.type === 'project' && patch.type !== 'project') {
+    const n = d.tickets.items.filter((x) => x.project === id).length;
+    need(!n, `Move its ${n} ${n === 1 ? 'item' : 'items'} out of this project first.`);
+  }
   Object.assign(t, patch, { updated: today() });
   for (const [k, v] of Object.entries(t)) if (v === undefined) delete t[k];
+  /* the id letter follows the type (T, P, C, F) */
+  if (retyped) return renameTicket(d, id, idForType(d, t, t.type));
+  return id;
 }
 /* drag and drop / quick status change: Blocked may carry a reason, any other status clears it */
 export const STATUSES = ['todo', 'doing', 'blocked', 'done'];
